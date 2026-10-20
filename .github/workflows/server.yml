@@ -1,0 +1,122 @@
+name: 🔒 Encrypted Cloud Linux (16GB RAM)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  secure-pc:
+    runs-on: ubuntu-latest # 16GB RAM + 4 vCPUs مجاناً
+    timeout-minutes: 350   # يعمل لقرابة 6 ساعات متواصلة للجلسة
+    steps:
+      - name: 1. تهيئة قرص الـ RAM المشفر
+        run: |
+          mkdir -p /dev/shm/secure-ram
+          chmod 700 /dev/shm/secure-ram
+
+      - name: 2. استعادة الكاش والمكتبات فورا
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.local
+            ~/.config
+            ~/.opencode
+          key: encrypted-opencode-${{ runner.os }}
+
+      - name: 3. تثبيت الأدوات وفك تشفير الخزنة وحقن جميع المفاتيح
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          SERVER_PASS: ${{ secrets.SERVER_PASS }}
+          AI_KEYS: ${{ secrets.AI_KEYS }}
+        run: |
+          # تثبيت الأدوات الأساسية بصمت وسرعة
+          sudo apt-get update -qq && sudo apt-get install -y -qq ttyd jq gnupg zstd openssl git curl > /dev/null
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+          sudo chmod +x /usr/local/bin/cloudflared
+          
+          # تثبيت OpenCode وأداة Cloudflare Wrangler
+          npm install -g wrangler opencode-ai > /dev/null 2>&1 || curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1
+
+          # سحب مستودع الخزنة الخاصة (my-vault) داخل الـ RAM فقط
+          cd /dev/shm/secure-ram
+          git clone --quiet https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/my-vault.git vault
+          cd vault
+          git config --global user.name "${{ github.repository_owner }}"
+          git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
+
+          # فك تشفير المشاريع والمكتبات المحفوظة بمعيار AES-256 إن وجدت
+          if [ -f "vault-data.tar.zst.gpg" ]; then
+            echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
+          fi
+
+          # حقن جميع التوكنات ومفاتيح الذكاء الاصطناعي (Gemini, Groq, OpenRouter, HF, Cloudflare)
+          {
+            echo ""
+            echo "# --- Cloud Environment Keys ---"
+            echo "export CLOUDFLARE_API_TOKEN='${CF_API_TOKEN}'"
+            echo "export GITHUB_TOKEN='${GH_TOKEN}'"
+            echo "export GH_TOKEN='${GH_TOKEN}'"
+            echo 'export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"'
+            printf "%s\n" "$AI_KEYS"
+          } >> ~/.bashrc
+
+      - name: 4. التشفير التلقائي للمشاريع وفتح البوابة السرية
+        env:
+          SERVER_PASS: ${{ secrets.SERVER_PASS }}
+        run: |
+          # إنشاء أداة التشفير والحفظ التلقائي بمعيار AES-256
+          cat << 'EOF' > /usr/local/bin/lock-and-save
+          #!/usr/bin/env bash
+          cd /dev/shm/secure-ram/vault
+          tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
+            gpg --batch --yes --passphrase "$SERVER_PASS" --cipher-algo AES256 -c -o vault-data.tar.zst.gpg 2>/dev/null
+          git add vault-data.tar.zst.gpg
+          git commit -m "🔒 AES-256 Auto-Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
+          EOF
+          sudo chmod +x /usr/local/bin/lock-and-save
+
+          # ضمان التشفير والحفظ التلقائي عند إغلاق السيرفر أو انتهاء الوقت
+          trap "/usr/local/bin/lock-and-save" EXIT SIGTERM SIGINT
+
+          # تشغيل الحفظ المشفر في الخلفية كل دقيقتين
+          (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
+
+          # تشغيل شاشة الويب محمية بكلمة السر الخاصة بك
+          nohup ttyd -p 7681 -c "admin:${SERVER_PASS}" -W bash -c "cd /dev/shm/secure-ram/vault && source ~/.bashrc && exec bash" > /dev/null 2>&1 &
+          
+          # فتح نفق Cloudflare السريع والمشفر
+          nohup cloudflared tunnel --url http://localhost:7681 > /dev/shm/tunnel.log 2>&1 &
+          
+          # انتظار توليد الرابط السري
+          TUNNEL_URL=""
+          for i in {1..15}; do
+            TUNNEL_URL=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /dev/shm/tunnel.log | head -n 1 || true)
+            if [ -n "$TUNNEL_URL" ]; then break; fi
+            sleep 1
+          done
+
+          # إرسال الرابط السري إلى مستودعك الخاص (my-vault) فقط
+          cd /dev/shm/secure-ram/vault
+          cat << EOF > ACCESS-LINK.md
+          # 🔐 بوابة الدخول السرية للسيرفر النشط الآن
+          * **الرابط المباشر:** [$TUNNEL_URL]($TUNNEL_URL)
+          * **اسم المستخدم:** \`admin\`
+          * **كلمة المرور:** كلمة السر التي وضعتها في \`SERVER_PASS\`
+          * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
+          
+          ---
+          💡 *بمجرد الدخول للشاشة، اكتب \`opencode\` للبدء فوراً، أو اكتب \`lock-and-save\` لحفظ عملك يدوياً في أي لحظة.*
+          EOF
+          
+          git add ACCESS-LINK.md
+          git commit -m "🔑 Update Private Access Link" --quiet && git push --quiet || true
+
+          echo "===================================================="
+          echo "🔒 SERVER IS RUNNING IN STEALTH MODE!"
+          echo "✅ تم إرسال رابط الدخول السري إلى مستودعك الخاص (my-vault)"
+          echo "===================================================="
+
+          # إبقاء السيرفر شغالاً لمدة 5 ساعات و 45 دقيقة
+          sleep 20700
+          
