@@ -1,18 +1,17 @@
-name: 🚀 Official Pure OpenCode Terminal (Zero Lag & Full Copy/Paste)
+name: 🌟 Modern Open WebUI Cloud Engine
 
 on:
   workflow_dispatch:
 
 jobs:
-  official-opencode:
+  modern-ui-cloud:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - name: 1. تهيئة الذاكرة السريعة للبيئة
+      - name: 1. تهيئة الذاكرة السريعة
         run: |
           mkdir -p /dev/shm/secure-ram
           chmod 700 /dev/shm/secure-ram
-          sudo sysctl -w net.ipv4.tcp_low_latency=1 > /dev/null 2>&1 || true
 
       - name: 2. استعادة الكاش فورا
         uses: actions/cache@v4
@@ -22,26 +21,19 @@ jobs:
             ~/.local
             ~/.config
             ~/.opencode
-          key: official-opencode-v9-${{ runner.os }}
+          key: modern-ui-v11-${{ runner.os }}
 
-      - name: 3. تثبيت الأدوات الرسمية وفك تشفير الخزنة (AES-256)
+      - name: 3. تثبيت بيئة الحاويات وفك تشفير الخزنة (AES-256)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
           AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
-          # تثبيت محرك الطرفية الويب ttyd وجلسات tmux وأداة cloudflared
-          sudo apt-get update -qq && sudo apt-get install -y -qq ttyd tmux jq gnupg zstd openssl git curl openssh-client > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq jq gnupg zstd openssl git curl docker.io > /dev/null
           if ! command -v cloudflared &> /dev/null; then
             curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
             sudo chmod +x /usr/local/bin/cloudflared
-          fi
-
-          # تثبيت أداة OpenCode الرسمية
-          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
-          if ! command -v opencode &> /dev/null; then
-            curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
           fi
 
           # سحب الخزنة (my-vault) وربطها بـ ~/vault
@@ -53,38 +45,36 @@ jobs:
           git config --global user.name "${{ github.repository_owner }}"
           git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
 
-          # فك تشفير المشاريع المحفوظة بمعيار AES-256
+          # فك تشفير المشاريع
           if [ -f "vault-data.tar.zst.gpg" ]; then
             echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
           fi
 
-          # استعادة إعدادات وجلسات OpenCode السابقة
+          # استعادة الجلسات
           if [ -d "/dev/shm/secure-ram/vault/.opencode-state" ]; then
             mkdir -p ~/.config/opencode ~/.local/share/opencode
             cp -r /dev/shm/secure-ram/vault/.opencode-state/config/* ~/.config/opencode/ 2>/dev/null || true
             cp -r /dev/shm/secure-ram/vault/.opencode-state/share/* ~/.local/share/opencode/ 2>/dev/null || true
           fi
 
-          # حقن مفاتيح الذكاء الاصطناعي والتوركنات
+          # حقن المفاتيح
           {
             echo ""
             echo "export CLOUDFLARE_API_TOKEN='${CF_API_TOKEN}'"
             echo "export GITHUB_TOKEN='${GH_TOKEN}'"
             echo "export GH_TOKEN='${GH_TOKEN}'"
-            echo 'export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"'
             printf "%s\n" "$AI_KEYS"
           } >> ~/.bashrc
 
-      - name: 4. تشغيل حماية الخزنة وجلسة OpenCode الرسمية المباشرة
+      - name: 4. تشغيل الحفظ التلقائي وواجهة Open WebUI العصرية
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
           AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
           source ~/.bashrc
-          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
           eval "$AI_KEYS" 2>/dev/null || true
 
-          # نظام الحفظ والتشفير التلقائي AES-256 في الخلفية كل دقيقتين وعند الخروج
+          # نظام الحفظ والتشفير التلقائي AES-256
           cat << 'EOF' > /usr/local/bin/lock-and-save
           #!/usr/bin/env bash
           cd /dev/shm/secure-ram/vault || exit 0
@@ -107,48 +97,42 @@ jobs:
           trap "/usr/local/bin/lock-and-save force" EXIT SIGTERM SIGINT
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # تشغيل OpenCode داخل جلسة tmux دائمة داخل مجلد الخزنة
-          cd /dev/shm/secure-ram/vault
-          tmux new-session -d -s opencode_session "source ~/.bashrc && opencode"
+          # تشغيل حاوية Open WebUI العصرية على المنفذ 3000 محلياً
+          docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main > /dev/null 2>&1
 
-          # تشغيل ttyd مع الحماية بكلمة المرور وتفعيل دعم اللمس والكتابة والنسخ للهمواتف
-          nohup ttyd -p 7681 -c "opencode:${SERVER_PASS}" -t fontSize=15 -t cursorStyle=block -t disableLeaveAlert=true tmux attach -t opencode_session > /dev/null 2>&1 &
-
-          # فتح نفق مباشر فائق السرعة عبر lhr.life وعبر Cloudflare
+          # فتح نفق اتصال فائق السرعة عبر lhr.life وعبر Cloudflare
           mkdir -p ~/.ssh
           ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -q <<< y >/dev/null 2>&1 || true
-          nohup ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:127.0.0.1:7681 nokey@localhost.run > /dev/shm/ssh_tunnel.log 2>&1 &
-          nohup cloudflared tunnel --protocol http2 --no-autoupdate --url http://127.0.0.1:7681 > /dev/shm/cf.log 2>&1 &
+          nohup ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:127.0.0.1:3000 nokey@localhost.run > /dev/shm/ssh_ui.log 2>&1 &
+          nohup cloudflared tunnel --protocol http2 --no-autoupdate --url http://127.0.0.1:3000 > /dev/shm/cf_ui.log 2>&1 &
 
           # انتظار توليد الروابط
-          SSH_URL=""
-          CF_URL=""
-          for i in {1..20}; do
-            [ -z "$SSH_URL" ] && SSH_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.lhr.life' /dev/shm/ssh_tunnel.log | head -n 1 || true)
-            [ -z "$CF_URL" ] && CF_URL=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /dev/shm/cf.log | head -n 1 || true)
-            if [ -n "$SSH_URL" ] && [ -n "$CF_URL" ]; then break; fi
+          UI_SSH=""
+          UI_CF=""
+          for i in {1..30}; do
+            [ -z "$UI_SSH" ] && UI_SSH=$(grep -o 'https://[a-zA-Z0-9.-]*\.lhr.life' /dev/shm/ssh_ui.log | head -n 1 || true)
+            [ -z "$UI_CF" ] && UI_CF=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /dev/shm/cf_ui.log | head -n 1 || true)
+            if [ -n "$UI_SSH" ] && [ -n "$UI_CF" ]; then break; fi
             sleep 1
           done
 
-          # إرسال الروابط الرسمية المضمونة إلى مستودعك الخاص (my-vault)
+          # إرسال رابط الواجهة العصرية إلى مستودعك الخاص (my-vault)
           cd /dev/shm/secure-ram/vault
           cat << EOF > ACCESS-LINK.md
-          # 🚀 رابط OpenCode الرسمي والمباشر (دعم كامل للكتابة والنسخ)
-          * **الرابط المباشر الأول (SSH Speed - lhr.life):** [$SSH_URL]($SSH_URL)
-          * **الرابط المباشر الثاني (Cloudflare):** [$CF_URL]($CF_URL)
-          * **اسم المستخدم:** \`opencode\`
-          * **كلمة المرور:** كلمة السر الموجودة في \`SERVER_PASS\`
+          # 🌟 لوحة تحكم Open WebUI العصرية
+          
+          * **الرابط المباشر السريع (SSH Tunnel):** [$UI_SSH]($UI_SSH)
+          * **الرابط البديل (Cloudflare):** [$UI_CF]($UI_CF)
           * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
           
           ---
           💡 *تعليمات التشغيل:*
-          1. افتح الرابط وأدخل اسم المستخدم (`opencode`) وكلمة المرور (`SERVER_PASS`).
-          2. ستفتح أمامك واجهة OpenCode السوداء الرسمية.
-          3. **اضغط بصباعك داخل الشاشة السوداء:** سيظهر كيبورد هاتفك فوراً، ويمكنك كتابة أي أمر، لصق النصوص، ونسخ المخرجات بسلاسة مطلقة وبدون أي تعليق!
+          1. افتح الرابط، ستظهر لك واجهة إنشاء حساب جديد (أول حساب تسجله يعتبر مديراً للسيرفر بالكامل).
+          2. استمتع بواجهة عصرية تشبه ChatGPT تماماً، مع دعم كامل لكيبورد الهاتف، النسخ، اللصق، والتدفق الفوري للردود!
           EOF
           
           git add ACCESS-LINK.md
-          git commit -m "🚀 Update Official OpenCode Terminal Links" --quiet && git push --quiet || true
+          git commit -m "🌟 Update Open WebUI Links" --quiet && git push --quiet || true
 
           sleep 20700
           
