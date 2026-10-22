@@ -1,19 +1,21 @@
-name: 🔒 Encrypted Cloud Linux (16GB RAM)
+name: 🚀 Ultra-Fast Encrypted OpenCode Cloud (16GB RAM)
 
 on:
   workflow_dispatch:
 
 jobs:
-  secure-pc:
-    runs-on: ubuntu-latest # 16GB RAM + 4 vCPUs مجاناً
-    timeout-minutes: 350   # يعمل لقرابة 6 ساعات متواصلة للجلسة
+  opencode-cloud:
+    runs-on: ubuntu-latest # 16GB RAM + 4 vCPUs
+    timeout-minutes: 350   # يعمل لمدة 5 ساعات و 50 دقيقة بأمان تام
     steps:
-      - name: 1. تهيئة قرص الـ RAM المشفر
+      - name: 1. تهيئة قرص الـ RAM فائق السرعة
         run: |
           mkdir -p /dev/shm/secure-ram
           chmod 700 /dev/shm/secure-ram
+          # ضبط إعدادات الشبكة في النظام لتسريع البث الحي (Streaming)
+          sudo sysctl -w net.ipv4.tcp_low_latency=1 > /dev/null 2>&1 || true
 
-      - name: 2. استعادة الكاش والمكتبات فورا
+      - name: 2. استعادة الكاش والأدوات فورا
         uses: actions/cache@v4
         with:
           path: |
@@ -21,37 +23,53 @@ jobs:
             ~/.local
             ~/.config
             ~/.opencode
-          key: encrypted-opencode-web-${{ runner.os }}
+          key: opencode-ultra-v3-${{ runner.os }}
 
-      - name: 3. تثبيت الأدوات وفك تشفير الخزنة وحقن جميع المفاتيح
+      - name: 3. تثبيت البيئة وفك تشفير الخزنة وحقن المفاتيح
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
           AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
-          # تثبيت الأدوات الأساسية بصمت وسرعة
+          # تثبيت الحزم الأساسية وأداة cloudflared بأقصى سرعة
           sudo apt-get update -qq && sudo apt-get install -y -qq jq gnupg zstd openssl git curl > /dev/null
-          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
-          sudo chmod +x /usr/local/bin/cloudflared
-          
-          # تثبيت OpenCode الرسمي وأداة Cloudflare Wrangler
-          curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
-          npm install -g wrangler > /dev/null 2>&1
+          if ! command -v cloudflared &> /dev/null; then
+            curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+            sudo chmod +x /usr/local/bin/cloudflared
+          fi
 
-          # سحب مستودع الخزنة الخاصة (my-vault) داخل الـ RAM فقط
+          # تثبيت النسخة الرسمية من OpenCode وأداة Wrangler
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+          if ! command -v opencode &> /dev/null; then
+            curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
+          fi
+          if ! command -v wrangler &> /dev/null; then
+            npm install -g wrangler > /dev/null 2>&1
+          fi
+
+          # سحب مستودع الخزنة (my-vault) داخل الـ RAM وربطه بالمسار الرئيسي لسهولة الوصول
           cd /dev/shm/secure-ram
           git clone --quiet https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/my-vault.git vault
-          cd vault
+          ln -sfn /dev/shm/secure-ram/vault "$HOME/vault"
+          
+          cd /dev/shm/secure-ram/vault
           git config --global user.name "${{ github.repository_owner }}"
           git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
 
-          # فك تشفير المشاريع والمكتبات المحفوظة بمعيار AES-256 إن وجدت
+          # فك تشفير المشاريع المحفوظة بمعيار AES-256
           if [ -f "vault-data.tar.zst.gpg" ]; then
             echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
           fi
 
-          # حقن جميع التوكنات ومفاتيح الذكاء الاصطناعي
+          # استعادة إعدادات وجلسات OpenCode السابقة من داخل الخزنة إن وجدت
+          if [ -d "/dev/shm/secure-ram/vault/.opencode-state" ]; then
+            mkdir -p ~/.config/opencode ~/.local/share/opencode
+            cp -r /dev/shm/secure-ram/vault/.opencode-state/config/* ~/.config/opencode/ 2>/dev/null || true
+            cp -r /dev/shm/secure-ram/vault/.opencode-state/share/* ~/.local/share/opencode/ 2>/dev/null || true
+          fi
+
+          # حقن جميع التوكنات ومفاتيح الذكاء الاصطناعي في النظام
           {
             echo ""
             echo "# --- Cloud Environment Keys ---"
@@ -62,65 +80,83 @@ jobs:
             printf "%s\n" "$AI_KEYS"
           } >> ~/.bashrc
 
-      - name: 4. التشفير التلقائي وفتح الواجهة الرسمية لـ OpenCode
+      - name: 4. تشغيل الحفظ الذكي وفتح واجهة OpenCode الرسمية فائقة السرعة
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
+          AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
           source ~/.bashrc
           export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+          eval "$AI_KEYS" 2>/dev/null || true
 
-          # إنشاء أداة التشفير والحفظ التلقائي بمعيار AES-256
+          # بناء نظام الحفظ والتشفير الذكي (لا يرفع إلا عند وجود تغييرات فعلية لمنع أي تهنيج)
           cat << 'EOF' > /usr/local/bin/lock-and-save
           #!/usr/bin/env bash
-          cd /dev/shm/secure-ram/vault
-          tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
-            gpg --batch --yes --passphrase "$SERVER_PASS" --cipher-algo AES256 -c -o vault-data.tar.zst.gpg 2>/dev/null
-          git add vault-data.tar.zst.gpg
-          git commit -m "🔒 AES-256 Auto-Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
+          cd /dev/shm/secure-ram/vault || exit 0
+          
+          # حفظ إعدادات وجلسات OpenCode داخل الخزنة لتستمر معك دائماً
+          mkdir -p /dev/shm/secure-ram/vault/.opencode-state/config /dev/shm/secure-ram/vault/.opencode-state/share
+          cp -r ~/.config/opencode/* /dev/shm/secure-ram/vault/.opencode-state/config/ 2>/dev/null || true
+          cp -r ~/.local/share/opencode/* /dev/shm/secure-ram/vault/.opencode-state/share/ 2>/dev/null || true
+
+          # فحص ما إذا كان هناك تغيير في الملفات قبل الضغط والتشفير
+          CURRENT_HASH=$(find . -maxdepth 3 -not -path '*/.*' -not -name 'vault-data.tar.zst.gpg' -not -name 'ACCESS-LINK.md' -printf "%p %T@\n" 2>/dev/null | sha256sum | awk '{print $1}')
+          LAST_HASH=$(cat /dev/shm/last_sync_hash 2>/dev/null || echo "")
+
+          if [ "$CURRENT_HASH" != "$LAST_HASH" ] || [ "$1" == "force" ]; then
+            echo "$CURRENT_HASH" > /dev/shm/last_sync_hash
+            tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
+              gpg --batch --yes --passphrase "$SERVER_PASS" --cipher-algo AES256 -c -o vault-data.tar.zst.gpg 2>/dev/null
+            git add vault-data.tar.zst.gpg
+            git commit -m "🔒 Smart AES-256 Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
+          fi
           EOF
           sudo chmod +x /usr/local/bin/lock-and-save
 
-          # ضمان التشفير والحفظ التلقائي عند إغلاق السيرفر أو انتهاء الوقت
-          trap "/usr/local/bin/lock-and-save" EXIT SIGTERM SIGINT
+          # ضمان الحفظ الإجباري عند انتهاء الجلسة أو إيقاف السيرفر
+          trap "/usr/local/bin/lock-and-save force" EXIT SIGTERM SIGINT
 
-          # تشغيل الحفظ المشفر في الخلفية كل دقيقتين
+          # تشغيل المراقب الذكي في الخلفية كل دقيقتين
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # تشغيل واجهة الويب الرسمية لـ OpenCode مباشرة داخل مجلد الخزنة
+          # تشغيل واجهة OpenCode الرسمية مباشرة داخل مجلد الخزنة
           cd /dev/shm/secure-ram/vault
           export OPENCODE_SERVER_PASSWORD="$SERVER_PASS"
           nohup opencode web --port 4096 --hostname 127.0.0.1 > /dev/shm/opencode.log 2>&1 &
           
-          # فتح نفق Cloudflare السريع والمشفر على منفذ الواجهة الرسمية
-          nohup cloudflared tunnel --url http://localhost:4096 > /dev/shm/tunnel.log 2>&1 &
+          sleep 2
+
+          # فتح نفق Cloudflare بتقنية HTTP2 لمنع تجمّد الردود وضمان البث اللحظي السريع
+          nohup cloudflared tunnel --protocol http2 --no-autoupdate --url http://127.0.0.1:4096 > /dev/shm/tunnel.log 2>&1 &
           
-          # انتظار توليد الرابط السري
+          # التقاط الرابط السري فور توليده
           TUNNEL_URL=""
-          for i in {1..15}; do
+          for i in {1..20}; do
             TUNNEL_URL=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /dev/shm/tunnel.log | head -n 1 || true)
             if [ -n "$TUNNEL_URL" ]; then break; fi
             sleep 1
           done
 
-          # إرسال الرابط السري إلى مستودعك الخاص (my-vault) فقط
+          # إرسال بيانات الدخول إلى مستودع الخزنة الخاص (my-vault)
           cd /dev/shm/secure-ram/vault
           cat << EOF > ACCESS-LINK.md
-          # 🔐 بوابة الواجهة الرسمية لـ OpenCode
+          # ⚡ بوابة OpenCode السحابية المطورة (بث لحظي بدون تقطيع)
           * **الرابط المباشر:** [$TUNNEL_URL]($TUNNEL_URL)
-          * **اسم المستخدم (إذا طُلب):** \`opencode\`
-          * **كلمة المرور:** كلمة السر التي وضعتها في \`SERVER_PASS\`
+          * **اسم المستخدم:** \`opencode\`
+          * **كلمة المرور:** كلمة السر الموضوعة في \`SERVER_PASS\`
+          * **المجلد الجاهز للعمل:** اختر \`~/vault/\` من القائمة أو \`/dev/shm/secure-ram/vault\`
           * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
           
           ---
-          💡 *ستفتح لك واجهة OpenCode الرسمية مباشرة مع جميع النماذج المدمجة الجاهزة ومفاتيحك الخاصة.*
+          💡 *تم تفعيل بروتوكول HTTP/2 للبث المباشر السريع، ونظام الحفظ الذكي لجلساتك ومفاتيحك.*
           EOF
           
           git add ACCESS-LINK.md
-          git commit -m "🔑 Update Official OpenCode Web Link" --quiet && git push --quiet || true
+          git commit -m "⚡ Update Ultra-Fast OpenCode Link" --quiet && git push --quiet || true
 
           echo "===================================================="
-          echo "🚀 OFFICIAL OPENCODE WEB UI IS RUNNING!"
-          echo "✅ تم إرسال رابط الواجهة الرسمية إلى مستودعك الخاص (my-vault)"
+          echo "⚡ ULTRA-FAST OPENCODE SERVER IS LIVE!"
+          echo "✅ الرابط جاهز داخل مستودعك الخاص (my-vault -> ACCESS-LINK.md)"
           echo "===================================================="
 
           # إبقاء السيرفر شغالاً لمدة 5 ساعات و 45 دقيقة
