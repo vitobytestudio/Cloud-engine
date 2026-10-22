@@ -21,7 +21,7 @@ jobs:
             ~/.local
             ~/.config
             ~/.opencode
-          key: encrypted-opencode-v2-${{ runner.os }}
+          key: encrypted-opencode-web-${{ runner.os }}
 
       - name: 3. تثبيت الأدوات وفك تشفير الخزنة وحقن جميع المفاتيح
         env:
@@ -35,14 +35,9 @@ jobs:
           curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
           sudo chmod +x /usr/local/bin/cloudflared
           
-          # تثبيت واجهة VS Code السحابية (تدعم الكيبورد واللصق من الهاتف 100%)
-          if ! command -v code-server &> /dev/null; then
-            curl -fsSL https://code-server.dev/install.sh | sh -s -- --method=standalone > /dev/null 2>&1
-          fi
-          export PATH="$HOME/.local/bin:$PATH"
-
-          # تثبيت OpenCode وأداة Cloudflare Wrangler
-          npm install -g wrangler opencode-ai > /dev/null 2>&1 || curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1
+          # تثبيت OpenCode الرسمي وأداة Cloudflare Wrangler
+          curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
+          npm install -g wrangler > /dev/null 2>&1
 
           # سحب مستودع الخزنة الخاصة (my-vault) داخل الـ RAM فقط
           cd /dev/shm/secure-ram
@@ -56,7 +51,7 @@ jobs:
             echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
           fi
 
-          # حقن جميع التوكنات ومفاتيح الذكاء الاصطناعي (Gemini, Groq, OpenRouter, HF, Cloudflare)
+          # حقن جميع التوكنات ومفاتيح الذكاء الاصطناعي
           {
             echo ""
             echo "# --- Cloud Environment Keys ---"
@@ -67,11 +62,12 @@ jobs:
             printf "%s\n" "$AI_KEYS"
           } >> ~/.bashrc
 
-      - name: 4. التشفير التلقائي للمشاريع وفتح البوابة السرية
+      - name: 4. التشفير التلقائي وفتح الواجهة الرسمية لـ OpenCode
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
+          source ~/.bashrc
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
 
           # إنشاء أداة التشفير والحفظ التلقائي بمعيار AES-256
           cat << 'EOF' > /usr/local/bin/lock-and-save
@@ -90,12 +86,13 @@ jobs:
           # تشغيل الحفظ المشفر في الخلفية كل دقيقتين
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # تشغيل واجهة VS Code محمية بكلمة السر الخاصة بك (تقبل الكتابة واللصق فوراً)
-          export PASSWORD="$SERVER_PASS"
-          nohup code-server --bind-addr 127.0.0.1:8080 --auth password /dev/shm/secure-ram/vault > /dev/null 2>&1 &
+          # تشغيل واجهة الويب الرسمية لـ OpenCode مباشرة داخل مجلد الخزنة
+          cd /dev/shm/secure-ram/vault
+          export OPENCODE_SERVER_PASSWORD="$SERVER_PASS"
+          nohup opencode web --port 4096 --hostname 127.0.0.1 > /dev/shm/opencode.log 2>&1 &
           
-          # فتح نفق Cloudflare السريع والمشفر
-          nohup cloudflared tunnel --url http://localhost:8080 > /dev/shm/tunnel.log 2>&1 &
+          # فتح نفق Cloudflare السريع والمشفر على منفذ الواجهة الرسمية
+          nohup cloudflared tunnel --url http://localhost:4096 > /dev/shm/tunnel.log 2>&1 &
           
           # انتظار توليد الرابط السري
           TUNNEL_URL=""
@@ -108,21 +105,22 @@ jobs:
           # إرسال الرابط السري إلى مستودعك الخاص (my-vault) فقط
           cd /dev/shm/secure-ram/vault
           cat << EOF > ACCESS-LINK.md
-          # 🔐 بوابة الدخول السرية للسيرفر النشط الآن
+          # 🔐 بوابة الواجهة الرسمية لـ OpenCode
           * **الرابط المباشر:** [$TUNNEL_URL]($TUNNEL_URL)
-          * **كلمة المرور:** كلمة السر التي وضعتها في \`SERVER_PASS\` (بدون اسم مستخدم)
+          * **اسم المستخدم (إذا طُلب):** \`opencode\`
+          * **كلمة المرور:** كلمة السر التي وضعتها في \`SERVER_PASS\`
           * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
           
           ---
-          💡 *بمجرد الدخول، الصق كلمة المرور في المربع واضغط Submit. افتح الـ Terminal من القائمة واكتب \`opencode\` للبدء فوراً.*
+          💡 *ستفتح لك واجهة OpenCode الرسمية مباشرة مع جميع النماذج المدمجة الجاهزة ومفاتيحك الخاصة.*
           EOF
           
           git add ACCESS-LINK.md
-          git commit -m "🔑 Update Private Access Link" --quiet && git push --quiet || true
+          git commit -m "🔑 Update Official OpenCode Web Link" --quiet && git push --quiet || true
 
           echo "===================================================="
-          echo "🔒 SERVER IS RUNNING IN STEALTH MODE!"
-          echo "✅ تم إرسال رابط الدخول السري إلى مستودعك الخاص (my-vault)"
+          echo "🚀 OFFICIAL OPENCODE WEB UI IS RUNNING!"
+          echo "✅ تم إرسال رابط الواجهة الرسمية إلى مستودعك الخاص (my-vault)"
           echo "===================================================="
 
           # إبقاء السيرفر شغالاً لمدة 5 ساعات و 45 دقيقة
