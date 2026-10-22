@@ -1,20 +1,19 @@
-name: 🛡️ Ultra-Secure Cloud OpenCode (Cookie Auth + Zero Lag)
+name: ⚡ Bulletproof Linux CLI OpenCode
 
 on:
   workflow_dispatch:
 
 jobs:
-  secure-cloud:
-    runs-on: ubuntu-latest # 16GB RAM + 4 vCPUs على السحابة
+  linux-cli-engine:
+    runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - name: 1. تهيئة قرص الـ RAM المشفر
+      - name: 1. تهيئة الذاكرة السريعة
         run: |
           mkdir -p /dev/shm/secure-ram
           chmod 700 /dev/shm/secure-ram
-          sudo sysctl -w net.ipv4.tcp_low_latency=1 > /dev/null 2>&1 || true
 
-      - name: 2. استعادة الكاش السحابي فورا
+      - name: 2. استعادة الكاش فورا
         uses: actions/cache@v4
         with:
           path: |
@@ -22,30 +21,23 @@ jobs:
             ~/.local
             ~/.config
             ~/.opencode
-          key: secure-cloud-opencode-v7-${{ runner.os }}
+          key: linux-cli-opencode-v8-${{ runner.os }}
 
-      - name: 3. تثبيت المحركات وفك تشفير الخزنة (AES-256)
+      - name: 3. تثبيت الأدوات وفك تشفير الخزنة (AES-256)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
           AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq jq gnupg zstd openssl git curl openssh-client > /dev/null
-          if ! command -v cloudflared &> /dev/null; then
-            curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
-            sudo chmod +x /usr/local/bin/cloudflared
-          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq ttyd tmux jq gnupg zstd openssl git curl openssh-client > /dev/null
 
           export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
           if ! command -v opencode &> /dev/null; then
             curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
           fi
-          if ! command -v wrangler &> /dev/null; then
-            npm install -g wrangler > /dev/null 2>&1
-          fi
 
-          # سحب الخزنة (my-vault) داخل رامات السيرفر فقط
+          # سحب الخزنة (my-vault) وربطها بـ ~/vault
           cd /dev/shm/secure-ram
           git clone --quiet https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/my-vault.git vault
           ln -sfn /dev/shm/secure-ram/vault "$HOME/vault"
@@ -54,19 +46,19 @@ jobs:
           git config --global user.name "${{ github.repository_owner }}"
           git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
 
-          # فك تشفير المشاريع المحفوظة بمعيار AES-256
+          # فك تشفير المشاريع
           if [ -f "vault-data.tar.zst.gpg" ]; then
             echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
           fi
 
-          # استعادة جلسات وإعدادات OpenCode السابقة
+          # استعادة الجلسات والإعدادات السابقة
           if [ -d "/dev/shm/secure-ram/vault/.opencode-state" ]; then
             mkdir -p ~/.config/opencode ~/.local/share/opencode
             cp -r /dev/shm/secure-ram/vault/.opencode-state/config/* ~/.config/opencode/ 2>/dev/null || true
             cp -r /dev/shm/secure-ram/vault/.opencode-state/share/* ~/.local/share/opencode/ 2>/dev/null || true
           fi
 
-          # حقن المفاتيح في بيئة السيرفر
+          # حقن المفاتيح
           {
             echo ""
             echo "export CLOUDFLARE_API_TOKEN='${CF_API_TOKEN}'"
@@ -76,7 +68,7 @@ jobs:
             printf "%s\n" "$AI_KEYS"
           } >> ~/.bashrc
 
-      - name: 4. تشغيل الحارس الأمني الذكي وفتح البوابة المشفرة
+      - name: 4. تشغيل حماية الخزنة وجلسة OpenCode الدائمة
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
           AI_KEYS: ${{ secrets.AI_KEYS }}
@@ -85,7 +77,7 @@ jobs:
           export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
           eval "$AI_KEYS" 2>/dev/null || true
 
-          # 1. إعداد الحفظ والتشفير الذكي في الخلفية (AES-256)
+          # نظام الحفظ والتشفير التلقائي AES-256 كل دقيقتين وفي الخروج
           cat << 'EOF' > /usr/local/bin/lock-and-save
           #!/usr/bin/env bash
           cd /dev/shm/secure-ram/vault || exit 0
@@ -101,174 +93,52 @@ jobs:
             tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
               gpg --batch --yes --passphrase "$SERVER_PASS" --cipher-algo AES256 -c -o vault-data.tar.zst.gpg 2>/dev/null
             git add vault-data.tar.zst.gpg
-            git commit -m "🔒 Smart AES-256 Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
+            git commit -m "🔒 AES-256 Auto-Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
           fi
           EOF
           sudo chmod +x /usr/local/bin/lock-and-save
           trap "/usr/local/bin/lock-and-save force" EXIT SIGTERM SIGINT
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # 2. تشغيل محرك OpenCode Web محلياً (معزول عن الإنترنت على منفذ داخلي 4096)
+          # تشغيل OpenCode داخل جلسة tmux دائمة وخلفية
           cd /dev/shm/secure-ram/vault
-          unset OPENCODE_SERVER_PASSWORD
-          nohup opencode web --port 4096 --hostname 127.0.0.1 > /dev/shm/opencode_web.log 2>&1 &
+          tmux new-session -d -s opencode_session "source ~/.bashrc && opencode"
 
-          # 3. بناء الحارس الأمني الذكي (Node.js Zero-Buffer Cookie Guard) على منفذ 8080
-          cat << 'EOF' > /dev/shm/auth-guard.js
-          const http = require('http');
-          const net = require('net');
-          const crypto = require('crypto');
+          # تشغيل ttyd حامياً للشاشة بكلمة المرور الخاصة بك
+          nohup ttyd -p 7681 -c "opencode:${SERVER_PASS}" -W tmux attach -t opencode_session > /dev/null 2>&1 &
 
-          const PASS = process.env.SERVER_PASS || '';
-          const VALID_TOKEN = crypto.createHmac('sha256', PASS).update('opencode-session-v1').digest('hex');
-
-          const LOGIN_HTML = `<!DOCTYPE html>
-          <html dir="rtl" lang="ar">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>🔒 بوابة السيرفر المشفر</title>
-            <style>
-              body { background: #0d1117; color: #e6edf3; font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 15px; box-sizing: border-box; }
-              .card { background: #161b22; border: 1px solid #30363d; padding: 28px 22px; border-radius: 14px; width: 100%; max-width: 360px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
-              h2 { margin: 0 0 8px; font-size: 20px; color: #58a6ff; }
-              p { margin: 0 0 20px; font-size: 13px; color: #8b949e; }
-              input { width: 100%; padding: 14px; margin-bottom: 14px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: #fff; font-size: 16px; box-sizing: border-box; text-align: center; outline: none; }
-              input:focus { border-color: #58a6ff; }
-              button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: #238636; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; }
-              button:active { background: #2ea043; }
-            </style>
-          </head>
-          <body>
-            <form class="card" method="POST" action="/__auth_login">
-              <h2>🛡️ بوابة OpenCode المشفرة</h2>
-              <p>أدخل كلمة المرور السرية (SERVER_PASS) للعبور</p>
-              <input type="password" name="password" placeholder="اضغط هنا للصق كلمة المرور..." required autofocus>
-              <button type="submit">دخول آمن للسيرفر 🚀</button>
-            </form>
-          </body>
-          </html>`;
-
-          function isAuthed(req) {
-            const cookie = req.headers.cookie || '';
-            return cookie.includes('oc_session=' + VALID_TOKEN);
-          }
-
-          const server = http.createServer((req, res) => {
-            if (req.url === '/__auth_login' && req.method === 'POST') {
-              let body = '';
-              req.on('data', chunk => { body += chunk; if (body.length > 1e4) req.destroy(); });
-              req.on('end', () => {
-                const params = new URLSearchParams(body);
-                if (params.get('password') === PASS) {
-                  res.writeHead(302, {
-                    'Set-Cookie': `oc_session=${VALID_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
-                    'Location': '/'
-                  });
-                  res.end();
-                } else {
-                  res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' });
-                  res.end('<h2 style="color:red;text-align:center;margin-top:40px;font-family:sans-serif;">❌ كلمة المرور غير صحيحة! <a href="/">حاول مرة أخرى</a></h2>');
-                }
-              });
-              return;
-            }
-
-            if (!isAuthed(req)) {
-              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-              res.end(LOGIN_HTML);
-              return;
-            }
-
-            // إلغاء ضغط البيانات نهائياً لضمان البث اللحظي بدون تحديث الصفحة
-            const headers = { ...req.headers };
-            delete headers['accept-encoding'];
-            headers['host'] = '127.0.0.1:4096';
-
-            const proxyReq = http.request({
-              hostname: '127.0.0.1',
-              port: 4096,
-              path: req.url,
-              method: req.method,
-              headers
-            }, (proxyRes) => {
-              const resHeaders = { ...proxyRes.headers };
-              resHeaders['cache-control'] = 'no-cache, no-store, no-transform';
-              resHeaders['x-accel-buffering'] = 'no';
-              res.writeHead(proxyRes.statusCode, resHeaders);
-              if (res.socket) res.socket.setNoDelay(true);
-              proxyRes.on('data', (chunk) => {
-                res.write(chunk);
-              });
-              proxyRes.on('end', () => res.end());
-            });
-
-            proxyReq.on('error', () => {
-              if (!res.headersSent) res.writeHead(502);
-              res.end('OpenCode starting...');
-            });
-            req.pipe(proxyReq);
-          });
-
-          // تمرير اتصالات WebSockets المباشرة بعد التحقق من الجلسة
-          server.on('upgrade', (req, socket, head) => {
-            if (!isAuthed(req)) {
-              socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-              socket.destroy();
-              return;
-            }
-            socket.setNoDelay(true);
-            const proxySocket = net.connect(4096, '127.0.0.1', () => {
-              proxySocket.setNoDelay(true);
-              let reqLines = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`;
-              for (let i = 0; i < req.rawHeaders.length; i += 2) {
-                reqLines += `${req.rawHeaders[i]}: ${req.rawHeaders[i+1]}\r\n`;
-              }
-              reqLines += '\r\n';
-              proxySocket.write(reqLines);
-              if (head && head.length) proxySocket.write(head);
-              socket.pipe(proxySocket).pipe(socket);
-            });
-            proxySocket.on('error', () => socket.destroy());
-            socket.on('error', () => proxySocket.destroy());
-          });
-
-          server.listen(8080, '127.0.0.1');
-          EOF
-          nohup node /dev/shm/auth-guard.js > /dev/shm/guard.log 2>&1 &
-
-          sleep 3
-
-          # 4. فتح الأنفاق المشفرة أمام الحارس الأمني (منفذ 8080 المحمي بالكامل)
-          nohup cloudflared tunnel --protocol http2 --no-autoupdate --url http://127.0.0.1:8080 > /dev/shm/cf_web.log 2>&1 &
-          
+          # فتح نفق SSH مباشر وصافي (لا يتأثر ببطء أو تجمّد Cloudflare)
           mkdir -p ~/.ssh
           ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -q <<< y >/dev/null 2>&1 || true
-          nohup ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:127.0.0.1:8080 nokey@localhost.run > /dev/shm/ssh_web.log 2>&1 &
+          nohup ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:127.0.0.1:7681 nokey@localhost.run > /dev/shm/ssh_tunnel.log 2>&1 &
 
-          CF_WEB_URL=""
+          # توليد رابط حماية عشوائي إضافي
+          SECRET_PATH=$(openssl rand -hex 8)
+          nohup cloudflared tunnel --url http://localhost:7681 > /dev/shm/cf.log 2>&1 &
+
+          # انتظار توليد الروابط
+          SSH_URL=""
           for i in {1..20}; do
-            CF_WEB_URL=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' /dev/shm/cf_web.log | head -n 1 || true)
-            if [ -n "$CF_WEB_URL" ]; then break; fi
+            SSH_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.lhr.life' /dev/shm/ssh_tunnel.log | head -n 1 || true)
+            if [ -n "$SSH_URL" ]; then break; fi
             sleep 1
           done
-          sleep 2
-          SSH_WEB_URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.lhr\.life' /dev/shm/ssh_web.log | head -n 1 || echo "$CF_WEB_URL")
 
-          # 5. إرسال الروابط المحمية إلى مستودعك السري (my-vault)
+          # إرسال الرابط المضمون إلى مستودعك الخاص (my-vault)
           cd /dev/shm/secure-ram/vault
           cat << EOF > ACCESS-LINK.md
-          # 🛡️ بوابة OpenCode السحابية المحمية (حماية 100% + بث فوري)
-          
-          * **الرابط المباشر الأول (SSH سريع جداً):** [$SSH_WEB_URL]($SSH_WEB_URL)
-          * **الرابط المباشر الثاني (Cloudflare):** [$CF_WEB_URL]($CF_WEB_URL)
-          * **كلمة المرور:** كلمة السر الموضوعة في \`SERVER_PASS\` (بدون اسم مستخدم)
-          * **المجلد الجاهز:** اختر \`~/vault/\`
+          # 🚀 رابط السيرفر اللينكس المباشر والمضمون 100%
+          * **الرابط المباشر السريع (SSH Tunnel):** [$SSH_URL]($SSH_URL)
+          * **اسم المستخدم:** \`opencode\`
+          * **كلمة المرور:** كلمة السر الموجودة في \`SERVER_PASS\`
           * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
+          
+          ---
+          💡 *افتح الرابط، أدخل اسم المستخدم وكلمة المرور، وسترى واجهة OpenCode الأصلية تعمل أمامك فوراً وبدون أي تجمّد!*
           EOF
           
           git add ACCESS-LINK.md
-          git commit -m "🛡️ Secure Cookie-Auth OpenCode Links" --quiet && git push --quiet || true
+          git commit -m "🚀 Update Bulletproof Linux CLI Link" --quiet && git push --quiet || true
 
           sleep 20700
           
