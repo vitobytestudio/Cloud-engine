@@ -21,7 +21,7 @@ jobs:
             ~/.local
             ~/.config
             ~/.opencode
-          key: encrypted-opencode-${{ runner.os }}
+          key: encrypted-opencode-v2-${{ runner.os }}
 
       - name: 3. تثبيت الأدوات وفك تشفير الخزنة وحقن جميع المفاتيح
         env:
@@ -31,10 +31,16 @@ jobs:
           AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
           # تثبيت الأدوات الأساسية بصمت وسرعة
-          sudo apt-get update -qq && sudo apt-get install -y -qq ttyd jq gnupg zstd openssl git curl > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq jq gnupg zstd openssl git curl > /dev/null
           curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
           sudo chmod +x /usr/local/bin/cloudflared
           
+          # تثبيت واجهة VS Code السحابية (تدعم الكيبورد واللصق من الهاتف 100%)
+          if ! command -v code-server &> /dev/null; then
+            curl -fsSL https://code-server.dev/install.sh | sh -s -- --method=standalone > /dev/null 2>&1
+          fi
+          export PATH="$HOME/.local/bin:$PATH"
+
           # تثبيت OpenCode وأداة Cloudflare Wrangler
           npm install -g wrangler opencode-ai > /dev/null 2>&1 || curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1
 
@@ -65,6 +71,8 @@ jobs:
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
+
           # إنشاء أداة التشفير والحفظ التلقائي بمعيار AES-256
           cat << 'EOF' > /usr/local/bin/lock-and-save
           #!/usr/bin/env bash
@@ -82,11 +90,12 @@ jobs:
           # تشغيل الحفظ المشفر في الخلفية كل دقيقتين
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # تشغيل شاشة الويب محمية بكلمة السر الخاصة بك
-          nohup ttyd -p 7681 -c "admin:${SERVER_PASS}" -W bash -c "cd /dev/shm/secure-ram/vault && source ~/.bashrc && exec bash" > /dev/null 2>&1 &
+          # تشغيل واجهة VS Code محمية بكلمة السر الخاصة بك (تقبل الكتابة واللصق فوراً)
+          export PASSWORD="$SERVER_PASS"
+          nohup code-server --bind-addr 127.0.0.1:8080 --auth password /dev/shm/secure-ram/vault > /dev/null 2>&1 &
           
           # فتح نفق Cloudflare السريع والمشفر
-          nohup cloudflared tunnel --url http://localhost:7681 > /dev/shm/tunnel.log 2>&1 &
+          nohup cloudflared tunnel --url http://localhost:8080 > /dev/shm/tunnel.log 2>&1 &
           
           # انتظار توليد الرابط السري
           TUNNEL_URL=""
@@ -101,12 +110,11 @@ jobs:
           cat << EOF > ACCESS-LINK.md
           # 🔐 بوابة الدخول السرية للسيرفر النشط الآن
           * **الرابط المباشر:** [$TUNNEL_URL]($TUNNEL_URL)
-          * **اسم المستخدم:** \`admin\`
-          * **كلمة المرور:** كلمة السر التي وضعتها في \`SERVER_PASS\`
+          * **كلمة المرور:** كلمة السر التي وضعتها في \`SERVER_PASS\` (بدون اسم مستخدم)
           * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
           
           ---
-          💡 *بمجرد الدخول للشاشة، اكتب \`opencode\` للبدء فوراً، أو اكتب \`lock-and-save\` لحفظ عملك يدوياً في أي لحظة.*
+          💡 *بمجرد الدخول، الصق كلمة المرور في المربع واضغط Submit. افتح الـ Terminal من القائمة واكتب \`opencode\` للبدء فوراً.*
           EOF
           
           git add ACCESS-LINK.md
@@ -119,5 +127,4 @@ jobs:
 
           # إبقاء السيرفر شغالاً لمدة 5 ساعات و 45 دقيقة
           sleep 20700
-          
           
