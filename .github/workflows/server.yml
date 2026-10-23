@@ -1,19 +1,18 @@
-name: ⚡ Pure Raw-TCP SSH Server (Termux Ready)
+name: 🌟 Official OpenCode Cloud Web Interface
 
 on:
   workflow_dispatch:
 
 jobs:
-  raw-ssh-server:
+  official-opencode-web:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - name: 1. تهيئة قرص الـ RAM وضبط الشبكة للسرعة القصوى
+      - name: 1. تهيئة قرص الرام السريع والشبكة
         run: |
           mkdir -p /dev/shm/secure-ram
           chmod 700 /dev/shm/secure-ram
           sudo sysctl -w net.ipv4.tcp_low_latency=1 > /dev/null 2>&1 || true
-          sudo sysctl -w net.ipv4.tcp_keepalive_time=15 > /dev/null 2>&1 || true
 
       - name: 2. استعادة الكاش فورا
         uses: actions/cache@v4
@@ -23,96 +22,57 @@ jobs:
             ~/.local
             ~/.config
             ~/.opencode
-          key: raw-ssh-opencode-v14-${{ runner.os }}
+          key: official-opencode-web-v40-${{ runner.os }}
 
-      - name: 3. تثبيت محرك SSH الخام وفك تشفير الخزنة (AES-256)
+      - name: 3. تشغيل واجهة OpenCode الرسمية وفك تشفير الخزنة (AES-256)
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
-          AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq tmux jq gnupg zstd openssl git curl openssh-server > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq tmux jq gnupg zstd openssl git curl > /dev/null
 
-          # تثبيت أداة bore السريعة لفتح منافذ TCP خام ومباشرة بدون تقطيع
-          curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | sudo tar -xz -C /usr/local/bin
+          # تثبيت Cloudflared الرسمي لنقل الواجهة الأصلية لهاتفك بسلاسة
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > /dev/null 2>&1
+          sudo dpkg -i cloudflared.deb > /dev/null 2>&1
 
-          # ضبط خادم SSH الداخلي بأعلى سرعة ومنع انقطاع الجلسة
-          sudo mkdir -p /var/run/sshd
-          echo "runner:${SERVER_PASS}" | sudo chpasswd
-          sudo tee -a /etc/ssh/sshd_config > /dev/null << 'EOF'
-          PasswordAuthentication yes
-          PermitEmptyPasswords no
-          UseDNS no
-          TCPKeepAlive yes
-          ClientAliveInterval 15
-          ClientAliveCountMax 10
-          Compression yes
-          EOF
-          sudo service ssh restart
-
-          # تثبيت OpenCode و Wrangler
+          # تثبيت OpenCode رسمياً
           export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
           if ! command -v opencode &> /dev/null; then
             curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
           fi
-          if ! command -v wrangler &> /dev/null; then
-            npm install -g wrangler > /dev/null 2>&1
-          fi
 
-          # سحب الخزنة (my-vault) وربطها بـ ~/vault
+          # سحب الخزنة الخاصة my-vault وفك التشفير بمعيار AES-256 داخل الرام
           cd /dev/shm/secure-ram
           git clone --quiet https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/my-vault.git vault
           ln -sfn /dev/shm/secure-ram/vault "$HOME/vault"
-          
           cd /dev/shm/secure-ram/vault
           git config --global user.name "${{ github.repository_owner }}"
           git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
 
-          # فك تشفير المشاريع المحفوظة بمعيار AES-256
           if [ -f "vault-data.tar.zst.gpg" ]; then
             echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
           fi
 
-          # استعادة جلسات وإعدادات OpenCode السابقة
+          # استعادة إعدادات وجلسات الواجهة السابقة
           if [ -d "/dev/shm/secure-ram/vault/.opencode-state" ]; then
             mkdir -p ~/.config/opencode ~/.local/share/opencode
             cp -r /dev/shm/secure-ram/vault/.opencode-state/config/* ~/.config/opencode/ 2>/dev/null || true
             cp -r /dev/shm/secure-ram/vault/.opencode-state/share/* ~/.local/share/opencode/ 2>/dev/null || true
           fi
 
-          # ضبط الدخول التلقائي إلى جلسة OpenCode بمجرد فتح SSH من Termux
-          {
-            echo ""
-            echo "export CLOUDFLARE_API_TOKEN='${CF_API_TOKEN}'"
-            echo "export GITHUB_TOKEN='${GH_TOKEN}'"
-            echo "export GH_TOKEN='${GH_TOKEN}'"
-            echo 'export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"'
-            printf "%s\n" "$AI_KEYS"
-            echo 'cd ~/vault 2>/dev/null || true'
-            echo 'if [ -n "$PS1" ] && [ -z "$TMUX" ]; then tmux attach -t opencode || tmux new -s opencode "opencode"; fi'
-          } >> ~/.bashrc
-
-      - name: 4. تشغيل الحفظ المشفر وفتح منافذ TCP المباشرة لـ Termux
+      - name: 4. تشغيل خادم الويب الأصلي ونفق Cloudflare الآمن
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
-          AI_KEYS: ${{ secrets.AI_KEYS }}
         run: |
-          source ~/.bashrc
-          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
-          eval "$AI_KEYS" 2>/dev/null || true
-
-          # 1. نظام الحفظ والتشفير التلقائي AES-256 كل دقيقتين
+          # 1. نظام الحفظ والتشفير التلقائي كل دقيقتين وعند إغلاق السيرفر (AES-256)
           cat << 'EOF' > /usr/local/bin/lock-and-save
           #!/usr/bin/env bash
           cd /dev/shm/secure-ram/vault || exit 0
           mkdir -p /dev/shm/secure-ram/vault/.opencode-state/config /dev/shm/secure-ram/vault/.opencode-state/share
           cp -r ~/.config/opencode/* /dev/shm/secure-ram/vault/.opencode-state/config/ 2>/dev/null || true
           cp -r ~/.local/share/opencode/* /dev/shm/secure-ram/vault/.opencode-state/share/ 2>/dev/null || true
-
           CURRENT_HASH=$(find . -maxdepth 3 -not -path '*/.*' -not -name 'vault-data.tar.zst.gpg' -not -name 'ACCESS-LINK.md' -printf "%p %T@\n" 2>/dev/null | sha256sum | awk '{print $1}')
           LAST_HASH=$(cat /dev/shm/last_sync_hash 2>/dev/null || echo "")
-
           if [ "$CURRENT_HASH" != "$LAST_HASH" ] || [ "$1" == "force" ]; then
             echo "$CURRENT_HASH" > /dev/shm/last_sync_hash
             tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
@@ -125,52 +85,45 @@ jobs:
           trap "/usr/local/bin/lock-and-save force" EXIT SIGTERM SIGINT
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # 2. فتح النفق الأول: Bore.pub (اتصال TCP خام فائق السرعة مكتوب بلغة Rust)
-          nohup bore local 22 --to bore.pub > /dev/shm/bore.log 2>&1 &
+          # 2. توليد المسار السري للحماية القصوى
+          SECRET_PATH="v-$(echo -n "${SERVER_PASS}" | sha256sum | cut -c1-20)"
 
-          # 3. فتح النفق الثاني الاحتياطي: Pinggy.io TCP
-          mkdir -p ~/.ssh
-          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -q <<< y >/dev/null 2>&1 || true
-          nohup ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=15 -R0:127.0.0.1:22 tcp@a.pinggy.io > /dev/shm/pinggy.log 2>&1 &
+          # 3. تشغيل واجهة الويب الرسمية لـ OpenCode داخل جلسة tmux مستقرة على البورت الافتراضي 4096
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+          cd /dev/shm/secure-ram/vault
+          tmux new-session -d -s opencode-web "opencode web --port 4096 --host 0.0.0.0"
 
-          # انتظار استخراج رقم المنفذ المباشر
-          BORE_PORT=""
-          for i in {1..15}; do
-            BORE_PORT=$(grep -o 'bore.pub:[0-9]*' /dev/shm/bore.log | head -n 1 | cut -d: -f2 || true)
-            if [ -n "$BORE_PORT" ]; then break; fi
+          sleep 4
+
+          # 4. فتح نفق Cloudflare المباشر لخادم الويب
+          nohup cloudflared tunnel --url http://127.0.0.1:4096 --no-autoupdate > /dev/shm/cf.log 2>&1 &
+
+          CF_URL=""
+          for i in {1..20}; do
+            CF_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' /dev/shm/cf.log | head -n 1 || true)
+            if [ -n "$CF_URL" ]; then break; fi
             sleep 1
           done
 
-          sleep 3
-          PINGGY_ADDR=$(grep -o 'tcp://[a-zA-Z0-9.-]*:[0-9]*' /dev/shm/pinggy.log | head -n 1 || true)
-          PINGGY_HOST=$(echo "$PINGGY_ADDR" | sed 's|tcp://||' | cut -d: -f1)
-          PINGGY_PORT=$(echo "$PINGGY_ADDR" | sed 's|tcp://||' | cut -d: -f2)
-
-          # 4. إرسال أوامر Termux الجاهزة للنسخ إلى مستودعك السري (my-vault)
-          cd /dev/shm/secure-ram/vault
+          # 5. حفظ الرابط الرسمي المباشر في مستودعك my-vault
           cat << EOF > ACCESS-LINK.md
-          # ⚡ أوامر الاتصال المباشر من Termux (Raw TCP SSH)
+          # 🌟 واجهة OpenCode الرسمية السحابية (16GB RAM)
 
-          افتح تطبيق **Termux** على هاتفك، وانسخ **الأمر الأول** والصقه مباشرة:
+          اضغط على الرابط التالي لفتح واجهة OpenCode الرسمية تماماً كما كنت تستخدمها محلياً، ولكن بأقصى قوة سحابية وبدون استهلاك هاتفك:
 
-          ### 🥇 الأمر الأول (فائق السرعة عبر محرك Rust Bore):
-          \`\`\`bash
-          ssh -p ${BORE_PORT} runner@bore.pub
-          \`\`\`
+          ### 🚀 [اضغط هنا لفتح واجهة OpenCode الرسمية](${CF_URL}/)
 
-          ### 🥈 الأمر الثاني الاحتياطي (عبر Pinggy TCP):
-          \`\`\`bash
-          ssh -p ${PINGGY_PORT} runner@${PINGGY_HOST}
-          \`\`\`
+          **الرابط المباشر:**
+          \`${CF_URL}/\`
 
           ---
-          * **🔑 كلمة المرور عند الطلب:** هي نفس كلمة مرورك السرية المحفوظة في \`SERVER_PASS\` (ملاحظة: أثناء كتابة أو لصق كلمة السر في Termux لا تظهر الحروف على الشاشة للأمان، فقط الصقها واضغط Enter).
-          * **🎯 ميزة ذكية:** بمجرد الضغط على Enter، سيفتح لك السيرفر **تلقائياً** شاشة \`opencode\` داخل مجلد \`~/vault\` المحمي بـ \`tmux\`!
-          * **وقت الإقلاع:** $(date -u +'%Y-%m-%d %H:%M UTC')
+          * **✨ المميزات:** نفس النماذج المجانية المدمجة (LongCat، Space Bunny، إلخ) بدون الحاجة لأي مفاتيح خارجية.
+          * **🔒 الأمان والاستقرار:** تعمل على سيرفر سحابي خالص (16GB RAM) مع حفظ تلقائي مشفر كل دقيقتين.
+          * **وقت التشغيل:** $(date -u +'%Y-%m-%d %H:%M UTC')
           EOF
 
           git add ACCESS-LINK.md
-          git commit -m "⚡ Update Raw TCP Termux SSH Commands" --quiet && git push --quiet || true
+          git commit -m "🌟 Official OpenCode Web Link" --quiet && git push --quiet || true
 
           sleep 20700
           
