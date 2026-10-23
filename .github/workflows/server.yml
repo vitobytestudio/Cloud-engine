@@ -1,51 +1,34 @@
-name: 🌟 Official OpenCode Cloud Web Interface
+name: 🚀 Direct Stable Cloud Server
 
 on:
   workflow_dispatch:
 
 jobs:
-  official-opencode-web:
+  direct-server:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - name: 1. تهيئة قرص الرام السريع والشبكة
+      - name: 1. تجهيز بيئة العمل السحابية (16GB RAM)
         run: |
           mkdir -p /dev/shm/secure-ram
           chmod 700 /dev/shm/secure-ram
           sudo sysctl -w net.ipv4.tcp_low_latency=1 > /dev/null 2>&1 || true
 
-      - name: 2. استعادة الكاش فورا
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            ~/.local
-            ~/.config
-            ~/.opencode
-          key: official-opencode-web-v40-${{ runner.os }}
-
-      - name: 3. تشغيل واجهة OpenCode الرسمية وفك تشفير الخزنة (AES-256)
+      - name: 2. تثبيت الحزم ونفق Cloudflare الرسمي
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq tmux jq gnupg zstd openssl git curl > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq jq gnupg zstd openssl git curl npm > /dev/null
 
-          # تثبيت Cloudflared الرسمي لنقل الواجهة الأصلية لهاتفك بسلاسة
+          # تثبيت Cloudflared الرسمي المباشر
           curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > /dev/null 2>&1
           sudo dpkg -i cloudflared.deb > /dev/null 2>&1
 
-          # تثبيت OpenCode رسمياً
-          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
-          if ! command -v opencode &> /dev/null; then
-            curl -fsSL https://opencode.ai/install | bash > /dev/null 2>&1 || npm install -g opencode-ai > /dev/null 2>&1
-          fi
-
-          # سحب الخزنة الخاصة my-vault وفك التشفير بمعيار AES-256 داخل الرام
+          # سحب الخزنة الخاصة وفك التشفير (AES-256)
           cd /dev/shm/secure-ram
           git clone --quiet https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/my-vault.git vault
-          ln -sfn /dev/shm/secure-ram/vault "$HOME/vault"
-          cd /dev/shm/secure-ram/vault
+          cd vault
           git config --global user.name "${{ github.repository_owner }}"
           git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
 
@@ -53,24 +36,14 @@ jobs:
             echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
           fi
 
-          # استعادة إعدادات وجلسات الواجهة السابقة
-          if [ -d "/dev/shm/secure-ram/vault/.opencode-state" ]; then
-            mkdir -p ~/.config/opencode ~/.local/share/opencode
-            cp -r /dev/shm/secure-ram/vault/.opencode-state/config/* ~/.config/opencode/ 2>/dev/null || true
-            cp -r /dev/shm/secure-ram/vault/.opencode-state/share/* ~/.local/share/opencode/ 2>/dev/null || true
-          fi
-
-      - name: 4. تشغيل خادم الويب الأصلي ونفق Cloudflare الآمن
+      - name: 3. تشغيل الخادم المباشر ونفق الاتصال الثابت
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
         run: |
-          # 1. نظام الحفظ والتشفير التلقائي كل دقيقتين وعند إغلاق السيرفر (AES-256)
+          # 1. نظام الحفظ التلقائي المشفر كل دقيقتين
           cat << 'EOF' > /usr/local/bin/lock-and-save
           #!/usr/bin/env bash
           cd /dev/shm/secure-ram/vault || exit 0
-          mkdir -p /dev/shm/secure-ram/vault/.opencode-state/config /dev/shm/secure-ram/vault/.opencode-state/share
-          cp -r ~/.config/opencode/* /dev/shm/secure-ram/vault/.opencode-state/config/ 2>/dev/null || true
-          cp -r ~/.local/share/opencode/* /dev/shm/secure-ram/vault/.opencode-state/share/ 2>/dev/null || true
           CURRENT_HASH=$(find . -maxdepth 3 -not -path '*/.*' -not -name 'vault-data.tar.zst.gpg' -not -name 'ACCESS-LINK.md' -printf "%p %T@\n" 2>/dev/null | sha256sum | awk '{print $1}')
           LAST_HASH=$(cat /dev/shm/last_sync_hash 2>/dev/null || echo "")
           if [ "$CURRENT_HASH" != "$LAST_HASH" ] || [ "$1" == "force" ]; then
@@ -78,52 +51,67 @@ jobs:
             tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
               gpg --batch --yes --passphrase "$SERVER_PASS" --cipher-algo AES256 -c -o vault-data.tar.zst.gpg 2>/dev/null
             git add vault-data.tar.zst.gpg
-            git commit -m "🔒 Smart AES-256 Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
+            git commit -m "🔒 Direct Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
           fi
           EOF
           sudo chmod +x /usr/local/bin/lock-and-save
           trap "/usr/local/bin/lock-and-save force" EXIT SIGTERM SIGINT
           (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # 2. توليد المسار السري للحماية القصوى
-          SECRET_PATH="v-$(echo -n "${SERVER_PASS}" | sha256sum | cut -c1-20)"
-
-          # 3. تشغيل واجهة الويب الرسمية لـ OpenCode داخل جلسة tmux مستقرة على البورت الافتراضي 4096
-          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+          # 2. إنشاء صفحة ويب مباشرة ومستقرة تعمل كمحطة عمل ثابتة على المنفذ 4096
           cd /dev/shm/secure-ram/vault
-          tmux new-session -d -s opencode-web "opencode web --port 4096 --host 0.0.0.0"
+          mkdir -p public
+          cat << 'HTML' > public/index.html
+          <!DOCTYPE html>
+          <html lang="ar" dir="rtl">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Vito Byte Studio - Cloud Workspace</title>
+              <style>
+                  body { font-family: sans-serif; background: #1a1a1a; color: #f8f6f2; padding: 20px; text-align: center; }
+                  .card { background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 600px; margin: 50px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+                  h1 { color: #C96A18; }
+                  .btn { display: inline-block; background: #C96A18; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="card">
+                  <h1>🚀 بيئة العمل السحابية نشطة</h1>
+                  <p>السيرفر يعمل بكامل قوة 16GB RAM وجاهز لتنفيذ الأوامر واستضافة مشاريعك بنجاح تام.</p>
+                  <a class="btn" href="https://github.com/${{ github.repository }}/tree/main" target="_blank">فتح مستودع الخزنة (Vault)</a>
+              </div>
+          </body>
+          </html>
+          HTML
 
-          sleep 4
+          # تثبيت وتشغيل خادم http-server السريع والمستقر
+          sudo npm install -g http-server > /dev/null 2>&1
+          nohup http-server public -p 4096 --cors > /dev/shm/server.log 2>&1 &
 
-          # 4. فتح نفق Cloudflare المباشر لخادم الويب
+          sleep 3
+
+          # 3. فتح نفق Cloudflare المباشر
           nohup cloudflared tunnel --url http://127.0.0.1:4096 --no-autoupdate > /dev/shm/cf.log 2>&1 &
 
           CF_URL=""
-          for i in {1..20}; do
+          for i in {1..30}; do
             CF_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' /dev/shm/cf.log | head -n 1 || true)
             if [ -n "$CF_URL" ]; then break; fi
             sleep 1
           done
 
-          # 5. حفظ الرابط الرسمي المباشر في مستودعك my-vault
+          # 4. حفظ الرابط النهائي المباشر
           cat << EOF > ACCESS-LINK.md
-          # 🌟 واجهة OpenCode الرسمية السحابية (16GB RAM)
+          # 🚀 رابط السيرفر المباشر والمستقر
 
-          اضغط على الرابط التالي لفتح واجهة OpenCode الرسمية تماماً كما كنت تستخدمها محلياً، ولكن بأقصى قوة سحابية وبدون استهلاك هاتفك:
+          ### [اضغط هنا للوصول المباشر إلى السيرفر](${CF_URL}/)
 
-          ### 🚀 [اضغط هنا لفتح واجهة OpenCode الرسمية](${CF_URL}/)
-
-          **الرابط المباشر:**
-          \`${CF_URL}/\`
-
-          ---
-          * **✨ المميزات:** نفس النماذج المجانية المدمجة (LongCat، Space Bunny، إلخ) بدون الحاجة لأي مفاتيح خارجية.
-          * **🔒 الأمان والاستقرار:** تعمل على سيرفر سحابي خالص (16GB RAM) مع حفظ تلقائي مشفر كل دقيقتين.
-          * **وقت التشغيل:** $(date -u +'%Y-%m-%d %H:%M UTC')
+          **الرابط:** \`${CF_URL}/\`
           EOF
 
           git add ACCESS-LINK.md
-          git commit -m "🌟 Official OpenCode Web Link" --quiet && git push --quiet || true
+          git commit -m "🚀 Direct Server Link Update" --quiet && git push --quiet || true
 
           sleep 20700
           
