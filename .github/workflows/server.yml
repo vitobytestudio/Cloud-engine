@@ -1,117 +1,322 @@
-name: 🚀 Direct Stable Cloud Server
+name: "Vito Cloud Workspace"
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: vito-cloud-workspace
+  cancel-in-progress: false
+
 jobs:
-  direct-server:
+  cloud-workspace:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+
     steps:
-      - name: 1. تجهيز بيئة العمل السحابية (16GB RAM)
+      - name: Prepare cloud environment
+        shell: bash
         run: |
-          mkdir -p /dev/shm/secure-ram
-          chmod 700 /dev/shm/secure-ram
-          sudo sysctl -w net.ipv4.tcp_low_latency=1 > /dev/null 2>&1 || true
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            git curl jq gnupg zstd tar nodejs npm
+          mkdir -p "$RUNNER_TEMP/vito/vault"
+          chmod 700 "$RUNNER_TEMP/vito"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: 2. تثبيت الحزم ونفق Cloudflare الرسمي
+      - name: Restore encrypted vault
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        shell: bash
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq jq gnupg zstd openssl git curl npm > /dev/null
+          set -euo pipefail
+          cd "$RUNNER_TEMP/vito"
 
-          # تثبيت Cloudflared الرسمي المباشر
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > /dev/null 2>&1
-          sudo dpkg -i cloudflared.deb > /dev/null 2>&1
+          git -c "http.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_API_TOKEN" | base64 -w0)" \
+            clone --quiet \
+            "https://github.com/${REPO_OWNER}/my-vault.git" vault
 
-          # سحب الخزنة الخاصة وفك التشفير (AES-256)
-          cd /dev/shm/secure-ram
-          git clone --quiet https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository_owner }}/my-vault.git vault
           cd vault
-          git config --global user.name "${{ github.repository_owner }}"
-          git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
+          git remote set-url origin \
+            "https://github.com/${REPO_OWNER}/my-vault.git"
+          git config user.name "Vito Cloud Workspace"
+          git config user.email \
+            "${REPO_OWNER}@users.noreply.github.com"
 
-          if [ -f "vault-data.tar.zst.gpg" ]; then
-            echo "$SERVER_PASS" | gpg --batch --yes --passphrase-fd 0 -d vault-data.tar.zst.gpg 2>/dev/null | tar --zstd -xf -
+          if [ -f vault-data.tar.zst.gpg ]; then
+            gpg --batch --yes --pinentry-mode loopback \
+              --passphrase-fd 3 \
+              --decrypt vault-data.tar.zst.gpg \
+              3<<<"$SERVER_PASS" |
+              tar --zstd -xf -
+          else
+            echo "Encrypted vault archive not found."
+            exit 1
           fi
 
-      - name: 3. تشغيل الخادم المباشر ونفق الاتصال الثابت
+          unset SERVER_PASS GH_API_TOKEN
+
+      - name: Restore OpenCode profile and projects
+        shell: bash
+        run: |
+          set -euo pipefail
+          VAULT="$RUNNER_TEMP/vito/vault"
+          mkdir -p "$HOME/.local/share/opencode"
+
+          # Restore the canonical OpenCode profile if present.
+          if [ -d "$VAULT/opencode-data" ]; then
+            cp -a "$VAULT/opencode-data/." \
+              "$HOME/.local/share/opencode/"
+          else
+            # Migrate a discovered auth file without printing its contents.
+            AUTH_FILE="$(find "$VAULT" \
+              -path "$VAULT/.git" -prune -o \
+              -type f -name auth.json -print -quit)"
+
+            if [ -n "$AUTH_FILE" ]; then
+              cp "$AUTH_FILE" \
+                "$HOME/.local/share/opencode/auth.json"
+              chmod 600 "$HOME/.local/share/opencode/auth.json"
+            fi
+          fi
+
+          mkdir -p "$VAULT/workspace"
+          echo "Vault restored; sensitive contents were not printed."
+
+      - name: Install official OpenCode
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://opencode.ai/install | bash
+
+          if ! command -v opencode >/dev/null 2>&1; then
+            export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+          fi
+
+          command -v opencode
+          opencode --version
+
+      - name: Start OpenCode and encrypted autosave
         env:
           SERVER_PASS: ${{ secrets.SERVER_PASS }}
+          GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        shell: bash
         run: |
-          # 1. نظام الحفظ التلقائي المشفر كل دقيقتين
-          cat << 'EOF' > /usr/local/bin/lock-and-save
-          #!/usr/bin/env bash
-          cd /dev/shm/secure-ram/vault || exit 0
-          CURRENT_HASH=$(find . -maxdepth 3 -not -path '*/.*' -not -name 'vault-data.tar.zst.gpg' -not -name 'ACCESS-LINK.md' -printf "%p %T@\n" 2>/dev/null | sha256sum | awk '{print $1}')
-          LAST_HASH=$(cat /dev/shm/last_sync_hash 2>/dev/null || echo "")
-          if [ "$CURRENT_HASH" != "$LAST_HASH" ] || [ "$1" == "force" ]; then
-            echo "$CURRENT_HASH" > /dev/shm/last_sync_hash
-            tar --zstd -cf - --exclude='vault-data.tar.zst.gpg' --exclude='ACCESS-LINK.md' --exclude='.git' . | \
-              gpg --batch --yes --passphrase "$SERVER_PASS" --cipher-algo AES256 -c -o vault-data.tar.zst.gpg 2>/dev/null
+          set -euo pipefail
+
+          export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+          VAULT="$RUNNER_TEMP/vito/vault"
+          WORKSPACE="$VAULT/workspace"
+          mkdir -p "$WORKSPACE" "$VAULT/opencode-data"
+          chmod 700 "$VAULT/opencode-data"
+
+          # Copy the OpenCode profile into the encrypted vault workspace.
+          sync_profile() {
+            mkdir -p "$VAULT/opencode-data"
+            cp -a "$HOME/.local/share/opencode/." \
+              "$VAULT/opencode-data/" 2>/dev/null || true
+          }
+
+          save_vault() {
+            set +e
+            sync_profile
+            cd "$VAULT" || return 1
+
+            local new_hash
+            new_hash="$(
+              find workspace opencode-data \
+                -type f -print0 2>/dev/null |
+              sort -z |
+              xargs -0 -r sha256sum |
+              sha256sum | cut -d' ' -f1
+            )"
+
+            if [ "${FORCE_SAVE:-0}" != "1" ] &&
+               [ "$new_hash" = "${LAST_HASH:-}" ]; then
+              return 0
+            fi
+
+            local tmp="$RUNNER_TEMP/vault-backup.gpg"
+            tar --zstd -cf - \
+              --exclude='.git' \
+              --exclude='vault-data.tar.zst.gpg' \
+              --exclude='ACCESS-LINK.md' \
+              --exclude='public' \
+              . |
+              gpg --batch --yes --pinentry-mode loopback \
+                --passphrase-fd 3 \
+                --cipher-algo AES256 \
+                --symmetric --output "$tmp" \
+                3<<<"$SERVER_PASS"
+
+            if [ $? -ne 0 ] || [ ! -s "$tmp" ]; then
+              echo "Encrypted backup failed."
+              return 1
+            fi
+
+            cp "$tmp" "$VAULT/vault-data.tar.zst.gpg"
+            rm -f "$tmp"
             git add vault-data.tar.zst.gpg
-            git commit -m "🔒 Direct Sync $(date -u +'%Y-%m-%d %H:%M')" --quiet && git push --quiet || true
-          fi
-          EOF
-          sudo chmod +x /usr/local/bin/lock-and-save
-          trap "/usr/local/bin/lock-and-save force" EXIT SIGTERM SIGINT
-          (while true; do sleep 120; /usr/local/bin/lock-and-save; done) &
 
-          # 2. إنشاء صفحة ويب مباشرة ومستقرة تعمل كمحطة عمل ثابتة على المنفذ 4096
-          cd /dev/shm/secure-ram/vault
-          mkdir -p public
-          cat << 'HTML' > public/index.html
-          <!DOCTYPE html>
-          <html lang="ar" dir="rtl">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Vito Byte Studio - Cloud Workspace</title>
-              <style>
-                  body { font-family: sans-serif; background: #1a1a1a; color: #f8f6f2; padding: 20px; text-align: center; }
-                  .card { background: #2a2a2a; padding: 30px; border-radius: 12px; max-width: 600px; margin: 50px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-                  h1 { color: #C96A18; }
-                  .btn { display: inline-block; background: #C96A18; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold; }
-              </style>
-          </head>
-          <body>
-              <div class="card">
-                  <h1>🚀 بيئة العمل السحابية نشطة</h1>
-                  <p>السيرفر يعمل بكامل قوة 16GB RAM وجاهز لتنفيذ الأوامر واستضافة مشاريعك بنجاح تام.</p>
-                  <a class="btn" href="https://github.com/${{ github.repository }}/tree/main" target="_blank">فتح مستودع الخزنة (Vault)</a>
-              </div>
-          </body>
-          </html>
-          HTML
+            if ! git diff --cached --quiet; then
+              git commit -m "Encrypted workspace backup" --quiet || return 1
+              git -c "http.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_API_TOKEN" | base64 -w0)" \
+                push origin HEAD || return 1
+            fi
 
-          # تثبيت وتشغيل خادم http-server السريع والمستقر
-          sudo npm install -g http-server > /dev/null 2>&1
-          nohup http-server public -p 4096 --cors > /dev/shm/server.log 2>&1 &
+            LAST_HASH="$new_hash"
+            echo "Encrypted backup saved."
+          }
 
-          sleep 3
+          # Install a cleanup handler before starting long-running services.
+          cleanup() {
+            FORCE_SAVE=1 save_vault || true
+          }
+          trap cleanup EXIT TERM INT
 
-          # 3. فتح نفق Cloudflare المباشر
-          nohup cloudflared tunnel --url http://127.0.0.1:4096 --no-autoupdate > /dev/shm/cf.log 2>&1 &
+          # OpenCode requires authentication for network access.
+          export OPENCODE_SERVER_USERNAME=opencode
+          export OPENCODE_SERVER_PASSWORD="$SERVER_PASS"
 
-          CF_URL=""
-          for i in {1..30}; do
-            CF_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' /dev/shm/cf.log | head -n 1 || true)
-            if [ -n "$CF_URL" ]; then break; fi
-            sleep 1
+          cd "$WORKSPACE"
+          nohup opencode web \
+            --hostname 127.0.0.1 \
+            --port 4096 \
+            > "$RUNNER_TEMP/opencode.log" 2>&1 &
+
+          OPENCODE_PID=$!
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4096/ \
+              -o /dev/null; then
+              break
+            fi
+            if ! kill -0 "$OPENCODE_PID" 2>/dev/null; then
+              echo "OpenCode failed to start. Check the step logs."
+              tail -n 60 "$RUNNER_TEMP/opencode.log"
+              exit 1
+            fi
+            sleep 2
           done
 
-          # 4. حفظ الرابط النهائي المباشر
-          cat << EOF > ACCESS-LINK.md
-          # 🚀 رابط السيرفر المباشر والمستقر
+          curl -fsS http://127.0.0.1:4096/ -o /dev/null || {
+            echo "OpenCode did not become ready."
+            tail -n 60 "$RUNNER_TEMP/opencode.log"
+            exit 1
+          }
 
-          ### [اضغط هنا للوصول المباشر إلى السيرفر](${CF_URL}/)
+          # Create a temporary Cloudflare Tunnel.
+          curl -fsSL \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
+            -o "$RUNNER_TEMP/cloudflared.deb"
+          sudo dpkg -i "$RUNNER_TEMP/cloudflared.deb"
 
-          **الرابط:** \`${CF_URL}/\`
+          nohup cloudflared tunnel \
+            --url http://127.0.0.1:4096 \
+            --no-autoupdate \
+            > "$RUNNER_TEMP/cloudflared.log" 2>&1 &
+
+          CF_URL=""
+          for i in $(seq 1 60); do
+            CF_URL="$(grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' \
+              "$RUNNER_TEMP/cloudflared.log" | head -n 1 || true)"
+            [ -n "$CF_URL" ] && break
+            sleep 2
+          done
+
+          if [ -z "$CF_URL" ]; then
+            echo "Cloudflare Tunnel did not provide a URL."
+            tail -n 60 "$RUNNER_TEMP/cloudflared.log"
+            exit 1
+          fi
+
+          # Attempt to deploy a stable workers.dev gateway.
+          # This requires a token with Workers Scripts edit permissions.
+          STABLE_URL=""
+          if [ -n "${CF_API_TOKEN:-}" ]; then
+            ACCOUNT_JSON="$(
+              curl -fsS \
+                -H "Authorization: Bearer $CF_API_TOKEN" \
+                "https://api.cloudflare.com/client/v4/accounts?per_page=50" \
+                || true
+            )"
+
+            ACCOUNT_ID="$(echo "$ACCOUNT_JSON" |
+              jq -r '.result[0].id // empty')"
+
+            if [ -n "$ACCOUNT_ID" ]; then
+              mkdir -p "$RUNNER_TEMP/vito/worker"
+              cd "$RUNNER_TEMP/vito/worker"
+
+              cat > worker.js <<'WORKER'
+          export default {
+            async fetch(request, env) {
+              const incoming = new URL(request.url);
+              const origin = new URL(env.ORIGIN);
+              incoming.protocol = origin.protocol;
+              incoming.hostname = origin.hostname;
+              incoming.port = origin.port;
+              return fetch(new Request(incoming, request));
+            }
+          };
+          WORKER
+
+              cat > wrangler.toml <<EOF
+          name = "vito-cloud-workspace"
+          main = "worker.js"
+          compatibility_date = "2026-10-23"
+          workers_dev = true
+          account_id = "$ACCOUNT_ID"
+
+          [vars]
+          ORIGIN = "$CF_URL"
           EOF
 
-          git add ACCESS-LINK.md
-          git commit -m "🚀 Direct Server Link Update" --quiet && git push --quiet || true
+              export CLOUDFLARE_API_TOKEN="$CF_API_TOKEN"
+              if npx --yes wrangler deploy --config wrangler.toml \
+                > "$RUNNER_TEMP/wrangler.log" 2>&1; then
+                STABLE_URL="$(grep -Eo \
+                  'https://[a-zA-Z0-9-]+\.workers\.dev' \
+                  "$RUNNER_TEMP/wrangler.log" | head -n 1 || true)"
+              else
+                echo "Stable Worker deployment failed; using temporary tunnel."
+                tail -n 20 "$RUNNER_TEMP/wrangler.log"
+              fi
+            else
+              echo "Could not discover Cloudflare account; using temporary tunnel."
+            fi
+          fi
 
-          sleep 20700
+          ACCESS_URL="${STABLE_URL:-$CF_URL}"
+          printf '%s\n' "$ACCESS_URL" > "$RUNNER_TEMP/vito/access-url.txt"
+
+          cd "$VAULT"
+          printf '# Vito Cloud Workspace\n\nURL: %s\n' \
+            "$ACCESS_URL" > ACCESS-LINK.md
+          git add ACCESS-LINK.md
+          git commit -m "Update workspace access link" --quiet || true
+          git -c "http.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_API_TOKEN" | base64 -w0)" \
+            push origin HEAD || true
+
+          echo "Workspace is running. Access URL:"
+          echo "$ACCESS_URL"
+          echo "OpenCode access uses username: opencode"
+          echo "Use SERVER_PASS as the password."
+
+          # Keep the daily session under the workflow time limit.
+          END=$((SECONDS + 20400))
+          while [ "$SECONDS" -lt "$END" ]; do
+            sleep 120
+            save_vault || echo "Autosave failed; check GitHub logs."
+            kill -0 "$OPENCODE_PID" 2>/dev/null || {
+              echo "OpenCode process stopped."
+              exit 1
+            }
+          done
           
