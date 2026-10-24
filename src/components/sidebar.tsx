@@ -9,6 +9,7 @@ import {
   Users,
   Zap,
   Radar,
+  Crosshair,
   Send,
   FileDown,
   Settings,
@@ -20,6 +21,7 @@ import { useJson, useLive } from "@/lib/hooks";
 
 const NAV = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
+  { href: "/dashboard/radar", label: "رصّاد الفرص", icon: Crosshair },
   { href: "/dashboard/inbox", label: "الصندوق الموحد", icon: Inbox },
   { href: "/dashboard/leads", label: "العملاء", icon: Users },
   { href: "/dashboard/automations", label: "الأتمتة", icon: Zap },

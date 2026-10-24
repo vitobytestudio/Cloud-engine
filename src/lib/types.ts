@@ -136,4 +136,42 @@ export interface DB {
   campaigns: Campaign[];
   capturePages: CapturePage[];
   activity: ActivityEvent[];
+  opportunities: Opportunity[];
+  connectors: Connector[];
+}
+
+// ——— رصّاد الفرص: فرص عملاء من محتوى عام + رابط إلزامي ———
+
+export type OpportunityPlatform = Platform | "telegram" | "rss" | "web";
+
+export type OpportunityStatus = "new" | "saved" | "contacted" | "won" | "ignored";
+
+export interface Opportunity {
+  id: string;
+  title: string;
+  excerpt: string;
+  authorPublic: string; // الاسم العلني الظاهر فقط
+  platform: OpportunityPlatform;
+  sourceUrl: string; // رابط المنشور الأصلي (إلزامي — طريقة التواصل القانونية)
+  keyword: string; // الكلمة المطابقة التي جلبتها
+  engagement: { likes: number; comments: number };
+  locationHint?: string; // إن ظهرت علناً في المنشور
+  status: OpportunityStatus;
+  connectorId: string;
+  publishedAt: string; // توقيت النشر الأصلي — أساس درجة النضارة
+  fetchedAt: string;
+}
+
+export type ConnectorKind = "meta_webhook" | "x_api" | "telegram" | "rss" | "manual";
+
+export interface Connector {
+  id: string;
+  name: string;
+  kind: ConnectorKind;
+  platforms: OpportunityPlatform[];
+  active: boolean;
+  legalNote: string;
+  lastFetchedAt?: string;
+  fetchedCount: number;
+  requiresKey?: string; // متغير البيئة المطلوب للتفعيل الحقيقي
 }

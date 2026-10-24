@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  Crosshair,
   Zap,
   Inbox,
   Radar,
@@ -16,6 +17,11 @@ import {
 } from "lucide-react";
 
 const FEATURES = [
+  {
+    icon: Crosshair,
+    title: "رصّاد الفرص اللحظي",
+    desc: "فرص عملاء من المحتوى العام — تصلك لحظة نشرها بالرابط والتوقيت، والجديد فقط: كل فرصة تختفي تلقائياً بعد 72 ساعة.",
+  },
   {
     icon: Zap,
     title: "أتمتة «تعليق ← رسالة»",
