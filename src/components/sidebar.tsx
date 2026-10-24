@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Inbox,
@@ -12,6 +13,8 @@ import {
   FileDown,
   Settings,
   Radio,
+  Menu,
+  X,
 } from "lucide-react";
 import { useJson, useLive } from "@/lib/hooks";
 
@@ -44,64 +47,123 @@ export function Logo({ light }: { light?: boolean }) {
   );
 }
 
-export default function Sidebar() {
-  const pathname = usePathname();
+function LiveToggle() {
   const { live, setLive } = useLive();
+  return (
+    <button
+      onClick={() => setLive(!live)}
+      className="flex w-full items-center justify-between rounded-xl bg-slate-900 px-3 py-2.5 text-[12px] font-bold text-slate-300 hover:bg-slate-800"
+    >
+      <span className="flex items-center gap-2">
+        <Radio className={`h-4 w-4 ${live ? "text-emerald-400" : "text-slate-500"}`} />
+        الوضع الحي
+      </span>
+      <span className="flex items-center gap-1.5">
+        {live && <span className="live-dot h-2 w-2 rounded-full bg-emerald-400" />}
+        <span className={live ? "text-emerald-400" : "text-slate-500"}>{live ? "مفعّل" : "متوقف"}</span>
+      </span>
+    </button>
+  );
+}
+
+function WorkspaceCard() {
   const stats = useJson<{ workspace: { name: string } }>("/api/stats", 0);
   const workspaceName = stats.data?.workspace.name ?? "مساحة العمل";
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl bg-slate-900/60 px-3 py-2.5">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-[12px] font-extrabold text-white">
+        {workspaceName.charAt(0)}
+      </div>
+      <div className="min-w-0 leading-tight">
+        <div className="truncate text-[12px] font-bold text-white">{workspaceName}</div>
+        <div className="truncate text-[10px] text-slate-500">مساحة عمل تجريبية</div>
+      </div>
+    </div>
+  );
+}
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  return (
+    <nav className="flex-1 space-y-1 overflow-y-auto">
+      {NAV.map((item) => {
+        const active = pathname === item.href;
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-bold transition ${
+              active
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
+                : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+            }`}
+          >
+            <Icon className="h-[18px] w-[18px]" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export default function Sidebar() {
+  const [drawer, setDrawer] = useState(false);
+  const pathname = usePathname();
 
   return (
-    <aside className="fixed inset-y-0 start-0 z-40 flex w-[248px] flex-col bg-slate-950 px-3 py-5">
-      <div className="px-2 pb-5">
-        <Logo light />
+    <>
+      {/* الشريط الجانبي — شاشات كبيرة */}
+      <aside className="fixed inset-y-0 start-0 z-40 hidden w-[248px] flex-col bg-slate-950 px-3 py-5 lg:flex">
+        <div className="px-2 pb-5">
+          <Logo light />
+        </div>
+        <NavLinks />
+        <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
+          <LiveToggle />
+          <WorkspaceCard />
+        </div>
+      </aside>
+
+      {/* الشريط العلوي — جوال */}
+      <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+        <Logo />
+        <button
+          onClick={() => setDrawer(true)}
+          className="rounded-xl border border-slate-200 p-2 text-slate-600"
+          aria-label="فتح القائمة"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto">
-        {NAV.map((item) => {
-          const active = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-bold transition ${
-                active
-                  ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
-                  : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
-              }`}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
-        <button
-          onClick={() => setLive(!live)}
-          className="flex w-full items-center justify-between rounded-xl bg-slate-900 px-3 py-2.5 text-[12px] font-bold text-slate-300 hover:bg-slate-800"
-        >
-          <span className="flex items-center gap-2">
-            <Radio className={`h-4 w-4 ${live ? "text-emerald-400" : "text-slate-500"}`} />
-            الوضع الحي
-          </span>
-          <span className="flex items-center gap-1.5">
-            {live && <span className="live-dot h-2 w-2 rounded-full bg-emerald-400" />}
-            <span className={live ? "text-emerald-400" : "text-slate-500"}>{live ? "مفعّل" : "متوقف"}</span>
-          </span>
-        </button>
-
-        <div className="flex items-center gap-2.5 rounded-xl bg-slate-900/60 px-3 py-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-[12px] font-extrabold text-white">
-            {workspaceName.charAt(0)}
-          </div>
-          <div className="min-w-0 leading-tight">
-            <div className="truncate text-[12px] font-bold text-white">{workspaceName}</div>
-            <div className="truncate text-[10px] text-slate-500">مساحة عمل تجريبية</div>
+      {/* القائمة المنسدلة — جوال */}
+      {drawer && (
+        <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setDrawer(false)}>
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+          <div
+            className="pop-in absolute inset-y-0 start-0 flex w-[270px] flex-col bg-slate-950 px-3 py-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-2 pb-5">
+              <Logo light />
+              <button onClick={() => setDrawer(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-900" aria-label="إغلاق">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <NavLinks onNavigate={() => setDrawer(false)} />
+            <div className="mt-4 space-y-3 border-t border-slate-800 pt-4">
+              <LiveToggle />
+              <WorkspaceCard />
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      )}
+
+      {/* مسار حالي للقراءة فقط (يوازن الارتفاع على الجوال) */}
+      <span className="hidden">{pathname}</span>
+    </>
   );
 }
