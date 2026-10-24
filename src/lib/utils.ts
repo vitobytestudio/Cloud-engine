@@ -40,7 +40,7 @@ export const STATUS_META: Record<
   new: { label: "جديد", cls: "bg-sky-100 text-sky-700", dot: "bg-sky-500" },
   contacted: { label: "تم التواصل", cls: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
   qualified: { label: "مؤهل", cls: "bg-violet-100 text-violet-700", dot: "bg-violet-500" },
-  customer: { label: "عميل ✦", cls: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  customer: { label: "عميل", cls: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
   lost: { label: "مفقود", cls: "bg-slate-100 text-slate-500", dot: "bg-slate-400" },
 };
 
@@ -84,12 +84,12 @@ export function freshnessOf(publishedAt: string): {
 } {
   const ageMin = (Date.now() - new Date(publishedAt).getTime()) / 60000;
   if (ageMin < 60)
-    return { key: "hot", label: "ساخنة الآن", emoji: "🔥", cls: "bg-rose-100 text-rose-700" };
+    return { key: "hot", label: "خلال الساعة", emoji: "", cls: "bg-rose-100 text-rose-700" };
   if (ageMin < 24 * 60)
-    return { key: "warm", label: "اليوم", emoji: "☀️", cls: "bg-amber-100 text-amber-700" };
+    return { key: "warm", label: "اليوم", emoji: "", cls: "bg-amber-100 text-amber-700" };
   if (ageMin < 72 * 60)
-    return { key: "cold", label: "هذا الأسبوع", emoji: "❄️", cls: "bg-sky-100 text-sky-700" };
-  return { key: "expired", label: "انتهت (أقدم من 72سا)", emoji: "⏳", cls: "bg-slate-100 text-slate-400" };
+    return { key: "cold", label: "هذا الأسبوع", emoji: "", cls: "bg-sky-100 text-sky-700" };
+  return { key: "expired", label: "منتهية — أقدم من 72 ساعة", emoji: "", cls: "bg-slate-100 text-slate-400" };
 }
 
 export function freshAgo(dateIso: string): string {

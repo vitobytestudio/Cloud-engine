@@ -176,8 +176,8 @@ export default function RadarPage() {
           {(
             [
               { key: "all", label: "الجديدة", badge: counts?.new },
-              { key: "hot", label: "🔥 ساخنة (<ساعة)", badge: counts?.hot },
-              { key: "warm", label: "☀️ اليوم", badge: counts?.warm },
+              { key: "hot", label: "خلال الساعة الأخيرة", badge: counts?.hot },
+              { key: "warm", label: "اليوم", badge: counts?.warm },
               { key: "saved", label: "تابعتُها", badge: undefined },
             ] as Array<{ key: Tab; label: string; badge?: number }>
           ).map((t) => (
@@ -204,7 +204,7 @@ export default function RadarPage() {
       {/* ملاحظة القديم */}
       {!!counts?.expired && (
         <div className="mb-3 rounded-xl bg-slate-100 px-3.5 py-2 text-[11.5px] font-bold text-slate-500">
-          ⏳ {counts.expired} فرصة أقدم من 72 ساعة اختفت تلقائياً — رصّاد الفرص يعرض الجديد فقط.
+          أُخفيت {counts.expired} فرصة أقدم من 72 ساعة تلقائياً — الرصد يعرض الجديد حصراً.
         </div>
       )}
 
@@ -223,7 +223,7 @@ export default function RadarPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-black ${f.cls}`}>
-                        {f.emoji} {f.label}
+                        {f.label}
                       </span>
                       <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-extrabold text-violet-600">
                         «{o.keyword}»

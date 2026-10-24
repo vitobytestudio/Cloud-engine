@@ -70,7 +70,30 @@ function simMention(){
   rule.matchesCount+=1;
   act('mention','ذكر جديد لـ «'+rule.keyword+'»',platform);
 }
-function auto(){var r=Math.random();if(r<0.45)simNewLead();else if(r<0.85)simInbound();else simMention();}
+var OPP_T=[
+ {t:'مطلوب مصمم هوية بصرية كاملة — مشروع مقهى مختص',k:'تصميم جرافيك',a:'قهوة دزاير',l:'الجزائر العاصمة'},
+ {t:'شركة استيراد تبحث مطور موقع تعريفي وكاتالوغ',k:'تطوير ويب',a:'شركة النخبة',l:'وهران'},
+ {t:'قناة تعليمية: مونتير ريلز — تعاقد شهري ثابت',k:'مونتاج فيديو',a:'أكاديمية النجاح',l:'عن بعد'},
+ {t:'مدونة تقنية جزائرية: كاتب مقالات بالعربية',k:'كتابة محتوى',a:'تك نيوز',l:'عن بعد'},
+ {t:'افتتاح صالون تجميل: تغطية + جلسة كاتالوغ',k:'تصوير',a:'صالون ليلى',l:'وهران'},
+ {t:'مطعم جديد: إدارة صفحات سوشيال ميديا جزئية',k:'إدارة صفحات',a:'مطعم الذواقة',l:'قسنطينة'},
+ {t:'ترجمة كتيب منتجات 20 صفحة — فرنسي إلى عربي',k:'ترجمة',a:'شركة الأمل',l:'سطيف'}
+];
+function simOpp(){
+  if(!DB.connectors.length)return;
+  var conns=DB.connectors.filter(function(c){return c.active&&c.kind!=='manual';});
+  if(!conns.length)return;
+  var conn=conns[Math.floor(Math.random()*conns.length)];
+  var tpl=OPP_T[Math.floor(Math.random()*OPP_T.length)];
+  var slug=Math.floor(100000000+Math.random()*899999999);
+  var urls={facebook:'https://facebook.com/groups/dz.services/posts/'+slug,instagram:'https://instagram.com/p/C'+slug.toString(36)+'/',x:'https://x.com/user_dz/status/'+slug,telegram:'https://t.me/s/dz_freelance/'+Math.floor(1000+Math.random()*8999),rss:'https://forum.dz-dev.org/t/forsa-'+Math.floor(100+Math.random()*899),web:'https://jobs.dz/annonce/'+slug};
+  var platform=conn.platforms[Math.floor(Math.random()*conn.platforms.length)];
+  DB.opportunities.unshift({id:uid(),title:tpl.t,excerpt:'التفاصيل الكاملة في المنشور الأصلي — افتح الرابط للاطلاع والتواصل المهني.',authorPublic:tpl.a,platform:platform,sourceUrl:urls[platform]||urls.web,keyword:tpl.k,engagement:{likes:3+Math.floor(Math.random()*60),comments:1+Math.floor(Math.random()*25)},locationHint:tpl.l,status:'new',connectorId:conn.id,publishedAt:now(),fetchedAt:now()});
+  if(DB.opportunities.length>60)DB.opportunities.length=60;
+  conn.lastFetchedAt=now();conn.fetchedCount+=1;
+  act('mention','فرصة جديدة عبر '+conn.name+' — «'+tpl.k+'»');
+}
+function auto(){var r=Math.random();if(r<0.35)simNewLead();else if(r<0.7)simInbound();else if(r<0.85)simMention();else simOpp();}
 
 /* ——— معالجة المسارات ——— */
 function handle(path,method,body,query){
@@ -283,6 +306,58 @@ function handle(path,method,body,query){
     return J({ok:true});
   }
 
+  if(path==='opportunities'&&method==='GET'){
+    if(query.live==='1'&&Math.random()<0.18)simOpp();
+    var NOW=Date.now();
+    function age(o){return NOW-new Date(o.publishedAt).getTime();}
+    var counts={hot:DB.opportunities.filter(function(o){return age(o)<3600000;}).length,
+      warm:DB.opportunities.filter(function(o){var a=age(o);return a>=3600000&&a<86400000;}).length,
+      cold:DB.opportunities.filter(function(o){var a=age(o);return a>=86400000&&a<259200000;}).length,
+      expired:DB.opportunities.filter(function(o){return age(o)>=259200000;}).length,
+      new:DB.opportunities.filter(function(o){return o.status==='new';}).length};
+    var items=DB.opportunities.slice().sort(function(a,b){return b.publishedAt.localeCompare(a.publishedAt);});
+    var sf=query.status;
+    if(sf&&sf!=='all')items=items.filter(function(o){return o.status===sf;});
+    return J({opportunities:items,counts:counts,connectors:DB.connectors});
+  }
+  if(path==='opportunities'&&method==='POST'){
+    var purl=String(body.url||'').trim();
+    if(!purl||purl.indexOf('http')!==0)return J({error:'رابط المنشور مطلوب'},400);
+    function det(u){u=u.toLowerCase();if(u.indexOf('instagram.')>=0)return 'instagram';if(u.indexOf('facebook.')>=0||u.indexOf('fb.com')>=0)return 'facebook';if(u.indexOf('tiktok.')>=0)return 'tiktok';if(u.indexOf('twitter.')>=0||u.indexOf('x.com')>=0)return 'x';if(u.indexOf('t.me')>=0)return 'telegram';return 'web';}
+    var manual2=null;DB.connectors.forEach(function(c){if(c.kind==='manual')manual2=c;});
+    var opp={id:uid(),title:String(body.title||'فرصة من رابط ملصوق').slice(0,120),excerpt:String(body.excerpt||'التفاصيل الكاملة في المنشور الأصلي.').slice(0,400),authorPublic:String(body.author||'ناشر عام').slice(0,60),platform:det(purl),sourceUrl:purl,keyword:String(body.keyword||'لصق يدوي').slice(0,40),engagement:{likes:0,comments:0},status:'new',connectorId:manual2?manual2.id:'manual',publishedAt:now(),fetchedAt:now()};
+    DB.opportunities.unshift(opp);
+    if(DB.opportunities.length>60)DB.opportunities.length=60;
+    if(manual2){manual2.fetchedCount+=1;manual2.lastFetchedAt=now();}
+    act('mention','فرصة ملصقة يدوياً — '+opp.title);
+    return J(opp,201);
+  }
+  if(seg[0]==='opportunities'&&seg[1]==='refresh'&&method==='POST'){
+    var added2=1+Math.floor(Math.random()*2);
+    for(var ri=0;ri<added2;ri++)simOpp();
+    return J({ok:true,added:added2,scanned:DB.connectors.filter(function(c){return c.active&&c.kind!=='manual';}).length});
+  }
+  if(seg[0]==='opportunities'&&seg[2]==='action'&&method==='POST'){
+    var opp2=DB.opportunities.find(function(x){return x.id===seg[1];});
+    if(!opp2)return J({error:'غير موجودة'},404);
+    if(body.action==='status'&&body.status){opp2.status=body.status;return J(opp2);}
+    if(body.action==='to-lead'){
+      var bp=['instagram','facebook','whatsapp','tiktok','x'];
+      var lp=bp.indexOf(opp2.platform)>=0?opp2.platform:'facebook';
+      var nl3={id:uid(),name:opp2.authorPublic,handle:'',platform:lp,source:'الرصد — «'+opp2.keyword+'»',status:'new',tags:['الرصد',opp2.keyword],score:70,consent:false,notes:'فرصة: '+opp2.title+'\nالمصدر: '+opp2.sourceUrl,createdAt:now(),lastActivityAt:now()};
+      DB.leads.unshift(nl3);opp2.status='contacted';
+      act('lead','فرصة تحولت لعميل — '+nl3.name);
+      return J({opportunity:opp2,lead:nl3},201);
+    }
+    return J({error:'إجراء غير معروف'},400);
+  }
+  if(path==='connectors'&&method==='GET'){return J({connectors:DB.connectors});}
+  if(path==='connectors'&&method==='PATCH'){
+    var conn2=DB.connectors.find(function(c){return c.id===body.id;});
+    if(!conn2)return J({error:'غير موجود'},404);
+    if(typeof body.active==='boolean'){conn2.active=body.active;if(conn2.active)conn2.lastFetchedAt=now();}
+    return J(conn2);
+  }
   if(seg[0]==='webhooks'){
     if(method==='GET'&&query['hub.challenge'])return new Response(query['hub.challenge'],{status:200});
     return J({ok:true});
