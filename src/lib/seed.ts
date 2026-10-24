@@ -1,4 +1,4 @@
-import type { DB, Lead, Platform } from "./types";
+import type { DB, Lead, Platform, Opportunity, Connector } from "./types";
 import { iso, uid } from "./utils";
 
 const MIN = 60 * 1000;
@@ -487,5 +487,204 @@ export function buildSeed(): DB {
     campaigns,
     capturePages,
     activity,
+    opportunities: buildOpportunities(),
+    connectors: buildConnectors(),
   };
+}
+
+// ——— رصّاد الفرص: بيانات أولية (توقيتات حديثة — الجديد فقط) ———
+
+function buildOpportunities(): Opportunity[] {
+  const MIN = 60 * 1000;
+  const HOUR = 60 * MIN;
+  const opp = (
+    title: string,
+    excerpt: string,
+    authorPublic: string,
+    platform: Opportunity["platform"],
+    sourceUrl: string,
+    keyword: string,
+    connectorId: string,
+    ageMs: number,
+    likes: number,
+    comments: number,
+    locationHint?: string,
+    status: Opportunity["status"] = "new"
+  ): Opportunity => ({
+    id: uid(),
+    title,
+    excerpt,
+    authorPublic,
+    platform,
+    sourceUrl,
+    keyword,
+    engagement: { likes, comments },
+    locationHint,
+    status,
+    connectorId,
+    publishedAt: iso(-ageMs),
+    fetchedAt: iso(-Math.min(ageMs, 2 * MIN)),
+  });
+
+  return [
+    opp(
+      "مطلوب مصمم جرافيك — 10 تصاميم للسوشيال ميديا",
+      "السلام عليكم، نبحث عن مصمم جرافيك لتحرير 10 تصاميم منشورات + ستوري لماركة حلويات منزلية. الميزانية: 8.000 دج. العمل مستقبلي إذا أعجبتنا الجودة. المراسلة في التعليقات أو الخاص.",
+      "حلويات بيتية DZ",
+      "facebook",
+      "https://facebook.com/groups/freelance.dz/posts/872634512",
+      "مصمم",
+      "meta_webhook",
+      12 * MIN,
+      34,
+      21,
+      "الجزائر العاصمة"
+    ),
+    opp(
+      "نبحث مبرمج ويب لموقع شركة استيراد",
+      "شركة في وهران تحتاج مبرمج ويب لتطوير موقع تعريفي + كاتالوغ منتجات. يفضل من لديه أعمال سابقة. الدفع بالمرحلة، السعر بالاتفاق.",
+      "شركة النخبة للاستيراد",
+      "facebook",
+      "https://facebook.com/groups/ouedranouou/posts/915223481",
+      "مبرمج",
+      "meta_webhook",
+      38 * MIN,
+      12,
+      9,
+      "وهران"
+    ),
+    opp(
+      "مطلوب مونتير ريلز وتيك توك — عمل أسبوعي مستمر",
+      "نعمل مع عدة زبائن ونحتاج مونتير فيديوهات قصيرة (ريلز/تيك توك) بأسلوب ديناميكي. 8-12 فيديو شهرياً. أدفع لكل فيديو.",
+      "وكالة برومو DZ",
+      "telegram",
+      "https://t.me/s/dz_freelance/4821",
+      "مونتير",
+      "telegram",
+      55 * MIN,
+      8,
+      14
+    ),
+    opp(
+      "من يصمم شعار (لوقو) لمشروع حلويات جزائرية؟ 🍰",
+      "بديت مشروع حلويات تقليدية ونحتاج شعار أنيق + تغليف بسيط. الميزانية محدودة (5000-7000 دج) لكن وعد بالدعاية 😄",
+      "نسرين ح.",
+      "instagram",
+      "https://instagram.com/p/C9xKp2LmQte/",
+      "شعار",
+      "meta_webhook",
+      1 * HOUR + 20 * MIN,
+      45,
+      17,
+      "سطيف"
+    ),
+    opp(
+      "كاتب محتوى عربي لمدونة تقنية — الدفع بالمقال",
+      "مدونة جزائرية جديدة تبحث عن كاتب محتوى بالعربية الفصحى المبسطة، مقالات تقنية 1000 كلمة. الدفع 1500 دج للمقال (يصعد مع الأداء).",
+      "تك نيوز الجزائر",
+      "rss",
+      "https://forum.dz-dev.org/t/kitaba-taqnia/1245",
+      "كاتب",
+      "rss",
+      3 * HOUR,
+      5,
+      6
+    ),
+    opp(
+      "نبحث مدرب/ة رياضي لأونلاين كوتشينغ",
+      "مشروع كوتشينغ أونلاين يبحث مدرب معتمد لمتابعة مجموعة نسائية (10 أشخاص). الجلسات أسبوعية عبر زووم. الراتب شهري.",
+      "فيط سبورت",
+      "x",
+      "https://x.com/vita_sport/status/1812345678901",
+      "مدرب",
+      "x_api",
+      5 * HOUR,
+      23,
+      11,
+      "عن بعد"
+    ),
+    opp(
+      "مطلوب مصور فوتوغرافي لافتتاح صالون — وهران",
+      "صالون جديد في بير الجير يحتاج مصور لتغطية يوم الافتتاح + جلسة تصوير للكتالوغ. الدفع اليومي + وجبة 😄",
+      "صالون ليلى",
+      "facebook",
+      "https://facebook.com/groups/orane.annonce/posts/77123994",
+      "مصور",
+      "meta_webhook",
+      26 * HOUR,
+      19,
+      8,
+      "وهران — بير الجير",
+      "saved"
+    ),
+    opp(
+      "مبرمج تطبيقات موبايل — فلاتر لمشروع توصيل",
+      "نبحث عن مطور Flutter لتطبيق توصيل طلبات (نسخة عميل + توصيلي). المشروع ممول، الحصة أو الدفع بالمرحلة.",
+      "وصّلها DZ",
+      "telegram",
+      "https://t.me/s/dz_startups/1203",
+      "مبرمج",
+      "telegram",
+      2 * DAY,
+      31,
+      25,
+      undefined,
+      "contacted"
+    ),
+  ];
+}
+
+function buildConnectors(): Connector[] {
+  return [
+    {
+      id: "meta_webhook",
+      name: "صفحاتك — Meta Webhook",
+      kind: "meta_webhook",
+      platforms: ["facebook", "instagram"],
+      active: true,
+      legalNote: "أحداث رسمية من ميتا للصفحات المرتبطة بحسابك — لحظي 100٪",
+      lastFetchedAt: iso(-2 * MIN),
+      fetchedCount: 312,
+    },
+    {
+      id: "x_api",
+      name: "إكس — البحث الحديث",
+      kind: "x_api",
+      platforms: ["x"],
+      active: true,
+      legalNote: "X API v2 الرسمية: منشورات آخر 7 أيام فقط بالكلمات المفتاحية",
+      lastFetchedAt: iso(-6 * MIN),
+      fetchedCount: 87,
+      requiresKey: "X_BEARER_TOKEN",
+    },
+    {
+      id: "telegram",
+      name: "قنوات تيليغرام العامة",
+      kind: "telegram",
+      platforms: ["telegram"],
+      active: true,
+      legalNote: "قنوات عامة فقط (معاينة t.me/s) عبر Telegram Bot API الرسمية",
+      lastFetchedAt: iso(-4 * MIN),
+      fetchedCount: 156,
+    },
+    {
+      id: "rss",
+      name: "خلاصات RSS — منتديات ومواقع إعلانات",
+      kind: "rss",
+      platforms: ["rss", "web"],
+      active: true,
+      legalNote: "خلاصات عامة معلنة من المواقع نفسها — جلب التدفق الجديد فقط",
+      lastFetchedAt: iso(-9 * MIN),
+      fetchedCount: 203,
+    },
+    {
+      id: "manual",
+      name: "الصق رابطاً يدوياً",
+      kind: "manual",
+      platforms: ["web"],
+      active: true,
+      legalNote: "تجلب الميتاداتا العامة الظاهرة (og:) فقط + الرابط والتوقيت",
+      fetchedCount: 41,
+    },
+  ];
 }

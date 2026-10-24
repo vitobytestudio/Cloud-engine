@@ -40,7 +40,7 @@ export const STATUS_META: Record<
   new: { label: "جديد", cls: "bg-sky-100 text-sky-700", dot: "bg-sky-500" },
   contacted: { label: "تم التواصل", cls: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
   qualified: { label: "مؤهل", cls: "bg-violet-100 text-violet-700", dot: "bg-violet-500" },
-  customer: { label: "عميل ✦", cls: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  customer: { label: "عميل", cls: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
   lost: { label: "مفقود", cls: "bg-slate-100 text-slate-500", dot: "bg-slate-400" },
 };
 
@@ -59,4 +59,46 @@ export const TRIGGER_LABEL: Record<string, string> = {
 export function pct(n: number, d: number): string {
   if (!d) return "0٪";
   return `${Math.round((n / d) * 100)}٪`;
+}
+
+// ——— رصّاد الفرص ———
+
+export const OPP_PLATFORM_LABEL: Record<string, string> = {
+  instagram: "إنستغرام",
+  facebook: "فيسبوك",
+  whatsapp: "واتساب",
+  tiktok: "تيك توك",
+  x: "إكس",
+  telegram: "تيليغرام",
+  rss: "RSS",
+  web: "ويب",
+};
+
+export type Freshness = "hot" | "warm" | "cold" | "expired";
+
+export function freshnessOf(publishedAt: string): {
+  key: Freshness;
+  label: string;
+  emoji: string;
+  cls: string;
+} {
+  const ageMin = (Date.now() - new Date(publishedAt).getTime()) / 60000;
+  if (ageMin < 60)
+    return { key: "hot", label: "خلال الساعة", emoji: "", cls: "bg-rose-100 text-rose-700" };
+  if (ageMin < 24 * 60)
+    return { key: "warm", label: "اليوم", emoji: "", cls: "bg-amber-100 text-amber-700" };
+  if (ageMin < 72 * 60)
+    return { key: "cold", label: "هذا الأسبوع", emoji: "", cls: "bg-sky-100 text-sky-700" };
+  return { key: "expired", label: "منتهية — أقدم من 72 ساعة", emoji: "", cls: "bg-slate-100 text-slate-400" };
+}
+
+export function freshAgo(dateIso: string): string {
+  const s = Math.floor((Date.now() - new Date(dateIso).getTime()) / 1000);
+  if (s < 45) return "الآن مباشرة";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `قبل ${m} دقيقة`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `قبل ${h} سا`;
+  const d = Math.floor(h / 24);
+  return `قبل ${d} يوم`;
 }

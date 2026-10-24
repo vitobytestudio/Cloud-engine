@@ -124,9 +124,60 @@ export function simMention(): void {
   persist();
 }
 
+export function simOpportunity(): void {
+  const d = db();
+  const activeConns = d.connectors.filter((c) => c.active && c.kind !== "manual");
+  if (!activeConns.length) return;
+  const conn = pick(activeConns);
+  const platform = pick(conn.platforms);
+
+  const TEMPLATES: Array<{ title: string; excerpt: string; keyword: string; author: string; loc?: string }> = [
+    { title: "مطلوب مصمم لوقو لمشروع ناشئ", excerpt: "السلام عليكم، عندنا مشروع قهوة مختصة ونحتاج هوية بصرية كاملة (شعار + ألوان + منيو). الميزانية مرنة للشغل الحلو.", keyword: "مصمم", author: "قهوة دزاير", loc: "الجزائر العاصمة" },
+    { title: "نبحث مبرمج لإصلاح موقع ووردبريس", excerpt: "موقعنا فيه مشكلة تقنية منذ يومين وخسرنا زبائن. من يقدر يصلح اليوم؟ الدفع فوري نقداً.", keyword: "مبرمج", author: "مكتبة النور", loc: "قسنطينة" },
+    { title: "مطلوب مونتير فيديوهات يوتيوب", excerpt: "قناة تعليمية جديدة تبحث مونتير (قص + ترجمة + مؤثرات). فيديو واحد أسبوعياً، 3000 دج للفيديو.", keyword: "مونتير", author: "أكاديمية النجاح" },
+    { title: "من يكتب CV احترافي بالفرنسية؟", excerpt: "نحتاج شخص يكتب ويرتب سيرة ذاتية احترافية بالفرنسية لطلب عمل في شركة أجنبية. بسرعة من فضلكم.", keyword: "كاتب", author: "ياسين م.", loc: "عنابة" },
+    { title: "مطلوب مصور أعراس — موسم الصيف", excerpt: "نبحث مصور محترف لتغطية حفلي زفاف في جويلية. العدة كاملة إجبارية. أجور ممتازة للمحترف.", keyword: "مصور", author: "قاعة الأفراح", loc: "بليدة" },
+    { title: "نسعد مدير صفحات سوشيال ميديا", excerpt: "مطعم جديد يحتاج شخص يدير صفحاته (تصوير + نشر + ردود). عمل جزئي شهري ثابت.", keyword: "سوشيال", author: "مطعم الذواقة", loc: "وهران" },
+  ];
+
+  const tpl = pick(TEMPLATES);
+  const slug = Math.floor(100000000 + Math.random() * 899999999);
+  const urls: Record<string, string> = {
+    facebook: `https://facebook.com/groups/dz.services/posts/${slug}`,
+    instagram: `https://instagram.com/p/C${slug.toString(36)}/`,
+    x: `https://x.com/user_dz/status/${slug}`,
+    telegram: `https://t.me/s/dz_freelance/${Math.floor(1000 + Math.random() * 8999)}`,
+    rss: `https://forum.dz-dev.org/t/forsa-${Math.floor(100 + Math.random() * 899)}`,
+    web: `https://annaba-jobs.dz/annonce/${slug}`,
+  };
+
+  d.opportunities.unshift({
+    id: uid(),
+    title: tpl.title,
+    excerpt: tpl.excerpt,
+    authorPublic: tpl.author,
+    platform,
+    sourceUrl: urls[platform] ?? urls.web,
+    keyword: tpl.keyword,
+    engagement: { likes: 3 + Math.floor(Math.random() * 60), comments: 1 + Math.floor(Math.random() * 25) },
+    locationHint: tpl.loc,
+    status: "new",
+    connectorId: conn.id,
+    publishedAt: iso(-Math.floor(Math.random() * 6 * 60 * 1000)), // أقل من 6 دقائق
+    fetchedAt: iso(),
+  });
+  if (d.opportunities.length > 60) d.opportunities.length = 60;
+
+  conn.lastFetchedAt = iso();
+  conn.fetchedCount += 1;
+  pushActivity("mention", `فرصة جديدة عبر ${conn.name} — «${tpl.keyword}»`, platform === "telegram" || platform === "rss" || platform === "web" ? undefined : platform);
+  persist();
+}
+
 export function autoSimulate(): void {
   const r = Math.random();
-  if (r < 0.45) simNewLead();
-  else if (r < 0.85) simInboundMessage();
-  else simMention();
+  if (r < 0.35) simNewLead();
+  else if (r < 0.7) simInboundMessage();
+  else if (r < 0.85) simMention();
+  else simOpportunity();
 }
