@@ -6,7 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 step() { printf '\033[1;32m▸\033[0m %s\n' "$1"; }
-fail() { printf '\033[1;33m✗ %s\033[0m\n' "$1"; exit 1; }
+fail() { printf '\033[1;33m✗ %s\033[0m\n' "$1"; echo "::error::$1"; exit 1; }
+# أي فشل غير متوقع يصل كملاحظة فحص قابلة للقراءة (القيم السرية لا تُطبع أبداً)
+trap 'echo "::error::فشل النشر عند السطر $1 — راجع الخطوة السابقة في السجل"; exit 1' ERR
 
 command -v npx >/dev/null || fail "node/npm مطلوب"
 command -v python3 >/dev/null || fail "python3 مطلوب"
