@@ -1,0 +1,139 @@
+// مِرسال — أنواع البيانات الأساسية
+
+export type Platform = "instagram" | "facebook" | "whatsapp" | "tiktok" | "x";
+
+export type LeadStatus = "new" | "contacted" | "qualified" | "customer" | "lost";
+
+export interface Lead {
+  id: string;
+  name: string;
+  handle: string;
+  platform: Platform;
+  phone?: string;
+  email?: string;
+  source: string;
+  status: LeadStatus;
+  tags: string[];
+  score: number; // 0-100 مؤشر الاهتمام
+  consent: boolean; // موافقة صريحة على التواصل
+  notes?: string;
+  createdAt: string;
+  lastActivityAt: string;
+}
+
+export interface Conversation {
+  id: string;
+  leadId: string;
+  platform: Platform;
+  unread: number;
+  lastMessageAt: string;
+  lastMessagePreview: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  direction: "in" | "out";
+  body: string;
+  status: "sent" | "delivered" | "read";
+  createdAt: string;
+}
+
+export type AutomationTrigger = "comment_keyword" | "story_reply" | "dm_keyword";
+
+export interface Automation {
+  id: string;
+  name: string;
+  platform: Platform;
+  trigger: AutomationTrigger;
+  keyword: string;
+  replyTemplate: string;
+  ctaLink?: string;
+  collectPhone: boolean;
+  active: boolean;
+  triggeredCount: number;
+  leadsCaptured: number;
+  createdAt: string;
+}
+
+export interface ListenRule {
+  id: string;
+  keyword: string;
+  platforms: Platform[];
+  active: boolean;
+  matchesCount: number;
+  createdAt: string;
+}
+
+export type Sentiment = "positive" | "neutral" | "negative";
+
+export interface Mention {
+  id: string;
+  ruleId: string;
+  platform: Platform;
+  authorName: string;
+  authorHandle: string;
+  content: string;
+  url: string;
+  likes: number;
+  comments: number;
+  sentiment: Sentiment;
+  converted: boolean;
+  createdAt: string;
+}
+
+export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent";
+
+export interface Campaign {
+  id: string;
+  name: string;
+  channel: "whatsapp";
+  template: string;
+  audienceTag: string;
+  status: CampaignStatus;
+  targeted: number;
+  sent: number;
+  delivered: number;
+  read: number;
+  replied: number;
+  createdAt: string;
+}
+
+export interface CapturePage {
+  id: string;
+  slug: string;
+  title: string;
+  headline: string;
+  subtext: string;
+  offer?: string;
+  ctaLabel: string;
+  askPhone: boolean;
+  askEmail: boolean;
+  published: boolean;
+  views: number;
+  conversions: number;
+  createdAt: string;
+}
+
+export type ActivityType = "lead" | "message" | "mention" | "automation" | "campaign" | "system";
+
+export interface ActivityEvent {
+  id: string;
+  type: ActivityType;
+  text: string;
+  platform?: Platform;
+  createdAt: string;
+}
+
+export interface DB {
+  workspace: { name: string; tagline: string; city: string };
+  leads: Lead[];
+  conversations: Conversation[];
+  messages: Message[];
+  automations: Automation[];
+  rules: ListenRule[];
+  mentions: Mention[];
+  campaigns: Campaign[];
+  capturePages: CapturePage[];
+  activity: ActivityEvent[];
+}
