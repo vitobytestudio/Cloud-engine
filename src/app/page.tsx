@@ -12,6 +12,7 @@ import {
   Scale,
 } from "lucide-react";
 import { Reveal, Counter, SectionHead } from "@/components/landing/motion";
+import NavMobile from "@/components/landing/nav-mobile";
 import HeroFeed from "@/components/landing/hero-feed";
 import ChannelMarquee from "@/components/landing/marquee";
 
@@ -122,19 +123,20 @@ export default function Landing() {
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-[#06060b]/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Logo />
-          <nav className="hidden items-center gap-8 text-[13px] font-bold text-slate-400 md:flex">
+          <nav className="hidden items-center gap-8 text-[13px] font-bold text-slate-400 lg:flex">
             <a href="#product" className="transition hover:text-white">المنتج</a>
             <a href="#how" className="transition hover:text-white">كيف يعمل</a>
             <a href="#trust" className="transition hover:text-white">الأمان والامتثال</a>
             <a href="#pricing" className="transition hover:text-white">الأسعار</a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="hidden text-[13px] font-bold text-slate-400 transition hover:text-white sm:block">
+          <div className="flex items-center gap-2.5">
+            <Link href="/dashboard" className="hidden text-[13px] font-bold text-slate-400 transition hover:text-white lg:block">
               الدخول
             </Link>
+            <NavMobile />
             <Link
               href="/dashboard"
-              className="rounded-xl bg-white px-4 py-2 text-[13px] font-black text-[#06060b] transition hover:bg-violet-100"
+              className="hidden rounded-xl bg-white px-4 py-2 text-[13px] font-black text-[#06060b] transition hover:bg-violet-100 sm:block"
             >
               جرّب النموذج الحي
             </Link>
@@ -143,7 +145,7 @@ export default function Landing() {
       </header>
 
       {/* ——— البطل ——— */}
-      <section className="relative overflow-hidden pb-24 pt-36 md:pt-44">
+      <section className="relative overflow-hidden pb-16 pt-28 md:pb-24 md:pt-44">
         {/* خلفية الشفق */}
         <div className="pointer-events-none absolute inset-0">
           <div className="aurora-a absolute -top-40 start-[15%] h-[420px] w-[620px] rounded-full bg-violet-600/[0.16] blur-[120px]" />
@@ -164,7 +166,7 @@ export default function Landing() {
               </Reveal>
 
               <Reveal delay={110}>
-                <h1 className="mt-7 text-[40px] font-black leading-[1.22] sm:text-[54px] sm:leading-[1.18] md:text-[62px] md:leading-[1.15]">
+                <h1 className="mt-6 text-[34px] font-black leading-[1.25] sm:text-[54px] sm:leading-[1.18] md:mt-7 md:text-[62px] md:leading-[1.15]">
                   الفرص تصل إليك.
                   <br />
                   <span className="bg-gradient-to-l from-violet-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
@@ -174,7 +176,7 @@ export default function Landing() {
               </Reveal>
 
               <Reveal delay={220}>
-                <p className="mt-6 max-w-xl text-[15.5px] leading-9 text-slate-400">
+                <p className="mt-5 max-w-xl text-[14.5px] leading-8 text-slate-400 md:mt-6 md:text-[15.5px] md:leading-9">
                   «مِرسال» يرصد طلبات العملاء عبر وسائل التواصل والمجموعات والقنوات —
                   <span className="text-slate-200"> لحظة نشرها </span>
                   — ويحوّلها إلى محادثات وعقود. عبر القنوات الرسمية حصراً، وبأعلى معايير
@@ -183,17 +185,17 @@ export default function Landing() {
               </Reveal>
 
               <Reveal delay={330}>
-                <div className="mt-9 flex flex-wrap items-center gap-4">
+                <div className="mt-8 flex flex-wrap items-center gap-3 md:mt-9 md:gap-4">
                   <Link
                     href="/dashboard"
-                    className="group inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-[14px] font-black text-[#06060b] shadow-[0_8px_40px_-8px] shadow-violet-500/40 transition hover:bg-violet-50"
+                    className="group inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-[13.5px] font-black md:px-7 md:py-4 md:text-[14px] text-[#06060b] shadow-[0_8px_40px_-8px] shadow-violet-500/40 transition hover:bg-violet-50"
                   >
                     ابدأ التجربة المجانية
                     <ArrowUpLeft className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" />
                   </Link>
                   <a
                     href="#how"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-7 py-4 text-[14px] font-black text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-3.5 text-[13.5px] font-black md:px-7 md:py-4 md:text-[14px] text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]"
                   >
                     كيف يعمل
                     <ArrowDown className="h-4 w-4 opacity-60" />
@@ -220,7 +222,7 @@ export default function Landing() {
             </div>
 
             <Reveal delay={260} y={40}>
-              <div className="float-y">
+              <div className="md:float-y">
                 <HeroFeed />
               </div>
             </Reveal>
@@ -234,7 +236,7 @@ export default function Landing() {
       </Reveal>
 
       {/* ——— الأرقام ——— */}
-      <section className="relative py-24">
+      <section className="relative py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-5">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.04] md:grid-cols-4">
             {[
@@ -258,7 +260,7 @@ export default function Landing() {
       </section>
 
       {/* ——— المنتج: شبكة المزايا ——— */}
-      <section id="product" className="relative py-24">
+      <section id="product" className="relative py-16 md:py-24">
         <div className="pointer-events-none absolute inset-0">
           <div className="aurora-a absolute top-1/3 start-[30%] h-[380px] w-[560px] rounded-full bg-violet-600/[0.07] blur-[130px]" />
         </div>
@@ -297,7 +299,7 @@ export default function Landing() {
       </section>
 
       {/* ——— كيف يعمل ——— */}
-      <section id="how" className="relative border-y border-white/[0.06] bg-white/[0.015] py-24">
+      <section id="how" className="relative border-y border-white/[0.06] bg-white/[0.015] py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-5">
           <SectionHead
             overline="آلية العمل"
@@ -322,7 +324,7 @@ export default function Landing() {
       </section>
 
       {/* ——— الأمان والامتثال ——— */}
-      <section id="trust" className="relative py-24">
+      <section id="trust" className="relative py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-5">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
@@ -393,7 +395,7 @@ export default function Landing() {
       </section>
 
       {/* ——— الأسعار ——— */}
-      <section id="pricing" className="relative border-t border-white/[0.06] py-24">
+      <section id="pricing" className="relative border-t border-white/[0.06] py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-5">
           <SectionHead
             overline="الأسعار"
@@ -432,7 +434,7 @@ export default function Landing() {
             ].map((p, i) => (
               <Reveal key={p.name} delay={i * 120}>
                 <div
-                  className={`relative h-full rounded-3xl border p-8 transition duration-500 ${
+                  className={`relative h-full rounded-3xl border p-6 transition duration-500 md:p-8 ${
                     p.hot
                       ? "border-violet-400/30 bg-gradient-to-b from-violet-500/[0.10] to-white/[0.02] shadow-[0_20px_70px_-20px] shadow-violet-600/30"
                       : "border-white/[0.07] bg-white/[0.03] hover:border-white/[0.14]"
@@ -500,13 +502,13 @@ export default function Landing() {
       </section>
 
       {/* ——— النداء الأخير ——— */}
-      <section className="relative py-24">
+      <section className="relative py-16 md:py-24">
         <div className="mx-auto max-w-5xl px-5">
           <Reveal>
-            <div className="relative overflow-hidden rounded-[2rem] border border-violet-400/20 bg-gradient-to-l from-violet-600/[0.16] via-violet-600/[0.07] to-fuchsia-600/[0.12] px-8 py-16 text-center md:py-20">
+            <div className="relative overflow-hidden rounded-[2rem] border border-violet-400/20 bg-gradient-to-l from-violet-600/[0.16] via-violet-600/[0.07] to-fuchsia-600/[0.12] px-5 py-12 text-center md:px-8 md:py-20">
               <div className="aurora-a pointer-events-none absolute -top-32 start-1/3 h-72 w-[500px] rounded-full bg-violet-500/20 blur-[100px]" />
               <div className="relative">
-                <h2 className="mx-auto max-w-2xl text-3xl font-black leading-[1.4] text-white md:text-[40px] md:leading-[1.35]">
+                <h2 className="mx-auto max-w-2xl text-[26px] font-black leading-[1.4] text-white md:text-[40px] md:leading-[1.35]">
                   كل فرصة تفوتك الآن —
                   <span className="block text-violet-300">يعتني بها منافسك.</span>
                 </h2>

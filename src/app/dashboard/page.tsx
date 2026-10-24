@@ -55,6 +55,8 @@ const PLATFORM_ICON_BG: Record<string, string> = {
 export default function Overview() {
   const { live } = useLive();
   const { data, refresh } = useJson<StatsData>(`/api/stats?live=${live ? 1 : 0}`, 5000);
+  const prof = useJson<{ profile: { setupDone: boolean; professionId: string } }>("/api/profile", 0);
+  const setupDone = prof.data?.profile.setupDone ?? true;
 
   const simulate = async () => {
     await fetch("/api/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
@@ -83,6 +85,25 @@ export default function Overview() {
           </>
         }
       />
+
+      {/* لافتة التفعيل الذكي */}
+      {!setupDone && (
+        <Link
+          href="/dashboard/onboarding"
+          className="group mb-4 flex items-center gap-4 rounded-2xl border border-violet-200 bg-gradient-to-l from-violet-50 to-white p-4 shadow-sm transition hover:border-violet-300"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13.5px] font-black text-slate-900">فعّل الرصد التلقائي الذكي</span>
+            <span className="mt-0.5 block text-[11.5px] font-semibold leading-5 text-slate-500">
+              دقيقة واحدة: تخصصك وكلماتك — ثم تصلك فرص العملاء المطابقة وحدها، بلا أي بحث.
+            </span>
+          </span>
+          <span className="hidden text-[12px] font-black text-violet-600 group-hover:text-violet-700 sm:block">تفعيل ←</span>
+        </Link>
+      )}
 
       {/* البطاقات */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

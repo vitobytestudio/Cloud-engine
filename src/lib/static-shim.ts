@@ -79,12 +79,23 @@ var OPP_T=[
  {t:'مطعم جديد: إدارة صفحات سوشيال ميديا جزئية',k:'إدارة صفحات',a:'مطعم الذواقة',l:'قسنطينة'},
  {t:'ترجمة كتيب منتجات 20 صفحة — فرنسي إلى عربي',k:'ترجمة',a:'شركة الأمل',l:'سطيف'}
 ];
+var PROFS={dev_web:{label:'برمجة مواقع وتطبيقات',kw:['مبرمج','مطور','موقع','تطبيق','ووردبريس','متجر الكتروني']},logo_brand:{label:'تصميم الشعارات والهوية',kw:['شعار','لوقو','هوية بصرية','براندنج']},graphic:{label:'تصميم جرافيك ومنشورات',kw:['مصمم','تصميم','جرافيك','بوستر','منشورات']},video_ads:{label:'فيديوهات إعلانية',kw:['فيديو اعلاني','اعلان','موشن','فيديو ترويجي']},montage:{label:'مونتاج فيديو',kw:['مونتير','مونتاج','ريلز','يوتيوب']},content:{label:'كتابة المحتوى',kw:['كاتب','محتوى','مقالات']},photo:{label:'تصوير فوتوغرافي',kw:['مصور','تصوير','جلسة تصوير']},smm:{label:'إدارة صفحات السوشيال ميديا',kw:['ادارة صفحات','سوشيال ميديا','تسويق']},translation:{label:'الترجمة',kw:['ترجمة','مترجم','فرنسي']}};
 function simOpp(){
   if(!DB.connectors.length)return;
   var conns=DB.connectors.filter(function(c){return c.active&&c.kind!=='manual';});
   if(!conns.length)return;
   var conn=conns[Math.floor(Math.random()*conns.length)];
-  var tpl=OPP_T[Math.floor(Math.random()*OPP_T.length)];
+  var T2=OPP_T;
+  if(DB.profile&&DB.profile.setupDone&&PROFS[DB.profile.professionId]){
+    var pr=PROFS[DB.profile.professionId];
+    var loc=DB.profile.wilayas.indexOf('كل الولايات')>=0?null:DB.profile.wilayas[0];
+    T2=[
+     {t:'مطلوب '+pr.label+' — مشروع جديد يبحث عن تنفيذ احترافي',k:pr.kw[Math.floor(Math.random()*pr.kw.length)],a:'مشروع ناشئ DZ',l:loc},
+     {t:'نبحث '+pr.kw[0]+' لعمل مستمر — دفع أسبوعي',k:pr.kw[Math.floor(Math.random()*pr.kw.length)],a:'مجموعة أعمال DZ',l:loc},
+     {t:'من يقدم خدمة '+pr.label+'؟ استعجال',k:pr.kw[Math.floor(Math.random()*pr.kw.length)],a:'متجر النخبة',l:loc||['الجزائر العاصمة','وهران','قسنطينة'][Math.floor(Math.random()*3)]}
+    ];
+  }
+  var tpl=T2[Math.floor(Math.random()*T2.length)];
   var slug=Math.floor(100000000+Math.random()*899999999);
   var urls={facebook:'https://facebook.com/groups/dz.services/posts/'+slug,instagram:'https://instagram.com/p/C'+slug.toString(36)+'/',x:'https://x.com/user_dz/status/'+slug,telegram:'https://t.me/s/dz_freelance/'+Math.floor(1000+Math.random()*8999),rss:'https://forum.dz-dev.org/t/forsa-'+Math.floor(100+Math.random()*899),web:'https://jobs.dz/annonce/'+slug};
   var platform=conn.platforms[Math.floor(Math.random()*conn.platforms.length)];
@@ -306,6 +317,15 @@ function handle(path,method,body,query){
     return J({ok:true});
   }
 
+  if(path==='profile'&&method==='GET'){
+    return J({profile:DB.profile,professions:Object.keys(PROFS).map(function(k){return {id:k,label:PROFS[k].label,icon:'layers'};}),wilayas:['كل الولايات','الجزائر','وهران','قسنطينة','سطيف','عنابة','بجاية','البليدة','تلمسان','ورقلة']});
+  }
+  if(path==='profile'&&method==='PUT'){
+    var pid=String(body.professionId||'');
+    DB.profile={professionId:pid,keywords:Array.isArray(body.keywords)?body.keywords.slice(0,20):[],wilayas:(Array.isArray(body.wilayas)&&body.wilayas.length?body.wilayas:['كل الولايات']),alertChannel:['app','whatsapp','telegram'].indexOf(body.alertChannel)>=0?body.alertChannel:'app',alertPhone:body.alertPhone||undefined,setupDone:!!pid,createdAt:DB.profile?DB.profile.createdAt:now()};
+    act('system','تم تفعيل الرصد التلقائي — '+(PROFS[pid]?PROFS[pid].label:'تحديث الملف'));
+    return J({ok:true,profile:DB.profile});
+  }
   if(path==='opportunities'&&method==='GET'){
     if(query.live==='1'&&Math.random()<0.18)simOpp();
     var NOW=Date.now();
@@ -315,10 +335,38 @@ function handle(path,method,body,query){
       cold:DB.opportunities.filter(function(o){var a=age(o);return a>=86400000&&a<259200000;}).length,
       expired:DB.opportunities.filter(function(o){return age(o)>=259200000;}).length,
       new:DB.opportunities.filter(function(o){return o.status==='new';}).length};
+    function norm(s){return String(s||'').toLowerCase().replace(/[أإآ]/g,'ا').replace(/[ىي]/g,'ي').replace(/ة/g,'ه').replace(/[ًٌٍَُِّْ]/g,'').replace(/\s+/g,' ').trim();}
+    function matchOpp(o){
+      if(!DB.profile||!DB.profile.setupDone)return {score:0,reasons:[],matched:false};
+      var hay=norm(o.title+' '+o.excerpt+' '+o.keyword);
+      var pool=[];
+      if(DB.profile.professionId&&PROFS[DB.profile.professionId])PROFS[DB.profile.professionId].kw.forEach(function(k){pool.push(norm(k));});
+      (DB.profile.keywords||[]).forEach(function(k){pool.push(norm(k));});
+      var hits=pool.filter(function(k){return k&&hay.indexOf(k)>=0;});
+      if(!hits.length)return {score:0,reasons:[],matched:false};
+      var sc=55+Math.min(15,(hits.length-1)*8);
+      var rs=['تخصصك: '+hits.slice(0,3).join(' · ')];
+      var a2=age(o);
+      if(a2<3600000){sc+=25;rs.push('نُشرت خلال الساعة الأخيرة');}
+      else if(a2<86400000){sc+=12;rs.push('نُشرت اليوم');}
+      var anyW=DB.profile.wilayas.indexOf('كل الولايات')>=0;
+      if(o.locationHint&&(anyW||DB.profile.wilayas.some(function(w){return o.locationHint.indexOf(w)>=0;}))){sc+=8;rs.push('الولاية: '+o.locationHint);}
+      return {score:Math.min(100,sc),reasons:rs,matched:true};
+    }
     var items=DB.opportunities.slice().sort(function(a,b){return b.publishedAt.localeCompare(a.publishedAt);});
     var sf=query.status;
     if(sf&&sf!=='all')items=items.filter(function(o){return o.status===sf;});
-    return J({opportunities:items,counts:counts,connectors:DB.connectors});
+    var setupDone=DB.profile&&DB.profile.setupDone;
+    var enriched=items.map(function(o){var o2={};for(var k in o)o2[k]=o[k];o2.match=matchOpp(o);return o2;});
+    if(setupDone){
+      enriched.sort(function(a,b){
+        var am=a.match.matched?1:0,bm=b.match.matched?1:0;
+        if(am!==bm)return bm-am;
+        if(am&&bm&&a.match.score!==b.match.score)return b.match.score-a.match.score;
+        return b.publishedAt.localeCompare(a.publishedAt);
+      });
+    }
+    return J({opportunities:enriched,counts:counts,connectors:DB.connectors,profile:{setupDone:setupDone,professionId:DB.profile?DB.profile.professionId:'',wilayas:DB.profile?DB.profile.wilayas:[],alertChannel:DB.profile?DB.profile.alertChannel:'app'}});
   }
   if(path==='opportunities'&&method==='POST'){
     var purl=String(body.url||'').trim();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, persist } from "@/lib/store";
 import { uid } from "@/lib/utils";
+import { matchOpportunity } from "@/lib/matching";
 import type { Opportunity, OpportunityPlatform } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -80,8 +81,28 @@ export async function GET(req: NextRequest) {
     new: d.opportunities.filter((o) => o.status === "new").length,
   };
 
+  // المطابقة الذكية مع ملف الرصد — الأتمتة الكاملة: نُرتّب بما يناسب صاحب الملف
+  const enriched = items.map((o) => {
+    const m = matchOpportunity(o, d.profile);
+    return { ...o, match: m };
+  });
+  if (d.profile.setupDone) {
+    enriched.sort((a, b) => {
+      const am = a.match.matched ? 1 : 0;
+      const bm = b.match.matched ? 1 : 0;
+      if (am !== bm) return bm - am;
+      if (am && bm && a.match.score !== b.match.score) return b.match.score - a.match.score;
+      return b.publishedAt.localeCompare(a.publishedAt);
+    });
+  }
+
   const connectors = d.connectors;
-  return NextResponse.json({ opportunities: items, counts, connectors });
+  return NextResponse.json({
+    opportunities: enriched,
+    counts,
+    connectors,
+    profile: { setupDone: d.profile.setupDone, professionId: d.profile.professionId, wilayas: d.profile.wilayas, alertChannel: d.profile.alertChannel },
+  });
 }
 
 export async function POST(req: NextRequest) {

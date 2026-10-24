@@ -1,97 +1,101 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
-  Crosshair,
-  RefreshCw,
-  ExternalLink,
-  Bookmark,
-  UserPlus,
-  Check,
-  ShieldCheck,
-  Link2,
-  Plus,
-  Radio,
-  Heart,
-  MessageCircle as MsgIcon,
-  MapPin,
-  Send as TelegramIcon,
-  Rss,
-  Globe,
+  Crosshair, RefreshCw, ExternalLink, Bookmark, UserPlus, Check,
+  ShieldCheck, Link2, Plus, Radio, Heart, MessageCircle as MsgIcon,
+  MapPin, Send as TelegramIcon, Rss, Globe, Sparkles, BellRing,
 } from "lucide-react";
 import { useJson, useLive } from "@/lib/hooks";
 import { Btn, Empty, Field, inputCls, Modal, PageHeader, PlatformIcon, Toggle } from "@/components/ui";
-import {
-  OPP_PLATFORM_LABEL,
-  freshAgo,
-  freshnessOf,
-  relTime,
-} from "@/lib/utils";
+import { freshAgo, freshnessOf, relTime } from "@/lib/utils";
 import type { Connector, Opportunity, OpportunityPlatform } from "@/lib/types";
 
+interface MatchInfo {
+  score: number;
+  reasons: string[];
+  matched: boolean;
+}
+type OppItem = Opportunity & { match: MatchInfo };
+
 interface Data {
-  opportunities: Opportunity[];
+  opportunities: OppItem[];
   counts: { hot: number; warm: number; cold: number; expired: number; new: number };
   connectors: Connector[];
+  profile: { setupDone: boolean; professionId: string; wilayas: string[]; alertChannel: string };
 }
 
 function OppIcon({ p, className = "h-4 w-4" }: { p: OpportunityPlatform; className?: string }) {
   switch (p) {
-    case "telegram":
-      return <TelegramIcon className={className} />;
-    case "rss":
-      return <Rss className={className} />;
-    case "web":
-      return <Globe className={className} />;
-    default:
-      return <PlatformIcon p={p} className={className} />;
+    case "telegram": return <TelegramIcon className={className} />;
+    case "rss": return <Rss className={className} />;
+    case "web": return <Globe className={className} />;
+    default: return <PlatformIcon p={p} className={className} />;
   }
 }
 
 const OPP_ICON_BG: Record<string, string> = {
-  instagram: "bg-pink-600",
-  facebook: "bg-blue-600",
-  whatsapp: "bg-emerald-600",
-  tiktok: "bg-slate-900",
-  x: "bg-slate-800",
-  telegram: "bg-sky-500",
-  rss: "bg-orange-500",
-  web: "bg-violet-600",
+  instagram: "bg-pink-600", facebook: "bg-blue-600", whatsapp: "bg-emerald-600",
+  tiktok: "bg-slate-900", x: "bg-slate-800", telegram: "bg-sky-500",
+  rss: "bg-orange-500", web: "bg-violet-600",
 };
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   new: { label: "جديدة", cls: "bg-sky-100 text-sky-700" },
   saved: { label: "محفوظة", cls: "bg-amber-100 text-amber-700" },
   contacted: { label: "تحوّلت لعميل", cls: "bg-emerald-100 text-emerald-700" },
-  won: { label: "مكتملة ✦", cls: "bg-violet-100 text-violet-700" },
+  won: { label: "مكتملة", cls: "bg-violet-100 text-violet-700" },
   ignored: { label: "متجاهلة", cls: "bg-slate-100 text-slate-400" },
 };
 
-type Tab = "all" | "hot" | "warm" | "saved";
+function MatchRing({ score }: { score: number }) {
+  const color = score >= 85 ? "#10b981" : score >= 65 ? "#8b5cf6" : "#64748b";
+  const R = 15, C = 2 * Math.PI * R;
+  return (
+    <div className="relative h-11 w-11 shrink-0" dir="ltr">
+      <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
+        <circle cx="18" cy="18" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+        <circle
+          cx="18" cy="18" r={R} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={`${(score / 100) * C} ${C}`}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black tabular-nums" style={{ color }}>
+        {score}
+      </span>
+    </div>
+  );
+}
 
 export default function RadarPage() {
   const { live } = useLive();
   const { data, refresh } = useJson<Data>(`/api/opportunities?live=${live ? 1 : 0}`, 4000);
-  const [tab, setTab] = useState<Tab>("all");
-  const [onlyFresh, setOnlyFresh] = useState(true);
+  const [tab, setTab] = useState<"all" | "hour" | "today" | "followed">("all");
+  const [mineOnly, setMineOnly] = useState(true);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState({ url: "", title: "", excerpt: "", author: "" });
   const [pasting, setPasting] = useState(false);
   const [scanning, setScanning] = useState(false);
 
+  const profile = data?.profile;
+  const setupDone = profile?.setupDone ?? false;
+
   const now = Date.now();
   const items = useMemo(() => {
     let arr = data?.opportunities ?? [];
-    if (onlyFresh) arr = arr.filter((o) => now - new Date(o.publishedAt).getTime() < 72 * 3600_000);
-    if (tab === "hot") arr = arr.filter((o) => now - new Date(o.publishedAt).getTime() < 3600_000);
-    if (tab === "warm")
+    if (mineOnly && setupDone) arr = arr.filter((o) => o.match?.matched);
+    if (tab === "hour") arr = arr.filter((o) => now - new Date(o.publishedAt).getTime() < 3600_000);
+    if (tab === "today") {
       arr = arr.filter((o) => {
         const a = now - new Date(o.publishedAt).getTime();
         return a >= 3600_000 && a < 86400_000;
       });
-    if (tab === "saved") arr = arr.filter((o) => o.status === "saved" || o.status === "contacted" || o.status === "won");
+    }
+    if (tab === "followed")
+      arr = arr.filter((o) => ["saved", "contacted", "won"].includes(o.status));
     return arr;
-  }, [data, tab, onlyFresh, now]);
+  }, [data, tab, mineOnly, setupDone, now]);
 
   const scan = async () => {
     if (scanning) return;
@@ -126,65 +130,104 @@ export default function RadarPage() {
 
   const counts = data?.counts;
   const connectors = data?.connectors ?? [];
-  const activeConns = connectors.filter((c) => c.active);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="رصّاد الفرص"
-        sub="فرص عملاء من المحتوى العام — الجديد فقط، لحظة نشره، مع رابط المنشور دائماً"
+        title="الفرص المطابقة لك"
+        sub={
+          setupDone
+            ? "النظام يرصد ويرشّح تلقائياً — لا بحث يدوي، الفرص تصلك لحظة نشرها"
+            : "يرصد كل الفرص لحظياً — فعّل ملفك ليصلك ما يخص تخصصك حصراً"
+        }
         actions={
           <>
-            <Btn variant="ghost" onClick={() => setPasteOpen(true)}>
+            {!setupDone && (
+              <Link href="/dashboard/onboarding">
+                <Btn>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  تفعيل التصفية الذكية
+                </Btn>
+              </Link>
+            )}
+            <Btn variant="ghost" onClick={() => setPasteOpen(true)} className="hidden sm:inline-flex">
               <Plus className="h-3.5 w-3.5" />
-              الصق رابط منشور
+              إضافة رابط
             </Btn>
             <Btn onClick={scan} disabled={scanning}>
               <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} />
-              {scanning ? "جارٍ المسح…" : "مسح الآن"}
+              {scanning ? "مسح…" : "تحديث"}
             </Btn>
           </>
         }
       />
 
-      {/* شريط الموصلات */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="flex items-center gap-1.5 ps-1 text-[12px] font-extrabold text-slate-500">
-          <Radio className={`h-4 w-4 ${live ? "text-emerald-500" : "text-slate-400"}`} />
-          الموصلات:
-        </div>
-        {connectors.map((c) => (
-          <span
-            key={c.id}
-            title={`${c.legalNote}${c.lastFetchedAt ? ` — آخر مسح: ${relTime(c.lastFetchedAt)}` : ""}`}
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${
-              c.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"
-            }`}
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${c.active ? "live-dot bg-emerald-500" : "bg-slate-300"}`} />
-            {c.name}
+      {/* شريط الأتمتة */}
+      <div className="mb-4 rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.05] p-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="flex items-center gap-2 text-[12.5px] font-black text-emerald-300">
+            <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            الرصد التلقائي نشط
           </span>
-        ))}
-        <span className="ms-auto text-[10.5px] font-bold text-slate-400">
-          {activeConns.length}/{connectors.length} موصل نشط — الجلب منذ آخر مسح فقط
-        </span>
+          <span className="text-[11px] font-bold text-slate-400">
+            {connectors.filter((c) => c.active).length} قناة رسمية تعمل لحظياً · حذف تلقائي بعد 72 ساعة
+          </span>
+          {setupDone && (
+            <span className="ms-auto inline-flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-2.5 py-1 text-[11px] font-black text-slate-200">
+              <BellRing className="h-3 w-3" />
+              التنبيهات: {{ app: "داخل المنصة", whatsapp: "واتساب", telegram: "تيليغرام" }[profile?.alertChannel ?? "app"]}
+            </span>
+          )}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {connectors.map((c) => (
+            <span
+              key={c.id}
+              title={c.legalNote}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold ${
+                c.active ? "bg-white/[0.06] text-slate-300" : "bg-white/[0.03] text-slate-600"
+              }`}
+            >
+              <span className={`h-1 w-1 rounded-full ${c.active ? "bg-emerald-400" : "bg-slate-600"}`} />
+              {c.name}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* التبويبات */}
+      {/* لافتة التفعيل */}
+      {!setupDone && (
+        <Link href="/dashboard/onboarding" className="group mb-4 block rounded-2xl border border-violet-400/25 bg-gradient-to-l from-violet-600/[0.14] to-fuchsia-600/[0.08] p-5 transition hover:border-violet-400/40">
+          <div className="flex items-center gap-4">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-500/20 text-violet-200">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-black text-white">فعّل ملف الرصد في 60 ثانية</div>
+              <div className="mt-0.5 text-[12px] font-semibold leading-6 text-slate-400">
+                تخصص واحد، كلمات مولّدة تلقائياً، ولاياتك — ثم لا تبحث أبداً: الفرص المطابقة تصلك وحدها.
+              </div>
+            </div>
+            <span className="hidden text-[12px] font-black text-violet-300 group-hover:text-violet-200 sm:block">تفعيل ←</span>
+          </div>
+        </Link>
+      )}
+
+      {/* أدوات التصفية */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1.5">
           {(
             [
-              { key: "all", label: "الجديدة", badge: counts?.new },
-              { key: "hot", label: "خلال الساعة الأخيرة", badge: counts?.hot },
-              { key: "warm", label: "اليوم", badge: counts?.warm },
-              { key: "saved", label: "تابعتُها", badge: undefined },
-            ] as Array<{ key: Tab; label: string; badge?: number }>
+              { key: "all", label: "الكل", badge: counts?.new },
+              { key: "hour", label: "خلال الساعة", badge: counts?.hot },
+              { key: "today", label: "اليوم", badge: counts?.warm },
+              { key: "followed", label: "أتابعها", badge: undefined },
+            ] as Array<{ key: "all" | "hour" | "today" | "followed"; label: string; badge?: number }>
           ).map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`rounded-full px-3.5 py-1.5 text-[12px] font-extrabold transition ${
+              className={`rounded-full px-3.5 py-1.5 text-[12px] font-black transition ${
                 tab === t.key
                   ? "bg-violet-600 text-white shadow-md shadow-violet-600/25"
                   : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
@@ -195,16 +238,18 @@ export default function RadarPage() {
             </button>
           ))}
         </div>
-        <label className="ms-auto flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5">
-          <Toggle on={onlyFresh} onChange={setOnlyFresh} />
-          <span className="text-[11.5px] font-extrabold text-slate-600">الجديد فقط (آخر 72 ساعة)</span>
-        </label>
+        {setupDone && (
+          <label className="ms-auto flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5">
+            <Toggle on={mineOnly} onChange={setMineOnly} />
+            <span className="text-[11.5px] font-black text-slate-600">مطابقة تخصصي فقط</span>
+          </label>
+        )}
       </div>
 
       {/* ملاحظة القديم */}
       {!!counts?.expired && (
         <div className="mb-3 rounded-xl bg-slate-100 px-3.5 py-2 text-[11.5px] font-bold text-slate-500">
-          أُخفيت {counts.expired} فرصة أقدم من 72 ساعة تلقائياً — الرصد يعرض الجديد حصراً.
+          أُخفيت {counts.expired} فرصة أقدم من 72 ساعة تلقائياً — الجديد حصراً.
         </div>
       )}
 
@@ -212,57 +257,74 @@ export default function RadarPage() {
       <div className="space-y-3">
         {items.map((o) => {
           const f = freshnessOf(o.publishedAt);
-          const st = STATUS_LABEL[o.status];
+          const st = STATUS_LABEL[o.status] ?? STATUS_LABEL.new;
+          const matched = o.match?.matched;
           return (
-            <div key={o.id} className="pop-in rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-violet-200 hover:shadow-md">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${OPP_ICON_BG[o.platform]}`}>
-                    <OppIcon p={o.platform} className="h-4.5 w-4.5" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-black ${f.cls}`}>
-                        {f.label}
-                      </span>
-                      <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-extrabold text-violet-600">
-                        «{o.keyword}»
-                      </span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-extrabold ${st.cls}`}>{st.label}</span>
-                    </div>
-                    <div className="mt-1.5 text-[14px] font-extrabold text-slate-900">{o.title}</div>
-                    <div className="text-[11px] font-semibold text-slate-400">
-                      {o.authorPublic}
-                      {o.locationHint && (
-                        <span className="ms-2 inline-flex items-center gap-0.5">
-                          <MapPin className="h-3 w-3" />
-                          {o.locationHint}
-                        </span>
-                      )}
-                      <span className="ms-2">{freshAgo(o.publishedAt)}</span>
-                    </div>
+            <div
+              key={o.id}
+              className={`pop-in rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5 ${
+                matched ? "border-violet-200" : "border-slate-200"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {/* درجة المطابقة — تظهر فقط مع ملف مفعّل */}
+                {setupDone && (
+                  <div className="hidden sm:block">
+                    {matched ? (
+                      <MatchRing score={o.match.score} />
+                    ) : (
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-100 text-[10px] font-black text-slate-300">
+                        —
+                      </div>
+                    )}
                   </div>
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-black ${f.cls}`}>
+                      {f.label}
+                    </span>
+                    <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-extrabold text-violet-600">
+                      {o.keyword}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10.5px] font-extrabold ${st.cls}`}>{st.label}</span>
+                  </div>
+
+                  <div className="mt-1.5 text-[14px] font-extrabold leading-6 text-slate-900">{o.title}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-400">
+                    <span>{o.authorPublic}</span>
+                    {o.locationHint && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <MapPin className="h-3 w-3" />
+                        {o.locationHint}
+                      </span>
+                    )}
+                    <span>{freshAgo(o.publishedAt)}</span>
+                  </div>
+
+                  {matched && o.match.reasons.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {o.match.reasons.slice(0, 2).map((r) => (
+                        <span key={r} className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-extrabold text-emerald-600">
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <a
-                    href={o.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-xl bg-violet-600 px-3 py-2 text-[12px] font-extrabold text-white shadow-md shadow-violet-600/25 hover:bg-violet-700"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    افتح المنشور
-                  </a>
+                {/* الإجراءات */}
+                <div className="flex shrink-0 items-center gap-1.5">
                   {o.status === "new" && (
                     <>
-                      <button onClick={() => act(o, "status", "saved")} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-amber-50 hover:text-amber-600" title="حفظ" aria-label="حفظ">
+                      <button onClick={() => act(o, "status", "saved")} className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-amber-50 hover:text-amber-600" title="حفظ" aria-label="حفظ">
                         <Bookmark className="h-4 w-4" />
                       </button>
-                      <button onClick={() => act(o, "to-lead")} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600" title="تحويل إلى عميل" aria-label="تحويل">
+                      <button onClick={() => act(o, "to-lead")} className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-600" title="تحويل إلى عميل" aria-label="تحويل">
                         <UserPlus className="h-4 w-4" />
                       </button>
-                      <button onClick={() => act(o, "status", "ignored")} className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:bg-slate-50" title="تجاهل" aria-label="تجاهل">
+                      <button onClick={() => act(o, "status", "ignored")} className="hidden rounded-xl border border-slate-200 p-2 text-slate-400 hover:bg-slate-50 sm:block" title="تجاهل" aria-label="تجاهل">
                         <Check className="h-4 w-4" />
                       </button>
                     </>
@@ -270,9 +332,9 @@ export default function RadarPage() {
                 </div>
               </div>
 
-              <p className="mt-3 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-7 text-slate-600">{o.excerpt}</p>
+              <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-6 text-slate-600">{o.excerpt}</p>
 
-              <div className="mt-2.5 flex flex-wrap items-center gap-4 text-[11px] font-bold text-slate-400">
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold text-slate-400">
                 <span className="inline-flex items-center gap-1">
                   <Heart className="h-3.5 w-3.5 text-rose-300" />
                   {o.engagement.likes}
@@ -281,14 +343,10 @@ export default function RadarPage() {
                   <MsgIcon className="h-3.5 w-3.5 text-sky-300" />
                   {o.engagement.comments}
                 </span>
-                <span className="inline-flex items-center gap-1" dir="ltr">
-                  <Link2 className="h-3.5 w-3.5" />
-                  {new URL(o.sourceUrl).hostname}
-                </span>
-                <span className="ms-auto inline-flex items-center gap-1 text-emerald-600">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  محتوى عام ظاهر — التواصل عبر المنشور
-                </span>
+                <a href={o.sourceUrl} target="_blank" rel="noopener noreferrer" className="ms-auto inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3.5 py-2 text-[11.5px] font-black text-white shadow-md shadow-violet-600/25 transition hover:bg-violet-700">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  المنشور الأصلي
+                </a>
               </div>
             </div>
           );
@@ -298,42 +356,36 @@ export default function RadarPage() {
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <Empty
               icon={<Crosshair className="h-8 w-8" />}
-              title="لا فرص في هذا التصنيف"
-              sub="فعّل الوضع الحي وانتظر ثوانٍ، أو اضغط «مسح الآن» — أو الصق رابط منشور تصادفه."
+              title={mineOnly && setupDone ? "لا فرص مطابقة في هذه اللحظة" : "لا فرص في هذا التصنيف بعد"}
+              sub="النظام يرصد باستمرار — ستظهر الفرصة المناسبة تلقائياً خلال دقائق."
             />
           </div>
         )}
       </div>
 
-      {/* شريط القانونية */}
-      <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 text-[12px] leading-7 text-emerald-800">
-        <div className="mb-1 flex items-center gap-1.5 text-[13px] font-extrabold">
-          <ShieldCheck className="h-4 w-4" />
-          كيف نجلب بشكل قانوني 100٪؟
+      {/* إخلاء قانوني */}
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-[12px] leading-7 text-slate-500">
+        <div className="mb-1 flex items-center gap-1.5 text-[12.5px] font-black text-slate-700">
+          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+          المصادر والامتثال
         </div>
-        نجلب فقط ما هو <b>عام وظاهر للجميع</b> (اسم الناشر العلني، نص المنشور، التوقيت، التفاعلات) عبر الواجهات
-        الرسمية (Meta Webhooks، X API، Telegram Bot API، خلاصات RSS) أو ميتاداتا الصفحة العامة عند اللصق اليدوي.
-        <b>رابط المنشور مصدر كل فرصة</b> — تتصفّح وتردّ هناك بنفسك باحترام. لا سحب لأرقام ولا بيانات خاصة،
-        والفرص الأقدم من 72 ساعة تُحذف تلقائياً (تقليل التخزين = امتثال لقانون 18-07 وGDPR).
+        يُرصد المحتوى العام الظاهر للجميع عبر الواجهات الرسمية (Meta، X API، Telegram Bot API، خلاصات RSS) مع توثيق رابط المصدر لكل فرصة، وحذف تلقائي للأقدم من 72 ساعة — توافق مع قانون 18-07 وGDPR.
       </div>
 
-      {/* نافذة اللصق اليدوي */}
+      {/* نافذة إضافة رابط */}
       <Modal open={pasteOpen} onClose={() => setPasteOpen(false)} title="إضافة فرصة من رابط">
         <div className="space-y-4">
-          <Field label="رابط المنشور *" hint="فيسبوك، إنستغرام، إكس، تيليغرام، منتدى… أي منشور عام">
+          <Field label="رابط المنشور" hint="أي منشور عام: فيسبوك، إنستغرام، إكس، تيليغرام، منتدى">
             <input
               value={paste.url}
               onChange={(e) => setPaste({ ...paste, url: e.target.value })}
-              placeholder="https://facebook.com/groups/…/posts/…"
+              placeholder="https://…"
               dir="ltr"
               className={`${inputCls} text-left`}
             />
           </Field>
-          <Field label="عنوان مختصر (اختياري)" hint="يُجلب تلقائياً من المنشور إن تُرك فارغاً">
-            <input value={paste.title} onChange={(e) => setPaste({ ...paste, title: e.target.value })} placeholder="مطلوب مصمم لوقو…" className={inputCls} />
-          </Field>
-          <Field label="تفاصيل إضافية (اختياري)">
-            <textarea value={paste.excerpt} onChange={(e) => setPaste({ ...paste, excerpt: e.target.value })} rows={3} className={inputCls} />
+          <Field label="عنوان مختصر (اختياري)">
+            <input value={paste.title} onChange={(e) => setPaste({ ...paste, title: e.target.value })} className={inputCls} />
           </Field>
           <Field label="اسم الناشر الظاهر (اختياري)">
             <input value={paste.author} onChange={(e) => setPaste({ ...paste, author: e.target.value })} className={inputCls} />
@@ -342,7 +394,7 @@ export default function RadarPage() {
             <Btn variant="ghost" onClick={() => setPasteOpen(false)}>إلغاء</Btn>
             <Btn onClick={submitPaste} disabled={pasting || !paste.url.startsWith("http")}>
               <Plus className="h-3.5 w-3.5" />
-              {pasting ? "جارٍ الجلب…" : "إضافة الفرصة"}
+              {pasting ? "جارٍ الجلب…" : "إضافة"}
             </Btn>
           </div>
         </div>

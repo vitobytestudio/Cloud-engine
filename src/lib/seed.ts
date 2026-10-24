@@ -489,6 +489,14 @@ export function buildSeed(): DB {
     activity,
     opportunities: buildOpportunities(),
     connectors: buildConnectors(),
+    profile: {
+      professionId: "",
+      keywords: [],
+      wilayas: ["كل الولايات"],
+      alertChannel: "app",
+      setupDone: false,
+      createdAt: iso(),
+    },
   };
 }
 

@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/cairo";
 import "./globals.css";
 import { buildSeed } from "@/lib/seed";
 import { buildStaticShim } from "@/lib/static-shim";
 
 const STATIC_MODE = process.env.NEXT_PUBLIC_STATIC_DEPLOY === "1";
+
+export const viewport: Viewport = {
+  themeColor: "#06060b",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "مِرسال — استقطب عملاءك من السوشيال ميديا تلقائياً وبدون حظر",
