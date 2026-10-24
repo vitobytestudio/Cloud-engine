@@ -38,8 +38,8 @@ const FEATURES = [
   {
     n: "01",
     icon: Crosshair,
-    title: "رصد الفرص لحظة نشرها",
-    desc: "محرك استماع يعمل على مدار الساعة يرصد طلبات العملاء عبر القنوات الرسمية — ويوصلها إليك خلال ثوانٍ من نشرها، مع رابط المنشور الأصلي وسياقه الكامل.",
+    title: "زبائن جاهزون، مسلَّمون إلى لوحتك",
+    desc: "رادار يعمل 24/7 يرصد طلبات العملاء الحقيقية عبر القنوات الرسمية — ويوصلك كل زبون بمنشوره ورابط الوصول الفعلي إليه ورسالة جاهزة. يبقى عليك التواصل فقط.",
     span: "md:col-span-2",
   },
   {
@@ -52,8 +52,8 @@ const FEATURES = [
   {
     n: "03",
     icon: MessageSquareDot,
-    title: "ردود آلية بالعربية",
-    desc: "قوالب رد ذكية ترد على الاستفسارات خلال ثوانٍ وتطلب بيانات التواصل بأدب مهني — بينما أنت منشغل بعملك.",
+    title: "رسائل افتتاحية جاهزة",
+    desc: "لكل زبون يصلك، رسالة أولى مصاغة باسمك وتخصصه وبلهجة مهنية — انسخها بنقرة وأرسلها. أصعب جملة في الفري لانس كُتبت عنك.",
     span: "",
   },
   {
@@ -82,18 +82,18 @@ const FEATURES = [
 const STEPS = [
   {
     n: "01",
-    title: "اربط مصادرك رسمياً",
-    desc: "صفحاتك على ميتا، حساب إكس، قنوات تيليغرام العامة، وخلاصات المواقع — ربط رسمي بمصادقة آمنة خلال دقائق.",
+    title: "اختر باقتك",
+    desc: "انطلاقة مجانية للأبد، أو باقة توصيل يومي بالدينار — دفع جزائري، بلا التزام، وإلغاء متى شئت.",
   },
   {
     n: "02",
-    title: "حدّد تخصصك وكلماته",
-    desc: "«مصمم شعارات»، «مطور ووردبريس»، «مصور أعراس»… المحرك يضبط الرصد على طلبات تخصصك في ولاياتك.",
+    title: "حدّد تخصصك وولاياتك — مرة واحدة",
+    desc: "«مصمم شعارات»، «مطور ووردبريس»، «فيديوهات إعلانية»… المحرك يضبط التوصيل على طلبات تخصصك فقط.",
   },
   {
     n: "03",
-    title: "استقبل الفرص وأغلق الصفقات",
-    desc: "كل فرصة تصل بسياقها ورابطها وتقييم ملاءمتها — تفتح المحادثة من مكانها وتحوّلها إلى عقد.",
+    title: "استلم زبائنك جاهزين وتواصل",
+    desc: "كل زبون يصلك بمنشوره، ورابط الوصول الفعلي إليه، ورسالة افتتاحية جاهزة بنقرة نسخ — دورك: التواصل والإغلاق.",
   },
 ];
 
@@ -161,26 +161,25 @@ export default function Landing() {
                   <span className="rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-500 px-2.5 py-0.5 text-[10px] font-black text-white">
                     2026
                   </span>
-                  منصة رصد العملاء الأولى للفريلانسر الجزائري
+                  توصيل زبائن جاهزين — حصرياً للجزائر
                 </div>
               </Reveal>
 
               <Reveal delay={110}>
                 <h1 className="mt-6 text-[34px] font-black leading-[1.25] sm:text-[54px] sm:leading-[1.18] md:mt-7 md:text-[62px] md:leading-[1.15]">
-                  الفرص تصل إليك.
+                  زبائن جاهزون
                   <br />
                   <span className="bg-gradient-to-l from-violet-400 via-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
-                    لا تلاحظها بعد اليوم.
+                    يصلونك كل يوم.
                   </span>
                 </h1>
               </Reveal>
 
               <Reveal delay={220}>
                 <p className="mt-5 max-w-xl text-[14.5px] leading-8 text-slate-400 md:mt-6 md:text-[15.5px] md:leading-9">
-                  «مِرسال» يرصد طلبات العملاء عبر وسائل التواصل والمجموعات والقنوات —
-                  <span className="text-slate-200"> لحظة نشرها </span>
-                  — ويحوّلها إلى محادثات وعقود. عبر القنوات الرسمية حصراً، وبأعلى معايير
-                  الأمان المؤسسي.
+                  مِرسال يجلب لك طلبات العملاء الحقيقية —
+                  <span className="text-slate-200"> منشورهم، رابط الوصول إليهم، ورسالة أولى جاهزة للإرسال </span>
+                  — مباشرة إلى لوحتك. أنت لا تبحث بعد اليوم؛ أنت فقط تتواصل وتُغلق الصفقة.
                 </p>
               </Reveal>
 
@@ -190,14 +189,14 @@ export default function Landing() {
                     href="/dashboard"
                     className="group inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-[13.5px] font-black md:px-7 md:py-4 md:text-[14px] text-[#06060b] shadow-[0_8px_40px_-8px] shadow-violet-500/40 transition hover:bg-violet-50"
                   >
-                    ابدأ التجربة المجانية
+                    ابدأ مجاناً — 3 زبائن أسبوعياً
                     <ArrowUpLeft className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" />
                   </Link>
                   <a
-                    href="#how"
+                    href="#pricing"
                     className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-3.5 text-[13.5px] font-black md:px-7 md:py-4 md:text-[14px] text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]"
                   >
-                    كيف يعمل
+                    الباقات
                     <ArrowDown className="h-4 w-4 opacity-60" />
                   </a>
                 </div>
@@ -400,7 +399,7 @@ export default function Landing() {
           <SectionHead
             overline="الأسعار"
             title="بدينار جزائري، وبمعايير عالمية"
-            sub="فترة التجربة الحالية مجانية بالكامل. عند الإطلاق التجاري: دفع محلي بـ CIB والذهبية، بلا التزام طويل."
+            sub="أنت تدفع مقابل زبائن جاهزين يُسلَّمون إليك — لا مقابل أداة. عند الإطلاق: دفع محلي CIB والذهبية، بلا التزام، وإلغاء متى شئت."
           />
           <div className="grid gap-5 md:grid-cols-3">
             {[

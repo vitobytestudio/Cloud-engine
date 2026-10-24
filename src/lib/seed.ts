@@ -497,6 +497,13 @@ export function buildSeed(): DB {
       setupDone: false,
       createdAt: iso(),
     },
+    subscription: {
+      planId: "free",
+      status: "active",
+      startedAt: iso(-3 * DAY),
+      renewsAt: iso(27 * DAY),
+      totalDelivered: 41,
+    },
   };
 }
 

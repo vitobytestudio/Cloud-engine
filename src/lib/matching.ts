@@ -138,3 +138,18 @@ export function matchOpportunity(o: Opportunity, profile: RadarProfile | null): 
 
   return { score: Math.min(100, score), reasons, matched: true };
 }
+
+/** الرسالة الافتتاحية الجاهزة — أكبر مُسهّل: الفريلانسر ينسخ ويرسل فقط */
+export function suggestOpening(
+  o: Opportunity,
+  profLabel: string | null,
+  freelancerName?: string
+): string {
+  const who = profLabel ?? o.keyword;
+  const name = freelancerName?.trim() ? ` أنا ${freelancerName.trim()}.` : "";
+  return [
+    `السلام عليكم، ${o.authorPublic}.`,
+    `شفت طلبكم بخصوص «${o.title}» — هذا من تخصصي: ${who}.${name}`,
+    `عندي أعمال مشابهة ونقدر نبدلو التفاصيل والميزانية الآن. متاحين متى تحبوا؟`,
+  ].join("\n");
+}

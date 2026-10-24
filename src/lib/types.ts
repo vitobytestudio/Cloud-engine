@@ -139,6 +139,7 @@ export interface DB {
   opportunities: Opportunity[];
   connectors: Connector[];
   profile: RadarProfile;
+  subscription: Subscription;
 }
 
 // ——— رصّاد الفرص: فرص عملاء من محتوى عام + رابط إلزامي ———
@@ -189,4 +190,29 @@ export interface RadarProfile {
   alertPhone?: string; // بموافقة صريحة — للتنبيهات فقط
   setupDone: boolean;
   createdAt: string;
+}
+
+// ——— الباقات والاشتراك: نبيع زبائن جاهزين، لا أدوات بحث ———
+
+export type PlanId = "free" | "growth" | "pro";
+
+export interface Plan {
+  id: PlanId;
+  name: string;
+  priceDzd: number;
+  tagline: string;
+  dailyClients: number; // -1 = غير محدود
+  weeklyClientsFree?: number;
+  allChannels: boolean;
+  instantAlert: boolean;
+  priority: boolean;
+  features: string[];
+}
+
+export interface Subscription {
+  planId: PlanId;
+  status: "active" | "expired";
+  startedAt: string;
+  renewsAt: string;
+  totalDelivered: number;
 }
