@@ -1,0 +1,337 @@
+1:"$Sreact.fragment"
+8:I[7150,[],""]
+:HL["/Cloud-engine/_next/static/css/706fd9bd8a42ff83.css","style"]
+2:Ta91d,(function(){
+"use strict";
+var SEED={"workspace":{"name":"أناقة ستور","tagline":"تجهيزات صالونات وتجميل — وهران","city":"وهران"},"leads":[{"id":"298239c2-35ea-4e0a-a966-cdef207abf17","name":"أمينة بن عمر","handle":"@amina.coiffure","platform":"instagram","status":"customer","tags":["صالون","وهران","VIP"],"score":92,"consent":true,"source":"أتمتة «سعر»","createdAt":"2026-10-11T00:14:40.949Z","lastActivityAt":"2026-10-11T00:14:40.949Z","phone":"0550 12 34 56","notes":"صالون تجميل في وهران — طلبت ماكينة ميكر + كرسيين."},{"id":"30c6db60-9d3d-47ff-9827-e37cd6af13d8","name":"يوسف حمادي","handle":"+213661998877","platform":"whatsapp","status":"qualified","tags":["مستعد للشراء"],"score":81,"consent":true,"source":"واتساب — كاتالوغ","createdAt":"2026-10-13T00:14:40.949Z","lastActivityAt":"2026-10-13T00:14:40.949Z","phone":"0661 99 88 77"},{"id":"d7f460be-713c-44fb-8ae6-18a3773383ea","name":"سارة مرزوق","handle":"@sara.style_","platform":"tiktok","status":"contacted","tags":["مؤثرة"],"score":57,"consent":false,"source":"مراقبة «تجهيزات صالون»","createdAt":"2026-10-14T00:14:40.949Z","lastActivityAt":"2026-10-14T00:14:40.949Z"},{"id":"f9a39f10-579f-4136-9d9b-d2aafeebcb1e","name":"كريم بلحاج","handle":"Karim.Blahaj","platform":"facebook","status":"contacted","tags":[],"score":64,"consent":false,"source":"أتمتة «حجز»","createdAt":"2026-10-15T00:14:40.949Z","lastActivityAt":"2026-10-15T00:14:40.949Z"},{"id":"3f6d8afc-086d-4943-a430-d2793b833413","name":"نسرين قدور","handle":"@nesrine.kd","platform":"instagram","status":"qualified","tags":["ماكياج"],"score":74,"consent":true,"source":"أتمتة «سعر»","createdAt":"2026-10-16T00:14:40.949Z","lastActivityAt":"2026-10-16T00:14:40.949Z","phone":"0770 45 21 30"},{"id":"01b5d390-7790-46a5-87dc-d5406cb170b3","name":"محمد الأمين","handle":"+213770998812","platform":"whatsapp","status":"customer","tags":["صالون","قسنطينة"],"score":88,"consent":true,"source":"صفحة الالتقاط: عرض الصالونات","createdAt":"2026-10-17T00:14:40.949Z","lastActivityAt":"2026-10-17T00:14:40.949Z","phone":"0770 99 88 12"},{"id":"71640383-ed14-4f3f-b087-d9ec6d9a28ce","name":"فاطمة الزهراء","handle":"@fati.zrt","platform":"instagram","status":"contacted","tags":[],"score":60,"consent":false,"source":"أتمتة «توصيل»","createdAt":"2026-10-18T00:14:40.949Z","lastActivityAt":"2026-10-18T00:14:40.949Z"},{"id":"7da1d3d7-b4b1-45e9-9405-9adb1484c131","name":"عبد الرحمان طايبي","handle":"Abderrahmane.T","platform":"facebook","status":"lost","tags":["ميزانية منخفضة"],"score":30,"consent":false,"source":"مراقبة «ماكينة حلاقة»","createdAt":"2026-10-19T00:14:40.949Z","lastActivityAt":"2026-10-19T00:14:40.949Z","notes":"السعر خارج ميزانيته حالياً — يُعاد التواصل معه موسمياً."},{"id":"e2ec6ea0-e422-4614-9112-27faf8d2d416","name":"ليلى شريفي","handle":"@lila.sheriff","platform":"instagram","status":"new","tags":[],"score":68,"consent":true,"source":"صفحة الالتقاط: عرض الصالونات","createdAt":"2026-10-20T00:14:40.949Z","lastActivityAt":"2026-10-20T00:14:40.949Z","phone":"0555 77 88 90"},{"id":"42935494-eebb-492e-86e8-37b28bc607dd","name":"إلياس مزيان","handle":"@elyas.mz","platform":"tiktok","status":"new","tags":["باربر"],"score":52,"consent":false,"source":"مراقبة «كرسي باربر»","createdAt":"2026-10-21T00:14:40.949Z","lastActivityAt":"2026-10-21T00:14:40.949Z"},{"id":"031b93d0-5190-4e4d-a86f-ffcde0a58317","name":"خديجة سعدي","handle":"+213661445522","platform":"whatsapp","status":"contacted","tags":[],"score":71,"consent":true,"source":"واتساب — كاتالوغ","createdAt":"2026-10-22T00:14:40.949Z","lastActivityAt":"2026-10-22T00:14:40.949Z","phone":"0661 44 55 22"},{"id":"7ad84468-8b94-49c5-b765-11ef98ae19ac","name":"رامي بن علي","handle":"@rami.benali","platform":"instagram","status":"new","tags":[],"score":47,"consent":false,"source":"أتمتة «توصيل»","createdAt":"2026-10-23T19:14:40.949Z","lastActivityAt":"2026-10-23T19:14:40.949Z"},{"id":"ef819b87-a467-4353-bfec-4b87428f4ca6","name":"وليد عثماني","handle":"@walid.othmani","platform":"instagram","status":"new","tags":["باربر"],"score":77,"consent":true,"source":"أتمتة «سعر»","createdAt":"2026-10-23T22:14:40.949Z","lastActivityAt":"2026-10-23T22:14:40.949Z","phone":"0699 33 22 11"}],"conversations":[{"id":"b0248539-cea3-418f-9b26-b4fe232c3b19","leadId":"298239c2-35ea-4e0a-a966-cdef207abf17","platform":"instagram","unread":0,"lastMessageAt":"2026-10-23T00:14:40.949Z","lastMessagePreview":"اه هذا رقمي 0550 12 34 56"},{"id":"307d0265-276d-4f90-b02d-a694d43430cf","leadId":"30c6db60-9d3d-47ff-9827-e37cd6af13d8","platform":"whatsapp","unread":1,"lastMessageAt":"2026-10-23T21:44:40.949Z","lastMessagePreview":"اه عيني البروفيسيونال شحال توصيلو لقسنطينة؟"},{"id":"7fec2d77-eaab-4dab-ad45-b751c25245b7","leadId":"f9a39f10-579f-4136-9d9b-d2aafeebcb1e","platform":"facebook","unread":0,"lastMessageAt":"2026-10-23T04:44:40.949Z","lastMessagePreview":"مرحبا كريم 🌟 مرحباً! أقولنا وين المكان والأيام المناسبة ونثبتوها فوراً."},{"id":"d35c4487-caf5-4f4c-979d-d51542907ce3","leadId":"3f6d8afc-086d-4943-a430-d2793b833413","platform":"instagram","unread":1,"lastMessageAt":"2026-10-23T23:44:40.949Z","lastMessagePreview":"اه باراكا الله فيكم. شحال ولاو؟"},{"id":"d1177f0c-ae7e-490c-9ce7-cc775fd596af","leadId":"01b5d390-7790-46a5-87dc-d5406cb170b3","platform":"whatsapp","unread":0,"lastMessageAt":"2026-10-22T21:14:40.949Z","lastMessagePreview":"أكيد! المدير التاجر يحكي معك اليوم إن شاء الله 🤝"},{"id":"6dadd51b-fab2-4905-a2a2-647c4ea298a8","leadId":"71640383-ed14-4f3f-b087-d9ec6d9a28ce","platform":"instagram","unread":0,"lastMessageAt":"2026-10-23T22:59:40.949Z","lastMessagePreview":"تمام، راح نرجعلك"},{"id":"96fd6458-e3af-4411-8038-1a1e6b04a206","leadId":"031b93d0-5190-4e4d-a86f-ffcde0a58317","platform":"whatsapp","unread":1,"lastMessageAt":"2026-10-23T19:26:40.949Z","lastMessagePreview":"وعليكم السلام خديجة 🌷 تفضلي، أنا في الخدمة."},{"id":"7a5bd565-574b-445e-98aa-211ef8091ecf","leadId":"7ad84468-8b94-49c5-b765-11ef98ae19ac","platform":"instagram","unread":0,"lastMessageAt":"2026-10-23T20:20:40.949Z","lastMessagePreview":"مرحباً رامي 🚚 نوصلو لقسنطينة في 48 سا، ومجاناً فوق 50.000 دج."}],"messages":[{"id":"e5a274d0-27c1-4b3f-9112-0552bf026286","conversationId":"b0248539-cea3-418f-9b26-b4fe232c3b19","direction":"in","body":"السلام عليكم، شفت منشور الميكر 👌 شحال السعر؟","status":"delivered","createdAt":"2026-10-22T22:14:40.949Z"},{"id":"21d0cde0-f503-48db-9810-e6790680b741","conversationId":"b0248539-cea3-418f-9b26-b4fe232c3b19","direction":"out","body":"وعليكم السلام أمينة 🌸 الميكر الأصلي بـ 34.900 دج مع توصيل لـ 58 ولاية. نبعثلك الكاتالوغ الكامل؟","status":"read","createdAt":"2026-10-22T22:44:40.949Z"},{"id":"f4af098b-6e0b-422f-b3b3-abdddb896e89","conversationId":"b0248539-cea3-418f-9b26-b4fe232c3b19","direction":"in","body":"اه باراكا الله فيكم، عندي صالون في وهران","status":"delivered","createdAt":"2026-10-22T23:14:40.949Z"},{"id":"b2135786-dabb-4c99-9a5c-41afffa423c4","conversationId":"b0248539-cea3-418f-9b26-b4fe232c3b19","direction":"out","body":"ممتاز! عندنا خصم خاصة للصالونات 💜 نبعتلك التفاصيل على هذا الرقم؟","status":"read","createdAt":"2026-10-22T23:26:40.949Z"},{"id":"eff15e6f-2343-4621-a781-91ec682ae2ed","conversationId":"b0248539-cea3-418f-9b26-b4fe232c3b19","direction":"in","body":"اه هذا رقمي 0550 12 34 56","status":"delivered","createdAt":"2026-10-23T00:14:40.949Z"},{"id":"67ceed43-10c4-4f05-92af-7e0c1c41d966","conversationId":"307d0265-276d-4f90-b02d-a694d43430cf","direction":"in","body":"السلام عليكم، حبيت نسقسي واش عندكم من كراسي باربر","status":"delivered","createdAt":"2026-10-23T21:14:40.949Z"},{"id":"bbee65f6-1972-4476-a117-c3b967b21318","conversationId":"307d0265-276d-4f90-b02d-a694d43430cf","direction":"out","body":"وعليكم السلام يوسف 🙌 عندنا 3 موديلات: عادي 18.500، فاخر 27.900، وبروفيسيونال 41.000 دج. أنا نعرفلك الفرق بالصور؟","status":"read","createdAt":"2026-10-23T21:26:40.949Z"},{"id":"53ab7eb1-8165-4baa-be0c-235ec25f38a5","conversationId":"307d0265-276d-4f90-b02d-a694d43430cf","direction":"in","body":"اه عيني البروفيسيونال شحال توصيلو لقسنطينة؟","status":"delivered","createdAt":"2026-10-23T21:44:40.949Z"},{"id":"fa41607e-416f-4db5-b10c-17722e7f0778","conversationId":"7fec2d77-eaab-4dab-ad45-b751c25245b7","direction":"in","body":"سلام، نحب نحجز موعد لتركيب التجهيزات","status":"delivered","createdAt":"2026-10-23T04:14:40.949Z"},{"id":"3b88f31c-57e1-4967-8728-46efb6767861","conversationId":"7fec2d77-eaab-4dab-ad45-b751c25245b7","direction":"out","body":"مرحبا كريم 🌟 مرحباً! أقولنا وين المكان والأيام المناسبة ونثبتوها فوراً.","status":"read","createdAt":"2026-10-23T04:44:40.949Z"},{"id":"9fa3627e-0115-46db-a5cc-6af3caecd8f1","conversationId":"d35c4487-caf5-4f4c-979d-d51542907ce3","direction":"in","body":"سلام خويت نقولك بلي الميكر ولات في المدينة؟ 🥲","status":"delivered","createdAt":"2026-10-23T23:34:40.949Z"},{"id":"81da0864-84c5-4adf-a634-779bb5a45aba","conversationId":"d35c4487-caf5-4f4c-979d-d51542907ce3","direction":"out","body":"أهلاً نسرين 🌸 اه وصلنا أمس! خاصك نحجزولك واحدة من الكمية الجديدة؟","status":"read","createdAt":"2026-10-23T23:39:40.949Z"},{"id":"0f65685c-5041-4494-8ec8-126bad372a4b","conversationId":"d35c4487-caf5-4f4c-979d-d51542907ce3","direction":"in","body":"اه باراكا الله فيكم. شحال ولاو؟","status":"delivered","createdAt":"2026-10-23T23:44:40.949Z"},{"id":"fc5452db-7635-485c-9b2c-1d0ab4a97251","conversationId":"d1177f0c-ae7e-490c-9ce7-cc775fd596af","direction":"in","body":"مرحبا، أنا صاحب صالون جديد في قسنطينة ونحب نجهلو كامل","status":"delivered","createdAt":"2026-10-22T18:14:40.949Z"},{"id":"2b6ce5f5-f533-4e83-b24a-e6b0f7a561a8","conversationId":"d1177f0c-ae7e-490c-9ce7-cc775fd596af","direction":"out","body":"مرحباً بك محمد 🎉 فينا كامل: كراسي، مرايا، محركات، أدوات. نصايحك تبدا بهذا الباك: https://mirsal.dz/p/salon-offer","status":"read","createdAt":"2026-10-22T19:14:40.949Z"},{"id":"9077a7a3-ed89-4d4e-9231-4ad4b427a0fb","conversationId":"d1177f0c-ae7e-490c-9ce7-cc775fd596af","direction":"in","body":"شفت الباك، حلو بزاف. نحب نفاوض على الثمن","status":"delivered","createdAt":"2026-10-22T20:14:40.949Z"},{"id":"8b0ace22-5706-4b8f-8c02-bbc335e3ee2b","conversationId":"d1177f0c-ae7e-490c-9ce7-cc775fd596af","direction":"out","body":"أكيد! المدير التاجر يحكي معك اليوم إن شاء الله 🤝","status":"read","createdAt":"2026-10-22T21:14:40.949Z"},{"id":"bc99c88e-0349-4316-a134-5e1811d8087d","conversationId":"6dadd51b-fab2-4905-a2a2-647c4ea298a8","direction":"in","body":"التوصيل يشمل لبسكرة؟","status":"delivered","createdAt":"2026-10-23T22:44:40.949Z"},{"id":"dcc10660-8fbf-4c19-9bf6-f0b2d98bf5a0","conversationId":"6dadd51b-fab2-4905-a2a2-647c4ea298a8","direction":"out","body":"اه فاطمة، نوصلو لكل الولايات 🚚 التوصيل مجاني للطلبيات فوق 50.000 دج.","status":"read","createdAt":"2026-10-23T22:54:40.949Z"},{"id":"6fe190b0-917f-4871-a4e2-53761eee7bd3","conversationId":"6dadd51b-fab2-4905-a2a2-647c4ea298a8","direction":"in","body":"تمام، راح نرجعلك","status":"delivered","createdAt":"2026-10-23T22:59:40.949Z"},{"id":"b7386a37-25df-440e-ab38-c89194c37ebe","conversationId":"96fd6458-e3af-4411-8038-1a1e6b04a206","direction":"in","body":"سلام عليكم، بعتولي الكاتالوغ من قبل وشفتو، عندي سؤال على المحركات","status":"delivered","createdAt":"2026-10-23T19:14:40.949Z"},{"id":"5a157cef-618b-45a1-9315-87971703f024","conversationId":"96fd6458-e3af-4411-8038-1a1e6b04a206","direction":"out","body":"وعليكم السلام خديجة 🌷 تفضلي، أنا في الخدمة.","status":"read","createdAt":"2026-10-23T19:26:40.949Z"},{"id":"61843234-d23e-4088-9d43-64bd6ece0791","conversationId":"7a5bd565-574b-445e-98aa-211ef8091ecf","direction":"in","body":"التوصيل لقسنطينة كيماش؟","status":"delivered","createdAt":"2026-10-23T20:14:40.949Z"},{"id":"f82bf59e-d05d-49a1-b59c-f6887a04506e","conversationId":"7a5bd565-574b-445e-98aa-211ef8091ecf","direction":"out","body":"مرحباً رامي 🚚 نوصلو لقسنطينة في 48 سا، ومجاناً فوق 50.000 دج.","status":"read","createdAt":"2026-10-23T20:20:40.949Z"}],"automations":[{"id":"f1875afa-7a59-4c20-913a-fe9c477b0828","name":"رد فوري على كلمة «سعر»","platform":"instagram","trigger":"comment_keyword","keyword":"سعر","replyTemplate":"هلا بيك {{الاسم}} 🌸 الأسعار حسب الموديل — أبعثلك الكاتالوغ الكامل هنا في الخاص؟ وإن حبيت، اكتبلي رقمك ونتصلو بيك اليوم!","ctaLink":"","collectPhone":true,"active":true,"triggeredCount":184,"leadsCaptured":63,"createdAt":"2026-10-04T00:14:40.949Z"},{"id":"6280ccbe-86e1-4fdb-9b63-c1351e2d4f4c","name":"حجز المواعيد تلقائياً","platform":"facebook","trigger":"comment_keyword","keyword":"حجز","replyTemplate":"مرحباً {{الاسم}} 🌟 للحجز، اختار اليوم المناسب من هنا: {{الرابط}} — المواعيد محدودة هذا الأسبوع!","ctaLink":"https://cal.com/anaqa-studio","collectPhone":true,"active":true,"triggeredCount":97,"leadsCaptured":41,"createdAt":"2026-10-06T00:14:40.949Z"},{"id":"dfa0ace8-0b3b-48f5-9540-4f14db744da9","name":"معلومات التوصيل — تيك توك","platform":"tiktok","trigger":"comment_keyword","keyword":"توصيل","replyTemplate":"🚚 نوصلو لكل الولايات في 48-72 سا! التوصيل مجاني فوق 50.000 دج. قولي ولايتك ونعطيك التفاصيل بالضبط.","collectPhone":false,"active":true,"triggeredCount":142,"leadsCaptured":38,"createdAt":"2026-10-09T00:14:40.949Z"},{"id":"9a01ff75-98d1-48ed-9923-31d29b8d26c9","name":"إرسال الكاتالوغ على واتساب","platform":"whatsapp","trigger":"dm_keyword","keyword":"كاتالوغ","replyTemplate":"أهلاً بك 🌟 هذا الكاتالوغ الكامل 2026: {{الرابط}} — ولو حبيت مساعدة في الاختيار أنا هنا!","ctaLink":"https://mirsal.dz/catalogue-2026","collectPhone":false,"active":false,"triggeredCount":56,"leadsCaptured":22,"createdAt":"2026-10-12T00:14:40.949Z"}],"rules":[{"id":"3eec0941-9673-4d99-9666-efd7ce97e2ea","keyword":"تجهيزات صالون","platforms":["instagram","tiktok"],"active":true,"matchesCount":63,"createdAt":"2026-10-10T00:14:40.949Z"},{"id":"2e4d84e3-7b30-4322-97c8-0773431b5f08","keyword":"ماكينة حلاقة","platforms":["facebook","x"],"active":true,"matchesCount":41,"createdAt":"2026-10-11T00:14:40.949Z"},{"id":"d9695498-8f50-4801-bdfb-cd76d86b8cbc","keyword":"كرسي باربر","platforms":["facebook","instagram"],"active":true,"matchesCount":28,"createdAt":"2026-10-14T00:14:40.949Z"},{"id":"3004ff18-714f-4697-8684-e8285f2c3940","keyword":"صالون تجميل وهران","platforms":["instagram"],"active":true,"matchesCount":17,"createdAt":"2026-10-17T00:14:40.949Z"},{"id":"c3432919-d00c-47bb-912b-1d7439f268fa","keyword":"ماكياج احترافي","platforms":["tiktok"],"active":false,"matchesCount":9,"createdAt":"2026-10-20T00:14:40.949Z"}],"mentions":[{"id":"8cce2e6a-68c8-4f1d-b0e6-12cdf01f3dc4","ruleId":"3eec0941-9673-4d99-9666-efd7ce97e2ea","platform":"tiktok","authorName":"سارة مرزوق","authorHandle":"@sara.style_","content":"ولا حد يعرف وين نلقا تجهيزات صالون أصلية في وهران؟ عندي افتتاح الشهر الجاي 💇‍♀️","url":"#","likes":342,"comments":47,"sentiment":"positive","converted":false,"createdAt":"2026-10-23T23:49:40.949Z"},{"id":"10dd0b02-aec2-479f-b0b5-761e04c60a1d","ruleId":"d9695498-8f50-4801-bdfb-cd76d86b8cbc","platform":"facebook","authorName":"بلال عمراني","authorHandle":"Bilal.Omrani","content":"نورمالمي كرسي باربر بروفيسيونال، الميزانية حول 30 ألف. اقترحوالي موديلات 👊","url":"#","likes":18,"comments":12,"sentiment":"neutral","converted":false,"createdAt":"2026-10-23T22:14:40.949Z"},{"id":"ed254aa7-1f5e-48bb-8be0-39add6cdb2c3","ruleId":"3004ff18-714f-4697-8684-e8285f2c3940","platform":"instagram","authorName":"مليكة ح.","authorHandle":"@malika.hamdi","content":"أحلى صالون تجميل وهران فتح قريب وعمره يحتاج ملي حلاقة 😍 شكون يجاوبني على الأسعار؟","url":"#","likes":96,"comments":23,"sentiment":"positive","converted":false,"createdAt":"2026-10-23T21:14:40.949Z"},{"id":"e3d80f06-e124-4771-8629-1427ae6abd4f","ruleId":"2e4d84e3-7b30-4322-97c8-0773431b5f08","platform":"x","authorName":"ياسين بودية","authorHandle":"@yacine_b","content":"ماكينة حلاقة المستعملة خذلتني في وسط الشغل 🙄 هذي المرة نقطع غليان ونشري جديدة أصليّة.","url":"#","likes":41,"comments":9,"sentiment":"negative","converted":false,"createdAt":"2026-10-23T18:14:40.949Z"},{"id":"f6ed6941-0bca-4944-a67f-da900256be0a","ruleId":"3eec0941-9673-4d99-9666-efd7ce97e2ea","platform":"instagram","authorName":"هند بلقاسم","authorHandle":"@hind.blqs","content":"قائمة تجهيزات صالون كاملة نحتاجها للعرض تاع الاستيراد، شكون عندو مصدر ثقة؟","url":"#","likes":12,"comments":5,"sentiment":"neutral","converted":true,"createdAt":"2026-10-23T15:14:40.949Z"}],"campaigns":[{"id":"47e59703-c459-45c0-81ca-e0dd5c2dd32f","name":"الجمعة البيضاء — خصم 30٪","channel":"whatsapp","template":"مرحباً {{الاسم}} 👋 عرض الجمعة البيضاء وصل! خصم 30٪ على كل تجهيزات الصالونات حتى منتصف الليل 🖤 الطلب: {{الرابط}}","audienceTag":"مهم","status":"sent","targeted":420,"sent":412,"delivered":398,"read":351,"replied":87,"createdAt":"2026-10-16T00:14:40.949Z"},{"id":"078e3d8f-2fb9-4d25-a87b-00cf5d47ce8c","name":"تذكير مواعيد الصيانة","channel":"whatsapp","template":"أهلاً {{الاسم}} 🌸 ماكينتك تستحق صيانة! عندك خصم 15٪ على الصيانة هذا الأسبوع. نحجزلك موعد؟","audienceTag":"صالون","status":"sending","targeted":180,"sent":96,"delivered":90,"read":61,"replied":14,"createdAt":"2026-10-23T23:14:40.949Z"},{"id":"2d318f1b-e02d-478b-95dc-e424be9b33d9","name":"كاتالوغ 2026 — الصالونات الجديدة","channel":"whatsapp","template":"مرحباً {{الاسم}} 🎉 كاتالوغ 2026 وصل بأسعار الجملة للصالونات الجديدة. شوفو هنا: {{الرابط}}","audienceTag":"باربر","status":"draft","targeted":0,"sent":0,"delivered":0,"read":0,"replied":0,"createdAt":"2026-10-23T23:54:40.949Z"}],"capturePages":[{"id":"69f8171f-1b87-4964-a6d8-97164a8ace32","slug":"salon-offer","title":"عرض الصالونات الجديدة","headline":"جهّز صالونك كاملاً ووفّر 20٪","subtext":"باك تجهيزات كامل: كرسي، مرآة، محرك، وأدوات احترافية — مع تركيب مجاني في وهران والضواحي. سجل بياناتك ويتصل بك مستشارنا اليوم.","offer":"خصم 20٪ + توصيل مجاني لأول طلبية","ctaLabel":"أرسل طلب الحجز","askPhone":true,"askEmail":false,"published":true,"views":342,"conversions":47,"createdAt":"2026-10-18T00:14:40.949Z"},{"id":"c5563883-32ca-4230-91f9-9f0096b841a8","slug":"makeup-course","title":"ورشة ماكياج احترافي","headline":"ورشة ماكياج احترافي — مقاعد محدودة","subtext":"3 أيام تدريب عملي مع شهادة معتمدة. سجل اهتمامك ونبعتلك البرنامج والأسعار.","ctaLabel":"سجّل اهتمامي","askPhone":true,"askEmail":true,"published":false,"views":0,"conversions":0,"createdAt":"2026-10-22T00:14:40.949Z"}],"activity":[{"id":"5cb68bea-7a55-4bd8-8558-e7e710f24eee","type":"lead","text":"عميل جديد من أتمتة «سعر» — وليد عثماني","platform":"instagram","createdAt":"2026-10-23T22:14:40.949Z"},{"id":"488d970f-b34a-4b74-abbd-d2437c4b8c51","type":"automation","text":"رد تلقائي أُرسل إلى 3 متابعين علّقوا بكلمة «سعر»","platform":"instagram","createdAt":"2026-10-23T21:14:40.949Z"},{"id":"39efd7fa-1e8f-471c-bf8b-b1291f2c720d","type":"message","text":"رسالة جديدة من يوسف حمادي على واتساب","platform":"whatsapp","createdAt":"2026-10-23T21:14:40.949Z"},{"id":"29b1e165-ef98-48b1-acb3-f684043b025f","type":"mention","text":"ذكر جديد لـ «تجهيزات صالون» من @sara.style_","platform":"tiktok","createdAt":"2026-10-23T23:49:40.949Z"},{"id":"c10c12d6-b0c8-4559-8b44-b4a6ed914c21","type":"campaign","text":"حملة «تذكير مواعيد الصيانة» تُرسل الآن — 96/180","platform":"whatsapp","createdAt":"2026-10-23T23:14:40.949Z"},{"id":"d741e11e-36ff-42ad-9fb1-69ffda7e685d","type":"lead","text":"عميل جديد من صفحة الالتقاط «عرض الصالونات»","platform":"instagram","createdAt":"2026-10-20T00:14:40.949Z"},{"id":"120a1cca-9c21-4446-b058-e0befe750895","type":"system","text":"تم ربط حساب إنستغرام للأعمال بنجاح","createdAt":"2026-10-04T00:14:40.949Z"}]};
+var KEY='mirsal-db-v1';
+function load(){
+  try{var r=localStorage.getItem(KEY);if(r){var d=JSON.parse(r);if(d&&d.leads&&d.leads.length)return d;}}catch(e){}
+  var fresh=JSON.parse(JSON.stringify(SEED));
+  try{localStorage.setItem(KEY,JSON.stringify(fresh));}catch(e){}
+  return fresh;
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
+var DB=load();
+function J(data,status){return new Response(JSON.stringify(data),{status:status||200,headers:{'content-type':'application/json'}});}
+function uid(){return 'st-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9);}
+function now(){return new Date().toISOString();}
+function act(type,text,platform){DB.activity.unshift({id:uid(),type:type,text:text,platform:platform,createdAt:now()});if(DB.activity.length>80)DB.activity.length=80;}
+
+/* ——— محاكاة النشاط الحي ——— */
+var FIRST=['ريم','هدى','أسامة','إيمان','سفيان','بشرى','أنيس','وسام','مروة','زكرياء','إيناس','طارق'];
+var LAST=['بن يحيى','شعبان','بوعلام','زروقي','مرابط','بن ناصر','عمراني','دحماني','لعروسي','بوزيد'];
+var HANDLES=['@reeem.dz','@hoda.style','@osama_barber','@iman.beauty','@sofiane.dz','@bouchra.co','@anis_2026','@wissam.mr','@merva.dz','@zakaria.bna'];
+var PLATFORMS=['instagram','facebook','whatsapp','tiktok'];
+var SOURCES=['أتمتة «سعر»','أتمتة «حجز»','أتمتة «توصيل»','مراقبة «تجهيزات صالون»','صفحة الالتقاط: عرض الصالونات','واتساب — كاتالوغ'];
+var OPENINGS=['السلام عليكم، شحال السعر بلازمنا؟','مرحبا، هذا متوفر؟ 👀','سلام، التوصيل لولاية سطيف كيماش؟','أهلا، عندكم كاتالوغ جديد؟','سلام عليكم، نحب نسقسي على الدفع بالتقسيط','ممكن تفاصيل أكثر على الباك الكامل؟ 🌸'];
+var REPLIES=['شكراً، راح نفكر فيها وأرد عليك 👌','ممكن صور للمنتج من قريب؟','واش عنكم من ألوان أخرى؟','تمام، حجزتها! شكراً 🙏','ممكن رقم للتواصل المباشر؟','آخر سؤال: الضمان يشمل ولاية أخرى؟'];
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function simNewLead(){
+  var name=pick(FIRST)+' '+pick(LAST);
+  var platform=pick(PLATFORMS);
+  var withPhone=Math.random()<0.45;
+  var source=pick(SOURCES);
+  var phone;
+  if(withPhone){phone='0'+pick(['5','6','7'])+'xx xx xx xx';var digits=''+Math.floor(10000000+Math.random()*89999999);phone='0'+pick(['5','6','7'])+digits.slice(0,2)+' '+digits.slice(2,4)+' '+digits.slice(4,6)+' '+digits.slice(6,8);}
+  var lead={id:uid(),name:name,handle:pick(HANDLES),platform:platform,phone:phone,source:source,status:'new',tags:[],score:40+Math.floor(Math.random()*55),consent:!!withPhone,createdAt:now(),lastActivityAt:now()};
+  DB.leads.unshift(lead);
+  if(Math.random()<0.7){
+    var id=uid();var body=pick(OPENINGS);
+    DB.conversations.unshift({id:id,leadId:lead.id,platform:platform,unread:1,lastMessageAt:now(),lastMessagePreview:body});
+    DB.messages.push({id:uid(),conversationId:id,direction:'in',body:body,status:'delivered',createdAt:now()});
+  }
+  act('lead','عميل جديد — '+name+' ('+source+')',platform);
+}
+function simInbound(convId){
+  if(!DB.conversations.length)return;
+  var c=convId?DB.conversations.find(function(x){return x.id===convId;}):null;
+  c=c||DB.conversations[Math.floor(Math.random()*DB.conversations.length)];
+  var body=pick(REPLIES);
+  var msg={id:uid(),conversationId:c.id,direction:'in',body:body,status:'delivered',createdAt:now()};
+  DB.messages.push(msg);c.unread+=1;c.lastMessageAt=msg.createdAt;c.lastMessagePreview=body;
+  var lead=DB.leads.find(function(l){return l.id===c.leadId;});
+  if(lead)lead.lastActivityAt=now();
+  act('message','رسالة جديدة من '+(lead?lead.name:'عميل'),c.platform);
+}
+function simMention(){
+  var rules=DB.rules.filter(function(r){return r.active;});
+  if(!rules.length)return;
+  var rule=pick(rules);
+  var name=pick(FIRST)+' '+pick(LAST);
+  var platform=pick(rule.platforms);
+  DB.mentions.unshift({id:uid(),ruleId:rule.id,platform:platform,authorName:name,authorHandle:pick(HANDLES),
+    content:pick(['نحب نقترح عليكم '+rule.keyword+' جودة عالية، شكون يرشحلي؟','واش رايكم في '+rule.keyword+' المتوفرة حالياً بالسوق؟','في حاجة لـ '+rule.keyword+' بثمن معقول لهذا الشهر؟ 🙏']),
+    url:'#',likes:5+Math.floor(Math.random()*300),comments:2+Math.floor(Math.random()*40),
+    sentiment:pick(['positive','neutral','positive','negative']),converted:false,createdAt:now()});
+  rule.matchesCount+=1;
+  act('mention','ذكر جديد لـ «'+rule.keyword+'»',platform);
+}
+function auto(){var r=Math.random();if(r<0.45)simNewLead();else if(r<0.85)simInbound();else simMention();}
+
+/* ——— معالجة المسارات ——— */
+function handle(path,method,body,query){
+  var seg=path.split('/').filter(Boolean);
+  var i,p;
+
+  if(path==='stats'&&method==='GET'){
+    if(query.live==='1'&&Math.random()<0.22)auto();
+    var startOfDay=new Date();startOfDay.setHours(0,0,0,0);
+    var newToday=DB.leads.filter(function(l){return new Date(l.createdAt).getTime()>=startOfDay.getTime();}).length;
+    var activeConvs=DB.conversations.filter(function(c){return c.unread>0||new Date(c.lastMessageAt).getTime()>Date.now()-86400000;}).length;
+    var activeAutomations=DB.automations.filter(function(a){return a.active;}).length;
+    var customers=DB.leads.filter(function(l){return l.status==='customer';}).length;
+    var days=[];var di;
+    for(di=13;di>=0;di--){
+      var from=new Date();from.setHours(0,0,0,0);from.setDate(from.getDate()-di);
+      var to=from.getTime()+86400000;
+      (function(f,t){days.push(DB.leads.filter(function(l){var x=new Date(l.createdAt).getTime();return x>=f&&x<t;}).length);})(from.getTime(),to);
+    }
+    var order=['instagram','whatsapp','facebook','tiktok','x'];
+    var colors={instagram:'#db2777',whatsapp:'#059669',facebook:'#2563eb',tiktok:'#0f172a',x:'#475569'};
+    var labels={instagram:'إنستغرام',whatsapp:'واتساب',facebook:'فيسبوك',tiktok:'تيك توك',x:'إكس'};
+    var donut=order.map(function(pp){return {label:labels[pp],value:DB.leads.filter(function(l){return l.platform===pp;}).length,color:colors[pp]};}).filter(function(s){return s.value>0;});
+    var recent=DB.leads.slice().sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);}).slice(0,6);
+    var activity=DB.activity.slice().sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);}).slice(0,12);
+    return J({workspace:DB.workspace,cards:{newToday:newToday,activeConvs:activeConvs,activeAutomations:activeAutomations,conversionRate:DB.leads.length?Math.round(customers/DB.leads.length*100):0,totalLeads:DB.leads.length,unread:DB.conversations.reduce(function(a,c){return a+c.unread;},0)},spark:days,donut:donut,recentLeads:recent,activity:activity});
+  }
+
+  if(path==='leads'){
+    if(method==='GET')return J({leads:DB.leads.slice().sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);}),total:DB.leads.length});
+    if(method==='POST'){
+      if(!body.name)return J({error:'الاسم مطلوب'},400);
+      var lead={id:uid(),name:String(body.name).slice(0,80),handle:String(body.handle||'').slice(0,60),platform:body.platform||'instagram',phone:body.phone||undefined,email:body.email||undefined,source:String(body.source||'إضافة يدوية'),status:body.status||'new',tags:Array.isArray(body.tags)?body.tags.slice(0,8):[],score:Number(body.score||50),consent:!!body.consent,notes:body.notes||undefined,createdAt:now(),lastActivityAt:now()};
+      DB.leads.unshift(lead);
+      act('lead','عميل جديد — '+lead.name+' ('+lead.source+')',lead.platform);
+      return J(lead,201);
+    }
+  }
+  if(seg[0]==='leads'&&seg[1]){
+    p=DB.leads.find(function(l){return l.id===seg[1];});
+    if(method==='PATCH'){
+      if(!p)return J({error:'غير موجود'},404);
+      if(typeof body.status==='string')p.status=body.status;
+      if(typeof body.notes==='string')p.notes=body.notes.slice(0,500);
+      if(Array.isArray(body.tags))p.tags=body.tags.slice(0,8);
+      if(typeof body.phone==='string'){p.phone=body.phone.slice(0,30)||undefined;if(p.phone)p.consent=true;}
+      if(typeof body.score==='number')p.score=Math.max(0,Math.min(100,body.score));
+      p.lastActivityAt=now();return J(p);
+    }
+    if(method==='DELETE'){
+      if(!p)return J({error:'غير موجود'},404);
+      DB.leads=DB.leads.filter(function(l){return l.id!==p.id;});return J({ok:true});
+    }
+  }
+
+  if(path==='conversations'&&method==='GET'){
+    var convs=DB.conversations.slice().sort(function(a,b){return b.lastMessageAt.localeCompare(a.lastMessageAt);})
+      .map(function(c){var lead=DB.leads.find(function(l){return l.id===c.leadId;})||null;var o={};for(var k in c)o[k]=c[k];o.lead=lead;return o;});
+    return J({conversations:convs});
+  }
+  if(seg[0]==='conversations'&&seg[1]){
+    var conv=DB.conversations.find(function(c){return c.id===seg[1];});
+    if(!conv)return J({error:'غير موجودة'},404);
+    if(method==='GET'){
+      if(conv.unread>0){conv.unread=0;}
+      var lead=DB.leads.find(function(l){return l.id===conv.leadId;})||null;
+      var msgs=DB.messages.filter(function(m){return m.conversationId===conv.id;}).sort(function(a,b){return a.createdAt.localeCompare(b.createdAt);});
+      return J({conversation:conv,lead:lead,messages:msgs});
+    }
+    if(method==='POST'){
+      var text=String(body.body||'').trim();
+      if(!text)return J({error:'نص الرسالة مطلوب'},400);
+      var msg={id:uid(),conversationId:conv.id,direction:'out',body:text.slice(0,1000),status:'sent',createdAt:now()};
+      DB.messages.push(msg);conv.lastMessageAt=msg.createdAt;conv.lastMessagePreview=msg.body;
+      var lead2=DB.leads.find(function(l){return l.id===conv.leadId;});
+      if(lead2){lead2.lastActivityAt=msg.createdAt;if(lead2.status==='new')lead2.status='contacted';}
+      setTimeout(function(){msg.status='delivered';save();},1200);
+      setTimeout(function(){msg.status='read';save();},2600);
+      if(Math.random()<0.6)setTimeout(function(){simInbound(conv.id);save();},3000+Math.random()*3000);
+      return J(msg,201);
+    }
+  }
+
+  if(path==='automations'){
+    if(method==='GET')return J({automations:DB.automations});
+    if(method==='POST'){
+      if(!body.name||!body.keyword||!body.replyTemplate)return J({error:'الاسم والكلمة المفتاحية وقالب الرد مطلوبة'},400);
+      var a={id:uid(),name:String(body.name).slice(0,80),platform:body.platform||'instagram',trigger:body.trigger||'comment_keyword',keyword:String(body.keyword).slice(0,40),replyTemplate:String(body.replyTemplate).slice(0,600),ctaLink:body.ctaLink||undefined,collectPhone:!!body.collectPhone,active:true,triggeredCount:0,leadsCaptured:0,createdAt:now()};
+      DB.automations.unshift(a);
+      act('automation','تم إنشاء أتمتة جديدة «'+a.name+'»',a.platform);
+      return J(a,201);
+    }
+  }
+  if(seg[0]==='automations'&&seg[1]){
+    var au=DB.automations.find(function(x){return x.id===seg[1];});
+    if(method==='PATCH'){
+      if(!au)return J({error:'غير موجودة'},404);
+      ['name','keyword','replyTemplate','ctaLink','platform','trigger'].forEach(function(k){if(typeof body[k]==='string')au[k]=body[k];});
+      if(typeof body.active==='boolean')au.active=body.active;
+      if(typeof body.collectPhone==='boolean')au.collectPhone=body.collectPhone;
+      return J(au);
+    }
+    if(method==='DELETE'){
+      DB.automations=DB.automations.filter(function(x){return x.id!==seg[1];});return J({ok:true});
+    }
+  }
+
+  if(path==='rules'){
+    if(method==='GET')return J({rules:DB.rules});
+    if(method==='POST'){
+      var kw=String(body.keyword||'').trim();
+      if(!kw)return J({error:'الكلمة المفتاحية مطلوبة'},400);
+      var rule={id:uid(),keyword:kw.slice(0,40),platforms:(Array.isArray(body.platforms)&&body.platforms.length?body.platforms:['instagram','facebook']),active:true,matchesCount:0,createdAt:now()};
+      DB.rules.unshift(rule);return J(rule,201);
+    }
+  }
+  if(seg[0]==='rules'&&seg[1]){
+    var rule2=DB.rules.find(function(r){return r.id===seg[1];});
+    if(method==='PATCH'){if(!rule2)return J({error:'غير موجودة'},404);if(typeof body.active==='boolean')rule2.active=body.active;return J(rule2);}
+    if(method==='DELETE'){DB.rules=DB.rules.filter(function(r){return r.id!==seg[1];});return J({ok:true});}
+  }
+
+  if(path==='mentions'&&method==='GET'){
+    var ms=DB.mentions.slice().sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);})
+      .map(function(m){var o={};for(var k in m)o[k]=m[k];o.rule=DB.rules.find(function(r){return r.id===m.ruleId;})||null;return o;});
+    return J({mentions:ms,rules:DB.rules});
+  }
+  if(seg[0]==='mentions'&&seg[2]==='convert'&&method==='POST'){
+    var men=DB.mentions.find(function(m){return m.id===seg[1];});
+    if(!men)return J({error:'غير موجود'},404);
+    if(men.converted)return J({error:'تم التحويل مسبقاً'},409);
+    var rule3=DB.rules.find(function(r){return r.id===men.ruleId;});
+    var nl={id:uid(),name:men.authorName,handle:men.authorHandle,platform:men.platform,source:'مراقبة «'+(rule3?rule3.keyword:'ذكر')+'»',status:'new',tags:['من المراقبة'],score:55+Math.min(20,Math.floor(men.likes/50)),consent:false,createdAt:now(),lastActivityAt:now()};
+    DB.leads.unshift(nl);men.converted=true;
+    var cid=uid();
+    DB.conversations.unshift({id:cid,leadId:nl.id,platform:men.platform,unread:0,lastMessageAt:now(),lastMessagePreview:'مرحباً! شفتك تبحث… نقدر نساعدك؟'});
+    DB.messages.push({id:uid(),conversationId:cid,direction:'out',body:'مرحباً '+men.authorName+' 👋 شفنا تعليقك وتبحث عن حل — نقدر نساعدك؟ أنا هنا لأي سؤال 🌸',status:'sent',createdAt:now()});
+    act('lead','تم تحويل ذكر إلى عميل — '+nl.name,men.platform);
+    return J(nl,201);
+  }
+
+  if(path==='campaigns'){
+    if(method==='GET'){
+      DB.campaigns.forEach(function(c){
+        if(c.status!=='sending')return;
+        var step=Math.max(2,Math.round(c.targeted*0.06));
+        c.sent=Math.min(c.targeted,c.sent+step);
+        c.delivered=Math.min(c.sent,c.delivered+Math.round(step*0.94));
+        c.read=Math.min(c.delivered,c.read+Math.round(step*0.75));
+        c.replied=Math.min(c.read,c.replied+Math.round(step*0.12));
+        if(c.sent>=c.targeted)c.status='sent';
+      });
+      var tags=[];DB.leads.forEach(function(l){l.tags.forEach(function(t){if(tags.indexOf(t)<0)tags.push(t);});});
+      var ac={};tags.forEach(function(t){ac[t]=DB.leads.filter(function(l){return l.tags.indexOf(t)>=0;}).length;});
+      return J({campaigns:DB.campaigns.slice().sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);}),tags:tags,audienceCount:ac});
+    }
+    if(method==='POST'){
+      if(!body.name||!body.template)return J({error:'الاسم وقالب الرسالة مطلوبان'},400);
+      var tag=String(body.audienceTag||'');
+      var targeted=tag?DB.leads.filter(function(l){return l.tags.indexOf(tag)>=0&&l.consent;}).length:DB.leads.filter(function(l){return l.consent;}).length;
+      var c={id:uid(),name:String(body.name).slice(0,80),channel:'whatsapp',template:String(body.template).slice(0,800),audienceTag:tag,status:body.startNow?'sending':'draft',targeted:targeted,sent:0,delivered:0,read:0,replied:0,createdAt:now()};
+      DB.campaigns.unshift(c);
+      if(body.startNow)act('campaign','انطلقت حملة «'+c.name+'» — '+targeted+' مستلم بموافقتهم','whatsapp');
+      return J(c,201);
+    }
+  }
+
+  if(path==='capture-pages'){
+    if(method==='GET')return J({pages:DB.capturePages.slice().sort(function(a,b){return b.createdAt.localeCompare(a.createdAt);})});
+    if(method==='POST'){
+      if(!body.title||!body.headline)return J({error:'العنوان والعنوان الفرعي مطلوبان'},400);
+      function slugify(s){var b=s.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF\s-]/g,'').trim().replace(/\s+/g,'-').slice(0,40);return b||'page-'+Math.random().toString(36).slice(2,6);}
+      var slug=body.slug?slugify(String(body.slug)):slugify(String(body.title));
+      if(DB.capturePages.some(function(pp){return pp.slug===slug;}))slug=slug+'-'+Math.random().toString(36).slice(2,5);
+      var page={id:uid(),slug:slug,title:String(body.title).slice(0,80),headline:String(body.headline).slice(0,120),subtext:String(body.subtext||'').slice(0,400),offer:body.offer||undefined,ctaLabel:String(body.ctaLabel||'أرسل بياناتي').slice(0,40),askPhone:body.askPhone!==false,askEmail:!!body.askEmail,published:body.published!==false,views:0,conversions:0,createdAt:now()};
+      DB.capturePages.unshift(page);return J(page,201);
+    }
+  }
+  if(seg[0]==='capture-pages'&&seg[1]){
+    var pg=DB.capturePages.find(function(x){return x.id===seg[1];});
+    if(method==='PATCH'){if(!pg)return J({error:'غير موجودة'},404);if(typeof body.published==='boolean')pg.published=body.published;return J(pg);}
+    if(method==='DELETE'){DB.capturePages=DB.capturePages.filter(function(x){return x.id!==seg[1];});return J({ok:true});}
+  }
+
+  if(seg[0]==='capture'&&seg[1]){
+    var slug2=decodeURIComponent(seg[1]);
+    var page2=DB.capturePages.find(function(x){return x.slug===slug2&&x.published;});
+    if(!page2)return J({error:'غير متوفرة'},404);
+    if(method==='GET'){page2.views+=1;return J({page:page2});}
+    if(method==='POST'){
+      var name=String(body.name||'').trim();
+      if(!name)return J({error:'الاسم مطلوب'},400);
+      if(!body.consent)return J({error:'يجب موافقة العميل على التواصل'},400);
+      var lead3={id:uid(),name:name.slice(0,80),handle:'',platform:'whatsapp',phone:body.phone||undefined,email:body.email||undefined,source:'صفحة الالتقاط: '+page2.title,status:'new',tags:['صفحة التقاط'],score:page2.askPhone&&body.phone?72:55,consent:true,createdAt:now(),lastActivityAt:now()};
+      DB.leads.unshift(lead3);page2.conversions+=1;
+      var cid2=uid();
+      DB.conversations.unshift({id:cid2,leadId:lead3.id,platform:'whatsapp',unread:0,lastMessageAt:now(),lastMessagePreview:'مرحباً بك! وصلنا طلبك 🌸'});
+      DB.messages.push({id:uid(),conversationId:cid2,direction:'out',body:'مرحباً '+lead3.name+' 👋 وصلنا طلبك من «'+page2.title+'» — سنتواصل معك خلال دقائق إن شاء الله 🌸',status:'sent',createdAt:now()});
+      act('lead','عميل جديد من صفحة الالتقاط «'+page2.title+'» — '+lead3.name,'whatsapp');
+      return J({ok:true},201);
+    }
+  }
+
+  if(path==='simulate'&&method==='POST'){
+    var t=body.type||'auto';
+    if(t==='lead')simNewLead();
+    else if(t==='message')simInbound(body.conversationId);
+    else if(t==='mention')simMention();
+    else auto();
+    return J({ok:true});
+  }
+
+  if(seg[0]==='webhooks'){
+    if(method==='GET'&&query['hub.challenge'])return new Response(query['hub.challenge'],{status:200});
+    return J({ok:true});
+  }
+
+  return J({error:'غير موجود في الوضع الساكن'},404);
+}
+
+/* ——— اعتراض fetch ——— */
+var _fetch=window.fetch;
+window.fetch=function(input,init){
+  try{
+    var url=typeof input==='string'?input:(input&&input.url)||'';
+    var i=url.indexOf('/api/');
+    if(i<0)return _fetch.apply(this,arguments);
+    var rest=url.slice(i+5);
+    var q='';var qi=rest.indexOf('?');
+    if(qi>=0){q=rest.slice(qi+1);rest=rest.slice(0,qi);}
+    rest=rest.replace(/\/+$/,'');
+    var query={};
+    q.split('&').forEach(function(kv){if(kv){var pp=kv.split('=');query[decodeURIComponent(pp[0])]=decodeURIComponent(pp[1]||'');}});
+    var method=((init&&init.method)||'GET').toUpperCase();
+    var body={};
+    try{body=(init&&init.body)?JSON.parse(init.body):{};}catch(e){}
+    var res=handle(rest,method,body,query);
+    save();
+    return Promise.resolve(res);
+  }catch(e){
+    return _fetch.apply(this,arguments);
+  }
+};
+})();
+0:{"P":null,"b":"I0MDJuvWLfbzIKvXxdfqM","p":"/Cloud-engine","c":["","dashboard","leads",""],"i":false,"f":[[["",{"children":["dashboard",{"children":["leads",{"children":["__PAGE__",{}]}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/Cloud-engine/_next/static/css/706fd9bd8a42ff83.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"ar","dir":"rtl","children":["$","body",null,{"className":"font-sans antialiased","children":[["$","script",null,{"dangerouslySetInnerHTML":{"__html":"$2"}}],"$L3"]}]}]]}],{"children":["dashboard","$L4",{"children":["leads","$L5",{"children":["__PAGE__","$L6",{},null,false]},null,false]},null,false]},null,false],"$L7",false]],"m":"$undefined","G":["$8",[]],"s":false,"S":true}
+9:I[9766,[],""]
+a:I[8924,[],""]
+b:I[9406,["619","static/chunks/619-ba102abea3e3d0e4.js","954","static/chunks/app/dashboard/layout-7786e1ef9a14b417.js"],"LiveProvider"]
+c:I[5851,["619","static/chunks/619-ba102abea3e3d0e4.js","954","static/chunks/app/dashboard/layout-7786e1ef9a14b417.js"],"default"]
+d:I[1959,[],"ClientPageRoot"]
+e:I[9448,["434","static/chunks/434-ef11827746315aff.js","569","static/chunks/app/dashboard/leads/page-a3a4a899296cb0bc.js"],"default"]
+11:I[4431,[],"OutletBoundary"]
+13:I[5278,[],"AsyncMetadataOutlet"]
+15:I[4431,[],"ViewportBoundary"]
+17:I[4431,[],"MetadataBoundary"]
+18:"$Sreact.suspense"
+3:["$","$L9",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$La",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]
+4:["$","$1","c",{"children":[null,["$","$Lb",null,{"children":["$","div",null,{"className":"min-h-screen bg-slate-50","children":[["$","$Lc",null,{}],["$","main",null,{"className":"min-h-screen px-4 pb-6 pt-20 sm:px-8 lg:ms-[248px] lg:pt-6","children":["$","$L9",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$La",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]}]]}]}]]}]
+5:["$","$1","c",{"children":[null,["$","$L9",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$La",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}]
+6:["$","$1","c",{"children":[["$","$Ld",null,{"Component":"$e","searchParams":{},"params":{},"promises":["$@f","$@10"]}],null,["$","$L11",null,{"children":["$L12",["$","$L13",null,{"promise":"$@14"}]]}]]}]
+7:["$","$1","h",{"children":[null,[["$","$L15",null,{"children":"$L16"}],null],["$","$L17",null,{"children":["$","div",null,{"hidden":true,"children":["$","$18",null,{"fallback":null,"children":"$L19"}]}]}]]}]
+f:{}
+10:"$6:props:children:0:props:params"
+16:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+12:null
+14:{"metadata":[["$","title","0",{"children":"مِرسال — استقطب عملاءك من السوشيال ميديا تلقائياً وبدون حظر"}],["$","meta","1",{"name":"description","content":"منصة عربية تحوّل التعليقات والمتابعين إلى عملاء يدفعون: ردود تلقائية فورية، صندوق موحد لحظي، مراقبة الكلمات المفتاحية، وحملات واتساب رسمية — كل ذلك عبر الواجهات الرسمية الآمنة."}]],"error":null,"digest":"$undefined"}
+19:"$14:metadata"

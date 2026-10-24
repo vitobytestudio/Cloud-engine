@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000"
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "build:demo": "bash scripts/build-demo.sh"
   },
   "dependencies": {
     "@fontsource-variable/cairo": "^5.2.5",
