@@ -1,0 +1,35 @@
+name = "mirsal"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+# تُملأ المعرّفات آلياً عند أول نشر عبر scripts/deploy.sh
+[[d1_databases]]
+binding = "DB"
+database_name = "mirsal-db"
+database_id = "local-dev"
+
+[[r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "mirsal-receipts"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "local-dev"
+
+[triggers]
+crons = ["0 3 * * *"]
+
+[vars]
+APP_NAME = "مِرسال"
+# حساب استقبال الأموال — بريد الجزائر (CCP/RIP)
+PAYMENT_RIP = "00799999002254176901"
+PAYMENT_ACCOUNT = "0022541769"
+PAYMENT_KEY = "01"
+PAYMENT_HOLDER = "مِرسال"
+
+[assets]
+binding = "ASSETS"
+directory = "./public"
+
+[observability]
+enabled = true
