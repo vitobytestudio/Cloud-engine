@@ -124,13 +124,13 @@ export function SectionHead({
         </span>
       </Reveal>
       <Reveal delay={90}>
-        <h2 className="mt-5 text-3xl font-black leading-[1.35] text-white md:text-[44px] md:leading-[1.3]">
+        <h2 className="mt-5 text-[26px] font-black leading-[1.35] text-white md:text-[44px] md:leading-[1.3]">
           {title}
         </h2>
       </Reveal>
       {sub && (
         <Reveal delay={180}>
-          <p className={`mt-4 text-[15px] leading-8 text-slate-400 ${center ? "mx-auto max-w-2xl" : ""}`}>
+          <p className={`mt-4 text-[13.5px] leading-7 text-slate-400 md:text-[15px] md:leading-8 ${center ? "mx-auto max-w-2xl" : ""}`}>
             {sub}
           </p>
         </Reveal>

@@ -1,4 +1,5 @@
 import type { Conversation, Message, Platform } from "./types";
+import { PROFESSIONS, professionById } from "./matching";
 import { db, persist } from "./store";
 import { iso, uid } from "./utils";
 
@@ -131,7 +132,9 @@ export function simOpportunity(): void {
   const conn = pick(activeConns);
   const platform = pick(conn.platforms);
 
-  const TEMPLATES: Array<{ title: string; excerpt: string; keyword: string; author: string; loc?: string }> = [
+  // الأتمتة الكاملة: إن ضُبط ملف المستخدم، تتولد الفرص من تخصصه وكلماته تلقائياً
+  const prof = d.profile.setupDone ? professionById(d.profile.professionId) : undefined;
+  let TEMPLATES: Array<{ title: string; excerpt: string; keyword: string; author: string; loc?: string }> = [
     { title: "مطلوب مصمم لوقو لمشروع ناشئ", excerpt: "السلام عليكم، عندنا مشروع قهوة مختصة ونحتاج هوية بصرية كاملة (شعار + ألوان + منيو). الميزانية مرنة للشغل الحلو.", keyword: "مصمم", author: "قهوة دزاير", loc: "الجزائر العاصمة" },
     { title: "نبحث مبرمج لإصلاح موقع ووردبريس", excerpt: "موقعنا فيه مشكلة تقنية منذ يومين وخسرنا زبائن. من يقدر يصلح اليوم؟ الدفع فوري نقداً.", keyword: "مبرمج", author: "مكتبة النور", loc: "قسنطينة" },
     { title: "مطلوب مونتير فيديوهات يوتيوب", excerpt: "قناة تعليمية جديدة تبحث مونتير (قص + ترجمة + مؤثرات). فيديو واحد أسبوعياً، 3000 دج للفيديو.", keyword: "مونتير", author: "أكاديمية النجاح" },
@@ -139,6 +142,16 @@ export function simOpportunity(): void {
     { title: "مطلوب مصور أعراس — موسم الصيف", excerpt: "نبحث مصور محترف لتغطية حفلي زفاف في جويلية. العدة كاملة إجبارية. أجور ممتازة للمحترف.", keyword: "مصور", author: "قاعة الأفراح", loc: "بليدة" },
     { title: "نسعد مدير صفحات سوشيال ميديا", excerpt: "مطعم جديد يحتاج شخص يدير صفحاته (تصوير + نشر + ردود). عمل جزئي شهري ثابت.", keyword: "سوشيال", author: "مطعم الذواقة", loc: "وهران" },
   ];
+
+  if (prof) {
+    const kw = prof.keywords;
+    const loc = d.profile.wilayas.includes("كل الولايات") ? undefined : pick(d.profile.wilayas);
+    TEMPLATES = [
+      { title: `مطلوب ${prof.label} — مشروع جديد يبحث عن تنفيذ احترافي`, excerpt: `السلام عليكم، نبحث عن مختص في ${prof.label} لعمل عاجل. الجودة والالتزام أولاً. الميزانية قابلة للتفاوض مع الأعمال السابقة.`, keyword: pick(kw), author: pick(["مشروع ناشئ DZ", "شركة وهران للتقنية", "متجر إلكتروني", "وكالة جزائرية", "علامة محلية"]), loc },
+      { title: `نبحث ${pick(kw)} لعمل مستمر — دفع أسبوعي`, excerpt: `لدينا عدة مشاريع ونحتاج ${prof.label.toLowerCase()} للتعاقد طويل المدى. الدفع أسبوعي بعد كل تسليم.`, keyword: pick(kw), author: "مجموعة أعمال DZ", loc },
+      { title: `من يقدم خدمة ${prof.label.toLowerCase()}؟ استعجال`, excerpt: `مطلوب عمل بسرعة (هذا الأسبوع). السعر بالاتفاق بعد رؤية نماذج الأعمال. التواصل في التعليقات.`, keyword: pick(kw), author: pick(["خ. مراد", "س. بوعلام", "متجر النخبة"]), loc: loc ?? pick(["الجزائر العاصمة", "وهران", "قسنطينة", "سطيف"]) },
+    ];
+  }
 
   const tpl = pick(TEMPLATES);
   const slug = Math.floor(100000000 + Math.random() * 899999999);

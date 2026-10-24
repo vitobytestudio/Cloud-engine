@@ -138,6 +138,7 @@ export interface DB {
   activity: ActivityEvent[];
   opportunities: Opportunity[];
   connectors: Connector[];
+  profile: RadarProfile;
 }
 
 // ——— رصّاد الفرص: فرص عملاء من محتوى عام + رابط إلزامي ———
@@ -174,4 +175,18 @@ export interface Connector {
   lastFetchedAt?: string;
   fetchedCount: number;
   requiresKey?: string; // متغير البيئة المطلوب للتفعيل الحقيقي
+}
+
+// ——— ملف الرصد الذكي: إعداد لمرة واحدة ثم أتمتة كاملة ———
+
+export type AlertChannel = "app" | "whatsapp" | "telegram";
+
+export interface RadarProfile {
+  professionId: string;
+  keywords: string[]; // كلمات مولدة تلقائياً من التخصص + مخصصة
+  wilayas: string[]; // "كل الولايات" مسموحة
+  alertChannel: AlertChannel;
+  alertPhone?: string; // بموافقة صريحة — للتنبيهات فقط
+  setupDone: boolean;
+  createdAt: string;
 }
