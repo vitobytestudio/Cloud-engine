@@ -1,56 +1,56 @@
 #!/usr/bin/env bash
-# ——— نشر مِرسال إلى Cloudflare (إنتاج حقيقي) ———
-# يشترط: حساب Cloudflare + توكن API بصلاحيات (Workers, D1, R2, KV, Secrets)
-#   export CLOUDFLARE_API_TOKEN=...   (أو: npx wrangler login)
+# ——— نشر مِرسال إلى Cloudflare — بلا تفاعل، آمن للسجلات ———
+# القيم السرية لا تُطبع أبداً: تُقرأ من بيئة التنفيذ (GitHub Actions secrets)
+# أو تُولَّد صامتة. من يريد التحكم بالقيم يضعها أسراراً في GitHub ثم يعيد التشغيل.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-BOLD="\033[1m"; OK="\033[32m"; WARN="\033[33m"; RESET="\033[0m"
-step() { echo -e "${BOLD}${OK}▸${RESET} $1"; }
-fail() { echo -e "${WARN}✗ $1${RESET}"; exit 1; }
+step() { printf '\033[1;32m▸\033[0m %s\n' "$1"; }
+fail() { printf '\033[1;33m✗ %s\033[0m\n' "$1"; exit 1; }
 
 command -v npx >/dev/null || fail "node/npm مطلوب"
-[ -n "${CLOUDFLARE_API_TOKEN:-}" ] || { echo -e "${WARN}لا يوجد CLOUDFLARE_API_TOKEN — سيفتح المتصفح لتسجيل الدخول${RESET}"; }
+command -v python3 >/dev/null || fail "python3 مطلوب"
+[ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "سر CLOUDFLARE_API_TOKEN غير مضبوط في المستودع — أضفه من Settings → Secrets and variables → Actions"
 
-step "1/6 إنشاء قاعدة D1 (mirsal-db) إن لم تكن"
+# ——— 1/6 قاعدة البيانات D1 ———
+step "1/6 قاعدة البيانات D1 (mirsal-db)"
 DB_ID=$(npx wrangler d1 list --json 2>/dev/null | python3 -c "
-import json,sys
+import json, sys
 try:
-    dbs = json.load(sys.stdin)
-    print(next((d['uuid'] for d in dbs if d['name']=='mirsal-db'), ''))
+    print(next((d['uuid'] for d in json.load(sys.stdin) if d.get('name') == 'mirsal-db'), ''))
 except Exception:
-    print('')
-")
+    print('')")
 if [ -z "$DB_ID" ]; then
   OUT=$(npx wrangler d1 create mirsal-db)
-  DB_ID=$(echo "$OUT" | grep -oE 'database_id = "[a-f0-9-]+"' | head -1 | cut -d'"' -f2)
-  [ -n "$DB_ID" ] || fail "تعذر إنشاء D1"
+  DB_ID=$(printf '%s' "$OUT" | grep -oE '[a-f0-9]{32}' | head -1)
+  [ -n "$DB_ID" ] || fail "تعذر إنشاء قاعدة D1"
 fi
 python3 - "$DB_ID" << 'PY'
-import pathlib, sys
+import pathlib, re, sys
 p = pathlib.Path("wrangler.toml")
 t = p.read_text(encoding="utf-8")
-db_id = sys.argv[1]
-t = re.sub(r'(database_id = ")[^"]*(")', r'\g<1>' + db_id + r'\g<2>', t)
+t = re.sub(r'(database_id = ")[^"]*(")', r'\g<1>' + sys.argv[1] + r'\g<2>', t)
 p.write_text(t, encoding="utf-8")
 PY
-echo "  D1: $DB_ID"
+echo "  D1 جاهزة"
 
-step "2/6 إنشاء حاوية R2 (mirsal-receipts)"
+# ——— 2/6 تخزين R2 ———
+step "2/6 تخزين الوصولات R2 (mirsal-receipts)"
 npx wrangler r2 bucket list 2>/dev/null | grep -q "mirsal-receipts" || npx wrangler r2 bucket create mirsal-receipts
+echo "  R2 جاهز"
 
-step "3/6 إنشاء مساحة KV"
+# ——— 3/6 مساحة KV ———
+step "3/6 مساحة KV (حدود المعدل والأقفال)"
 KV_ID=$(npx wrangler kv namespace list 2>/dev/null | python3 -c "
-import json,sys
+import json, sys
 try:
-    ns = json.load(sys.stdin)
-    print(next((n['id'] for n in ns if n['title'].endswith('KV')), ''))
+    print(next((n['id'] for n in json.load(sys.stdin) if n.get('title', '').endswith(' KV')), ''))
 except Exception:
-    print('')
-")
+    print('')")
 if [ -z "$KV_ID" ]; then
   OUT=$(npx wrangler kv namespace create KV)
-  KV_ID=$(echo "$OUT" | grep -oE 'id = "[a-f0-9]+"' | head -1 | cut -d'"' -f2)
+  KV_ID=$(printf '%s' "$OUT" | grep -oE '[a-f0-9]{32}' | head -1)
+  [ -n "$KV_ID" ] || fail "تعذر إنشاء KV"
 fi
 python3 - "$KV_ID" << 'PY'
 import pathlib, re, sys
@@ -59,30 +59,50 @@ t = p.read_text(encoding="utf-8")
 t = re.sub(r'(kv_namespaces[\s\S]*?id = ")[^"]*(")', r'\g<1>' + sys.argv[1] + r'\g<2>', t, count=1)
 p.write_text(t, encoding="utf-8")
 PY
-echo "  KV: $KV_ID"
+echo "  KV جاهزة"
 
-step "4/6 تطبيق الترحيلات على D1 البعيد"
+# ——— 4/6 ترحيلات المخطط ———
+step "4/6 تطبيق ترحيلات قاعدة البيانات"
 npx wrangler d1 migrations apply mirsal-db --remote
 
-step "5/6 الأسرار (توليد آمن إن لم تُحدد)"
-if ! npx wrangler secret list 2>/dev/null | grep -q RECEIPT_ENCRYPTION_KEY; then
-  openssl rand -hex 32 | npx wrangler secret put RECEIPT_ENCRYPTION_KEY
-fi
-if ! npx wrangler secret list 2>/dev/null | grep -q INGEST_TOKEN; then
-  openssl rand -hex 24 | npx wrangler secret put INGEST_TOKEN
-fi
-if ! npx wrangler secret list 2>/dev/null | grep -q ADMIN_EMAIL; then
-  read -rp "بريد المدير (التسجيل بهذا البريد يمنح صلاحية الإدارة): " ADMIN_MAIL
-  [ -n "$ADMIN_MAIL" ] || fail "بريد المدير إلزامي"
-  echo "$ADMIN_MAIL" | npx wrangler secret put ADMIN_EMAIL
+# ——— 5/6 نشر العامل (قبل الأسرار — الأسرار تحتاج عاملاً منشوراً) ———
+step "5/6 نشر العامل والواجهة"
+DEPLOY_OUT=$(npx wrangler deploy)
+printf '%s\n' "$DEPLOY_OUT" | grep -E "Version|Uploaded|Published|workers\.dev|Current Version" || printf '%s\n' "$DEPLOY_OUT" | tail -6
+
+# ——— 6/6 الأسرار (قيمها لا تُطبع في أي سجل) ———
+step "6/6 أسرار الإنتاج"
+has_secret() { npx wrangler secret list 2>/dev/null | grep -q "\"$1\""; }
+put_secret() { printf '%s' "$2" | npx wrangler secret put "$1" >/dev/null 2>&1; }
+
+KEY="${RECEIPT_ENCRYPTION_KEY:-}"
+if [ -n "$KEY" ]; then
+  put_secret RECEIPT_ENCRYPTION_KEY "$KEY"; echo "  مفتاح تشفير الوصولات: من الأسرار الموفَّرة"
+elif has_secret RECEIPT_ENCRYPTION_KEY; then
+  echo "  مفتاح تشفير الوصولات: موجود — لم يُمَس"
+else
+  put_secret RECEIPT_ENCRYPTION_KEY "$(openssl rand -hex 32)"
+  echo "  مفتاح تشفير الوصولات: وُلِّد صامتاً — ضع RECEIPT_ENCRYPTION_KEY كسراً في GitHub للتحكم الكامل به"
 fi
 
-step "6/6 النشر"
-npx wrangler deploy
+INGEST="${INGEST_TOKEN:-}"
+if [ -n "$INGEST" ]; then
+  put_secret INGEST_TOKEN "$INGEST"; echo "  رمز استقبال الزبائن: من الأسرار الموفَّرة"
+elif has_secret INGEST_TOKEN; then
+  echo "  رمز استقبال الزبائن: موجود — لم يُمَس"
+else
+  put_secret INGEST_TOKEN "$(openssl rand -hex 24)"
+  echo "  رمز استقبال الزبائن: وُلِّد صامتاً — ضع INGEST_TOKEN كسراً في GitHub وأعد التشغيل لتستعمله مع الموصلات"
+fi
 
-URL=$(npx wrangler deployments list 2>/dev/null | grep -oE 'https://[a-z0-9-]+\.workers\.dev' | head -1 || true)
+ADMIN="${ADMIN_EMAIL:-admin@mirsal.dz}"
+if ! has_secret ADMIN_EMAIL || [ -n "${ADMIN_EMAIL:-}" ]; then
+  put_secret ADMIN_EMAIL "$ADMIN"
+fi
+echo "  بريد المدير: $ADMIN (سجّل به ليظهر لك دور الإدارة)"
+
+URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1 || true)
 echo
-echo -e "${OK}${BOLD}تم نشر مِرسال بنجاح${RESET}"
+step "تم نشر مِرسال بنجاح"
 [ -n "$URL" ] && echo "  الرابط: $URL"
-echo "  الخطوات الأولى: سجّل بحساب بريد المدير لتظهر لك لوحة الإدارة."
-echo "  استقبال الزبائن: POST {URL}/api/ingest مع ترويسة X-Ingest-Token (الرمز الذي وضعتَه في الخطوة 5)."
+echo "  حماية الوصولات: AES-256-GCM — استقبال الزبائن: POST {الرابط}/api/ingest مع ترويسة X-Ingest-Token"
