@@ -4,7 +4,12 @@ import { db } from "@/lib/store";
 import CaptureForm from "./capture-form";
 import { LogoMark } from "@/components/logo";
 
-export const dynamic = "force-dynamic";
+// في النشر الساكن تُبنى الصفحات المنشورة مسبقاً؛ وفي الخادم تعمل ديناميكياً
+export async function generateStaticParams() {
+  return db()
+    .capturePages.filter((p) => p.published)
+    .map((p) => ({ slug: p.slug }));
+}
 
 interface Props {
   params: Promise<{ slug: string }>;
