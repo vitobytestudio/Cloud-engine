@@ -106,5 +106,8 @@ echo "  بريد المدير: $ADMIN (سجّل به ليظهر لك دور ال
 URL=$(printf '%s' "$DEPLOY_OUT" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1 || true)
 echo
 step "تم نشر مِرسال بنجاح"
-[ -n "$URL" ] && echo "  الرابط: $URL"
+if [ -n "$URL" ]; then
+  echo "  الرابط: $URL"
+  echo "::notice::تم نشر مِرسال — الرابط: $URL"
+fi
 echo "  حماية الوصولات: AES-256-GCM — استقبال الزبائن: POST {الرابط}/api/ingest مع ترويسة X-Ingest-Token"
