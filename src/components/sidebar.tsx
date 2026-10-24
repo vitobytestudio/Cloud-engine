@@ -14,6 +14,7 @@ import {
   FileDown,
   Settings,
   Radio,
+  CreditCard,
   Menu,
   X,
 } from "lucide-react";
@@ -21,13 +22,14 @@ import { useJson, useLive } from "@/lib/hooks";
 
 const NAV = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
-  { href: "/dashboard/radar", label: "رصّاد الفرص", icon: Crosshair },
+  { href: "/dashboard/radar", label: "زبائنك الجاهزون", icon: Crosshair },
   { href: "/dashboard/inbox", label: "الصندوق الموحد", icon: Inbox },
   { href: "/dashboard/leads", label: "العملاء", icon: Users },
   { href: "/dashboard/automations", label: "الأتمتة", icon: Zap },
   { href: "/dashboard/monitoring", label: "المراقبة اللحظية", icon: Radar },
   { href: "/dashboard/campaigns", label: "الحملات", icon: Send },
   { href: "/dashboard/pages", label: "صفحات الالتقاط", icon: FileDown },
+  { href: "/dashboard/billing", label: "الباقات", icon: CreditCard },
   { href: "/dashboard/settings", label: "الإعدادات", icon: Settings },
 ];
 

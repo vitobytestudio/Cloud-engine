@@ -366,7 +366,32 @@ function handle(path,method,body,query){
         return b.publishedAt.localeCompare(a.publishedAt);
       });
     }
-    return J({opportunities:enriched,counts:counts,connectors:DB.connectors,profile:{setupDone:setupDone,professionId:DB.profile?DB.profile.professionId:'',wilayas:DB.profile?DB.profile.wilayas:[],alertChannel:DB.profile?DB.profile.alertChannel:'app'}});
+    var sub=DB.subscription||{planId:'free',status:'active',totalDelivered:0};
+    var PLN={free:{id:'free',name:'انطلاقة',priceDzd:0,dailyClients:0,weeklyClientsFree:3},growth:{id:'growth',name:'نمو',priceDzd:1900,dailyClients:5,weeklyClientsFree:null},pro:{id:'pro',name:'محترف',priceDzd:4900,dailyClients:-1,weeklyClientsFree:null}}[sub.planId]||{id:'free',name:'انطلاقة',priceDzd:0,dailyClients:0,weeklyClientsFree:3};
+    var profLabel2=DB.profile&&DB.profile.professionId&&PROFS[DB.profile.professionId]?PROFS[DB.profile.professionId].label:null;
+    enriched.forEach(function(o){
+      var who=profLabel2||o.keyword;
+      o.suggestion='السلام عليكم، '+o.authorPublic+'.\nشفت طلبكم بخصوص «'+o.title+'» — هذا من تخصصي: '+who+'.\nعندي أعمال مشابهة ونقدر نبدلو التفاصيل والميزانية الآن. متاحين متى تحبوا؟';
+    });
+    var startDay=new Date();startDay.setHours(0,0,0,0);
+    var todayN=DB.opportunities.filter(function(o){return new Date(o.fetchedAt).getTime()>=startDay.getTime()&&o.status!=='ignored';}).length;
+    var weekN=DB.opportunities.filter(function(o){return new Date(o.fetchedAt).getTime()>=Date.now()-604800000&&o.status!=='ignored';}).length;
+    return J({opportunities:enriched,counts:counts,connectors:DB.connectors,profile:{setupDone:setupDone,professionId:DB.profile?DB.profile.professionId:'',wilayas:DB.profile?DB.profile.wilayas:[],alertChannel:DB.profile?DB.profile.alertChannel:'app'},subscription:sub,plan:PLN,usage:{today:todayN,dailyQuota:PLN.dailyClients,week:weekN,weeklyQuota:PLN.weeklyClientsFree}});
+  }
+  if(path==='subscription'&&method==='GET'){
+    var s2=DB.subscription||{planId:'free',status:'active',startedAt:now(),renewsAt:now(),totalDelivered:0};
+    var PL={free:{id:'free',name:'انطلاقة',priceDzd:0,tagline:'جرّب التوصيل وحقق أول صفقة',dailyClients:0,weeklyClientsFree:3,features:['3 زبائن جاهزين أسبوعياً','منشور العميل + رابط الوصول الفعلي','رسالة أولى جاهزة بنقرة واحدة','تنبيه داخل المنصة','تخصص واحد']},growth:{id:'growth',name:'نمو',priceDzd:1900,tagline:'الأكثر ملاءمة للفريلانسر الجاد',dailyClients:5,weeklyClientsFree:null,features:['حتى 5 زبائن جاهزين يومياً (150/شهر)','كل القنوات الرسمية معاً','تنبيه فوري واتساب / تيليغرام','رسائل افتتاحية باسمك وتخصصك','أولوية الفرص الجديدة','تخصصان + ولايات غير محدودة']},pro:{id:'pro',name:'محترف',priceDzd:4900,tagline:'قسم تجاري كامل يعمل عنك',dailyClients:-1,weeklyClientsFree:null,features:['زبائن جاهزون بلا حدود','أعلى أولوية توصيل','تخصصات متعددة','حساب مخصص','إشعارات هاتف فورية']}};
+    var cur=PL[s2.planId]||PL.free;
+    var startD=new Date();startD.setHours(0,0,0,0);
+    var usageW=DB.opportunities.filter(function(o){return new Date(o.fetchedAt).getTime()>=Date.now()-604800000&&o.status!=='ignored';}).length;
+    return J({subscription:s2,plan:cur,plans:[PL.free,PL.growth,PL.pro],usage:{today:0,dailyQuota:cur.dailyClients,week:usageW,weeklyQuota:cur.weeklyClientsFree}});
+  }
+  if(path==='subscription'&&method==='PUT'){
+    var pid2=String(body.planId||'');
+    if(['free','growth','pro'].indexOf(pid2)<0)return J({error:'باقة غير معروفة'},400);
+    DB.subscription={planId:pid2,status:'active',startedAt:now(),renewsAt:new Date(Date.now()+2592000000).toISOString(),totalDelivered:(DB.subscription?DB.subscription.totalDelivered:0)};
+    act('system','تم تفعيل الباقة — توصيل الزبائن الجاهزين بأقصى طاقة');
+    return J({ok:true,subscription:DB.subscription});
   }
   if(path==='opportunities'&&method==='POST'){
     var purl=String(body.url||'').trim();

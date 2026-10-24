@@ -6,9 +6,10 @@ import {
   Crosshair, RefreshCw, ExternalLink, Bookmark, UserPlus, Check,
   ShieldCheck, Link2, Plus, Radio, Heart, MessageCircle as MsgIcon,
   MapPin, Send as TelegramIcon, Rss, Globe, Sparkles, BellRing,
+  Handshake, Copy,
 } from "lucide-react";
 import { useJson, useLive } from "@/lib/hooks";
-import { Btn, Empty, Field, inputCls, Modal, PageHeader, PlatformIcon, Toggle } from "@/components/ui";
+import { Btn, Empty, Field, inputCls, Modal, PageHeader, PlatformIcon, Toggle, CopyBtn } from "@/components/ui";
 import { freshAgo, freshnessOf, relTime } from "@/lib/utils";
 import type { Connector, Opportunity, OpportunityPlatform } from "@/lib/types";
 
@@ -17,13 +18,16 @@ interface MatchInfo {
   reasons: string[];
   matched: boolean;
 }
-type OppItem = Opportunity & { match: MatchInfo };
+type OppItem = Opportunity & { match: MatchInfo; suggestion: string };
 
 interface Data {
   opportunities: OppItem[];
   counts: { hot: number; warm: number; cold: number; expired: number; new: number };
   connectors: Connector[];
   profile: { setupDone: boolean; professionId: string; wilayas: string[]; alertChannel: string };
+  subscription: { planId: string };
+  plan: { id: string; name: string };
+  usage: { today: number; dailyQuota: number; week: number; weeklyQuota: number | null };
 }
 
 function OppIcon({ p, className = "h-4 w-4" }: { p: OpportunityPlatform; className?: string }) {
@@ -134,11 +138,11 @@ export default function RadarPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="الفرص المطابقة لك"
+        title="زبائنك الجاهزون"
         sub={
           setupDone
-            ? "النظام يرصد ويرشّح تلقائياً — لا بحث يدوي، الفرص تصلك لحظة نشرها"
-            : "يرصد كل الفرص لحظياً — فعّل ملفك ليصلك ما يخص تخصصك حصراً"
+            ? "وصلوا إليك تلقائياً بمنشوراتهم وروابط تواصلهم — راجع، انسخ الرسالة، وتواصل"
+            : "زبان جاهزون يُسلَّمون إليك — فعّل ملفك في دقيقة ليبدأ التوصيل"
         }
         actions={
           <>
@@ -194,6 +198,33 @@ export default function RadarPage() {
           ))}
         </div>
       </div>
+
+      {/* عدّاد التسليم */}
+      {data?.usage && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <Handshake className="h-5 w-5 shrink-0 text-violet-600" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[12.5px] font-black text-slate-800">
+              مسلَّم إلى لوحتك: {data.usage.week} زبون جاهز هذا الأسبوع
+              <span className="ms-2 rounded-full bg-violet-50 px-2 py-0.5 text-[10.5px] font-black text-violet-600">
+                باقة {data.plan.name}
+              </span>
+            </div>
+            <div className="mt-1 text-[11px] font-semibold text-slate-400">
+              {data.usage.dailyQuota === -1
+                ? "توصيل بلا حدود — قبل الجميع"
+                : data.usage.dailyQuota > 0
+                  ? `حصة باقتك: ${data.usage.dailyQuota} زبائن يومياً`
+                  : `${data.usage.weeklyQuota} زبائن أسبوعياً — رقِّ للتوصيل اليومي`}
+            </div>
+          </div>
+          {data.subscription.planId !== "pro" && (
+            <Link href="/dashboard/billing">
+              <Btn variant="soft">ترقية الباقة</Btn>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* لافتة التفعيل */}
       {!setupDone && (
@@ -334,18 +365,32 @@ export default function RadarPage() {
 
               <p className="mt-3 line-clamp-2 rounded-xl bg-slate-50 p-3 text-[12.5px] leading-6 text-slate-600">{o.excerpt}</p>
 
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold text-slate-400">
-                <span className="inline-flex items-center gap-1">
+              {/* الرسالة الجاهزة — ينسخها ويرسلها */}
+              {o.suggestion && (
+                <div className="mt-2.5 rounded-xl border border-dashed border-slate-200 bg-white p-3">
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 text-[10.5px] font-black text-slate-500">
+                      <Copy className="h-3 w-3" />
+                      رسالة افتتاحية جاهزة — انسخها وأرسلها كما هي
+                    </span>
+                    <CopyBtn text={o.suggestion} label="نسخ الرسالة" />
+                  </div>
+                  <p className="whitespace-pre-line text-[11.5px] leading-6 text-slate-500">{o.suggestion}</p>
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
                   <Heart className="h-3.5 w-3.5 text-rose-300" />
                   {o.engagement.likes}
                 </span>
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
                   <MsgIcon className="h-3.5 w-3.5 text-sky-300" />
                   {o.engagement.comments}
                 </span>
-                <a href={o.sourceUrl} target="_blank" rel="noopener noreferrer" className="ms-auto inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3.5 py-2 text-[11.5px] font-black text-white shadow-md shadow-violet-600/25 transition hover:bg-violet-700">
+                <a href={o.sourceUrl} target="_blank" rel="noopener noreferrer" className="ms-auto inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-[11.5px] font-black text-white shadow-md shadow-violet-600/25 transition hover:bg-violet-700">
                   <ExternalLink className="h-3.5 w-3.5" />
-                  المنشور الأصلي
+                  تواصل الآن — منشور العميل
                 </a>
               </div>
             </div>

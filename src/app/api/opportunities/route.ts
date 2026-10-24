@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, persist } from "@/lib/store";
 import { uid } from "@/lib/utils";
-import { matchOpportunity } from "@/lib/matching";
+import { matchOpportunity, suggestOpening, professionById } from "@/lib/matching";
+import { planById, deliveredToday } from "@/lib/plans";
 import type { Opportunity, OpportunityPlatform } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -96,12 +97,30 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // الرسالة الافتتاحية الجاهزة لكل فرصة — الفريلانسر ينسخ ويرسل فقط
+  const profLabel = d.profile.professionId ? professionById(d.profile.professionId)?.label ?? null : null;
+  const withMsg = enriched.map((o) => ({ ...o, suggestion: suggestOpening(o, profLabel) }));
+
+  const sub = d.subscription;
+  const plan = planById(sub.planId);
+
   const connectors = d.connectors;
   return NextResponse.json({
-    opportunities: enriched,
+    opportunities: withMsg,
     counts,
     connectors,
     profile: { setupDone: d.profile.setupDone, professionId: d.profile.professionId, wilayas: d.profile.wilayas, alertChannel: d.profile.alertChannel },
+    subscription: sub,
+    plan,
+    usage: {
+      today: deliveredToday(d.opportunities),
+      dailyQuota: plan.dailyClients,
+      week: (() => {
+        const from = Date.now() - 7 * 86400_000;
+        return d.opportunities.filter((o) => new Date(o.fetchedAt).getTime() >= from && o.status !== "ignored").length;
+      })(),
+      weeklyQuota: plan.weeklyClientsFree ?? null,
+    },
   });
 }
 
