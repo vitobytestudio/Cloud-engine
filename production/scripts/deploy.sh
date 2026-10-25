@@ -14,8 +14,14 @@ command -v npx >/dev/null || fail "node/npm مطلوب"
 command -v python3 >/dev/null || fail "python3 مطلوب"
 [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "سر CLOUDFLARE_API_TOKEN غير مضبوط في المستودع — أضفه من Settings → Secrets and variables → Actions"
 
+# إن كان متغير الحساب فارغاً نُسقطه حتى لا يربك wrangler
+[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || unset CLOUDFLARE_ACCOUNT_ID 2>/dev/null || true
+
 # ——— 0/6 صلاحية التوكن ———
 WHOAMI=$(npx wrangler whoami 2>&1) || fail2 "$WHOAMI" "التوكن مرفوض من Cloudflare"
+if printf '%s' "$WHOAMI" | grep -q "More than one account"; then
+  fail "حسابك التوكن يرى أكثر من حساب — أضف سراً باسم CLOUDFLARE_ACCOUNT_ID قيمته معرف حسابك من المعرفات المذكورة أدناه"
+fi
 echo "::notice::0-التوكن صالح"
 
 # ——— 1/6 قاعدة البيانات D1 ———
