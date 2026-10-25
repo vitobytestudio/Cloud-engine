@@ -75,9 +75,21 @@ function parseRSS(xml: string, limit: number): RadarHit[] {
   return out;
 }
 
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); }
+    );
+    void ctl;
+  });
+}
+
 async function fetchGoogleNews(q: string): Promise<RadarHit[]> {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q + " الجزائر")}&hl=ar&gl=DZ&ceid=DZ:ar`;
-  const res = await fetch(url, { headers: { "user-agent": "mirsal-radar/1.0" }, signal: AbortSignal.timeout(8000) });
+  const res = await withTimeout(fetch(url, { headers: { "user-agent": "mirsal-radar/1.0" } }), 9000);
   if (!res.ok) throw new Error(`news ${res.status}`);
   return parseRSS(await res.text(), 12);
 }
@@ -86,9 +98,11 @@ async function fetchGoogleNews(q: string): Promise<RadarHit[]> {
 const REDDIT_SUBS = ["algeria", "AlgeriaFreelance", "dzdev"];
 async function fetchReddit(q: string): Promise<RadarHit[]> {
   const out: RadarHit[] = [];
-  const res = await fetch(
-    `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=new&t=week&limit=25`,
-    { headers: { "user-agent": "mirsal-radar/1.0 (platform contact: admin@mirsal.dz)" }, signal: AbortSignal.timeout(8000) }
+  const res = await withTimeout(
+    fetch(`https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=new&t=week&limit=25`, {
+      headers: { "user-agent": "mirsal-radar/1.0 (platform contact: admin@mirsal.dz)" },
+    }),
+    9000
   );
   if (!res.ok) throw new Error(`reddit ${res.status}`);
   const data = (await res.json()) as { data?: { children?: { data: Record<string, unknown> }[] } };
@@ -132,13 +146,16 @@ export function classify(hit: RadarHit): { professionId: string; keyword: string
 }
 
 // ——— 5) المسح الفوري: يجلب بالتوازي، يصنف، يستبعد القديم والمكرر ———
-export async function scan(professionIds: string[]): Promise<{ fetched: number; kept: RadarHit[]; sources: string[] }> {
+export async function scan(professionIds: string[]): Promise<{ fetched: number; kept: RadarHit[]; errors: string[] }> {
   const queries = buildQueries(professionIds);
-  const newsJobs = queries.slice(0, 8).map((q) => fetchGoogleNews(q).catch(() => [] as RadarHit[]));
+  const errors: string[] = [];
+  const newsJobs = queries.slice(0, 8).map((q) =>
+    fetchGoogleNews(q).catch((e) => { errors.push(`news:${e?.message ?? "؟"}`.slice(0, 80)); return [] as RadarHit[]; })
+  );
   const redditJobs = [
     fetchReddit("algeria freelance OR فريلانسر OR مطلوب"),
     fetchReddit("algeria \"looking for\" developer OR designer"),
-  ].map((p) => p.catch(() => [] as RadarHit[]));
+  ].map((p) => p.catch((e) => { errors.push(`reddit:${e?.message ?? "؟"}`.slice(0, 80)); return [] as RadarHit[]; }));
 
   const all = await Promise.all([...newsJobs, ...redditJobs]);
   const cutoff = Date.now() - 72 * 3600_000;
@@ -154,8 +171,7 @@ export async function scan(professionIds: string[]): Promise<{ fetched: number; 
       kept.push(hit);
     }
   }
-  const sources = all.map((_, i) => (i < newsJobs.length ? `news:${queries[i]}` : `reddit`));
-  return { fetched: all.reduce((a, b) => a + b.length, 0), kept, sources };
+  return { fetched: all.reduce((a, b) => a + b.length, 0), kept, errors: errors.slice(0, 6) };
 }
 
 export { randomId };

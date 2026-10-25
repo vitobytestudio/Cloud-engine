@@ -59,4 +59,4 @@ authRoutes.get("/api/auth/csrf", async (c) => {
   return c.json({ ok: true });
 });
 
-authRoutes.get("/api/health", (c) => c.json({ ok: true, service: "mirsal", ts: Date.now() }));
+authRoutes.get("/api/health", (c) => c.json({ ok: true, service: "mirsal", v: "2.1.0", ts: Date.now() }));

@@ -12,6 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: انتظار النسخة الجديدة
+        run: |
+          API=https://mirsal.vitobytestudio.workers.dev
+          for i in $(seq 1 24); do
+            V=$(curl -s -m 10 $API/api/health | python3 -c "import json,sys; print(json.load(sys.stdin).get('v',''))" || true)
+            [ "$V" = "2.1.0" ] && { echo "النسخة الجديدة حية"; break; }
+            echo "انتظار النشر... ($i)"; sleep 10
+          done
       - name: تسجيل مستخدم جديد وتشغيل مسح حقيقي
         run: |
           API=https://mirsal.vitobytestudio.workers.dev
