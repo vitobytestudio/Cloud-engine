@@ -72,7 +72,7 @@ KV_OUT=$(npx wrangler kv namespace list 2>&1) || fail2 "$KV_OUT" "فشل قرا�
 KV_ID=$(printf '%s' "$KV_OUT" | python3 -c "
 import json, sys
 try:
-    print(next((n['id'] for n in json.load(sys.stdin) if n.get('title', '').endswith(' KV')), ''))
+    print(next((n['id'] for n in json.load(sys.stdin) if 'kv' in n.get('title', '').lower()), ''))
 except Exception:
     print('')")
 if [ -z "$KV_ID" ]; then
