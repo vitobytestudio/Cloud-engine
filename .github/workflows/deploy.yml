@@ -37,6 +37,7 @@ jobs:
         working-directory: production
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RECEIPT_ENCRYPTION_KEY: ${{ secrets.RECEIPT_ENCRYPTION_KEY }}
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
