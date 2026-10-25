@@ -32,16 +32,16 @@ adminRoutes.get("/api/admin/payments/:id/receipt", async (c) => {
   const admin = c.get("user");
   const orderId = c.req.param("id");
   const receipt = await c.env.DB.prepare(
-    "SELECT r2_key, content_type, filename FROM payment_receipts WHERE order_id = ?1"
+    "SELECT storage_key, content_type, filename FROM payment_receipts WHERE order_id = ?1"
   )
     .bind(orderId)
-    .first<{ r2_key: string; content_type: string; filename: string }>();
+    .first<{ storage_key: string; content_type: string; filename: string }>();
   if (!receipt) return c.json({ error: "لا وصل لهذا الطلب" }, 404);
 
-  const blob = await c.env.RECEIPTS.get(receipt.r2_key);
-  if (!blob) return c.json({ error: "الملف غير موجود في التخزين" }, 404);
+  const stored = await c.env.KV.get(receipt.storage_key, "arrayBuffer");
+  if (!stored) return c.json({ error: "الملف غير موجود في التخزين" }, 404);
 
-  const plain = await aesDecrypt(c.env.RECEIPT_ENCRYPTION_KEY, await blob.arrayBuffer());
+  const plain = await aesDecrypt(c.env.RECEIPT_ENCRYPTION_KEY, stored);
   await audit(c, admin.id, "receipt_viewed", orderId);
   return new Response(plain, {
     headers: {

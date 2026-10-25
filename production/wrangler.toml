@@ -8,10 +8,6 @@ binding = "DB"
 database_name = "mirsal-db"
 database_id = "local-dev"
 
-[[r2_buckets]]
-binding = "RECEIPTS"
-bucket_name = "mirsal-receipts"
-
 [[kv_namespaces]]
 binding = "KV"
 id = "local-dev"
