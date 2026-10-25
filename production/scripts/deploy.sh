@@ -19,10 +19,27 @@ command -v python3 >/dev/null || fail "python3 مطلوب"
 
 # ——— 0/6 صلاحية التوكن ———
 WHOAMI=$(npx wrangler whoami 2>&1) || fail2 "$WHOAMI" "التوكن مرفوض من Cloudflare"
-if printf '%s' "$WHOAMI" | grep -q "More than one account"; then
-  fail "حسابك التوكن يرى أكثر من حساب — أضف سراً باسم CLOUDFLARE_ACCOUNT_ID قيمته معرف حسابك من المعرفات المذكورة أدناه"
-fi
 echo "::notice::0-التوكن صالح"
+
+# تحديد الحساب: من السر إن وُجد، وإلا مطابقة اسمه (vitobytestudio)، وإلا الوحيد إن كان واحداً
+if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+  ACC_JSON=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts || true)
+  CLOUDFLARE_ACCOUNT_ID=$(printf '%s' "$ACC_JSON" | python3 -c "
+import json, sys
+try:
+    accs = json.load(sys.stdin).get('result') or []
+    m = [a['id'] for a in accs if 'vito' in (a.get('name') or '').lower()]
+    if len(m) >= 1: print(m[0])
+    elif len(accs) == 1: print(accs[0]['id'])
+    else: print('')
+except Exception:
+    print('')")
+  if [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+    export CLOUDFLARE_ACCOUNT_ID
+    echo "::notice::الحساب المحدد: $CLOUDFLARE_ACCOUNT_ID"
+  fi
+fi
+[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || fail "تعذر تحديد الحساب آلياً — أضف سراً باسم CLOUDFLARE_ACCOUNT_ID (معرفه من dash.cloudflare.com)"
 
 # ——— 1/6 قاعدة البيانات D1 ———
 step "1/6 قاعدة البيانات D1 (mirsal-db)"
