@@ -46,11 +46,26 @@ const freshness = (ts) => {
 /* ——— هيكل الصفحة ——— */
 const LOGO_SVG = '<svg viewBox="0 0 24 24"><path d="M2.4 11.1 20.8 3.2c.8-.34 1.6.44 1.3 1.26l-6 16.9c-.3.86-1.5.9-1.9.06l-2.6-5.8a1.4 1.4 0 0 0-.6-.64l-5.9-3.2c-.8-.44-.7-1.62.2-1.7Zm7.9 5.4 1.8 3.9 2.6-7.2-4.4 3.3Zm5-4.5 2.4-6.8-10.5 4.6 4.5 2.4c.3.17.55.4.74.7l.36.5 2.5-1.4Z"/></svg>';
 
-function header(nav) {
+const NAV_ICONS = {
+  clients: '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
+  billing: '<svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 10h19"/><path d="M6 15h4"/></svg>',
+  admin: '<svg viewBox="0 0 24 24"><path d="M12 2.5 20 6v6c0 5-3.4 8.2-8 9.5C7.4 20.2 4 17 4 12V6l8-3.5Z"/><path d="m9 11.5 2.2 2.2L15.5 9"/></svg>',
+  out: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>'
+};
+function bottomNav(role, active) {
+  const item = (key, href, icon, label, on) =>
+    `<a href="${href}" class="${on === active ? "on" : ""}" ${key === "out" ? 'onclick="doLogout()"' : ""}>${NAV_ICONS[icon]}<span>${label}</span></a>`;
+  let items = item("c", "#/dashboard", "clients", "زبائني", "dashboard") + item("b", "#/billing", "billing", "الباقات", "billing");
+  if (role === "admin") items += item("a", "#/admin", "admin", "الإدارة", "admin");
+  items += item("o", "#", "out", "خروج", "out");
+  return `<nav class="bottomnav">${items}</nav>`;
+}
+function header(nav, opts = {}) {
+  const bn = opts.bottom ? bottomNav(opts.role, opts.active) : "";
   return `<header><div class="wrap hd">
     <a href="#/" class="logo"><span class="logo-mark">${LOGO_SVG}</span><span><b>مِرسال</b><small>توصيل زبائن جاهزين — الجزائر</small></span></a>
     <nav>${nav}</nav>
-  </div></header>`;
+  </div></header>${bn}`;
 }
 
 /* ——— الصفحة الرئيسية ——— */
@@ -142,8 +157,8 @@ async function loadPlansGrid() {
 function renderLogin(err) {
   app.innerHTML = `${header(`<a href="#/">الرئيسية</a>`)}
   <div class="wrap auth"><div class="card">
-    <h2 style="font-size:20px;margin-bottom:4px">تسجيل الدخول</h2>
-    <p style="color:var(--dim);font-size:12.5px;margin-bottom:20px">أدخل بياناتك للوصول إلى زبائنك</p>
+    <h2>تسجيل الدخول</h2>
+    <p class="muted">أدخل بياناتك للوصول إلى زبائنك</p>
     ${err ? `<div class="err">${esc(err)}</div>` : ""}
     <div class="field"><label>البريد الإلكتروني</label><input id="li-email" type="email" dir="ltr" autocomplete="email"/></div>
     <div class="field"><label>كلمة السر</label><input id="li-pass" type="password" autocomplete="current-password"/></div>
@@ -154,15 +169,15 @@ function renderLogin(err) {
 function renderRegister(err) {
   app.innerHTML = `${header(`<a href="#/">الرئيسية</a>`)}
   <div class="wrap auth"><div class="card">
-    <h2 style="font-size:20px;margin-bottom:4px">إنشاء حساب</h2>
-    <p style="color:var(--dim);font-size:12.5px;margin-bottom:20px">دقيقة واحدة — ثم زبائنك الأول في طريقه إليك</p>
+    <h2>إنشاء حساب</h2>
+    <p class="muted">دقيقة واحدة — ثم زبائنك الأول في طريقه إليك</p>
     ${err ? `<div class="err">${esc(err)}</div>` : ""}
     <div class="field"><label>الاسم الكامل</label><input id="rg-name"/></div>
     <div class="field"><label>البريد الإلكتروني</label><input id="rg-email" type="email" dir="ltr"/></div>
     <div class="field"><label>كلمة السر</label><input id="rg-pass" type="password"/><div class="hint">8 أحرف على الأقل</div></div>
-    <label style="display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--sub);margin:14px 0;cursor:pointer">
-      <input type="checkbox" id="rg-consent" style="width:auto;margin-top:3px"/>
-      <span>أوافق على <a href="#/legal" style="color:var(--vio2)">الشروط وسياسة الخصوصية</a> — بياناتي تُعالج بأمان وتُحفظ للمدة اللازمة فقط.</span>
+    <label class="consent">
+      <input type="checkbox" id="rg-consent"/>
+      <span>أوافق على <a href="#/legal" style="color:var(--brand-2)">الشروط وسياسة الخصوصية</a> — بياناتي تُعالَج بأمان وتُحفظ للمدة اللازمة فقط.</span>
     </label>
     <button class="btn btn-p" style="width:100%" onclick="doRegister()">إنشاء الحساب</button>
     <p style="text-align:center;margin-top:16px;font-size:12.5px;color:var(--sub)">لديك حساب؟ <a href="#/login" style="color:var(--vio2);font-weight:800">دخول</a></p>
@@ -198,7 +213,7 @@ async function renderDashboard() {
     ? `<div class="card" style="border-color:rgba(245,158,11,.3);margin-bottom:16px"><b style="font-size:13px;color:#fbbf24">طلب الاشتراك (${esc(s.pending_order.plan_id)}) قيد المراجعة</b><p style="font-size:12px;color:var(--sub)">المرجع: <b dir="ltr">${esc(s.pending_order.reference)}</b> — سيُفعَّل حسابك فور اعتماد الوصل</p></div>`
     : "";
 
-  app.innerHTML = `${header(nav)}
+  app.innerHTML = `${header(nav, { bottom: true, role: s.user.role, active: "dashboard" })}
   <div class="wrap app">
     <div class="app-hd">
       <div><h1>زبائنك الجاهزون</h1><div class="sub">${s.profile.setup_done ? "وصلوا إليك بمنشوراتهم وروابطهم — انسخ الرسالة وتواصل" : "فعّل ملفك لبدء التوصيل"}</div></div>
@@ -208,7 +223,7 @@ async function renderDashboard() {
       </div>
     </div>
     ${profileBanner}${orderBanner}
-    <div id="clients-area">${s.profile.setup_done ? "جارٍ جلب زبائنك…" : ""}</div>
+    <div id="clients-area">${s.profile.setup_done ? '<div class="skel" style="min-height:128px"></div><div class="skel" style="min-height:196px"></div><div class="skel" style="min-height:196px"></div>' : ""}</div>
   </div>`;
   if (s.profile.setup_done) await loadClients();
 }
@@ -291,7 +306,7 @@ async function renderBilling(section) {
   const nav = `<a href="#/dashboard">زبائني</a><a href="#/billing" style="color:#fff">الباقات</a>${s.user.role === "admin" ? '<a href="#/admin">الإدارة</a>' : ""}<a href="#" onclick="doLogout()">خروج</a>`;
   const currentPlan = s.subscription?.plan_id;
 
-  app.innerHTML = `${header(nav)}
+  app.innerHTML = `${header(nav, { bottom: true, role: s.user.role, active: "billing" })}
   <div class="wrap app">
     <div class="app-hd"><div><h1>الباقات والتسليم</h1><div class="sub">أنت تدفع مقابل زبائن جاهزين يُسلَّمون إليك</div></div>
     <div style="display:flex;gap:8px"><span class="tag v">باقتك: ${esc(s.subscription?.plan_name ?? "—")}</span><span class="tag g">${s.usage.week} هذا الأسبوع · ${s.usage.total} إجمالاً</span></div></div>
@@ -373,7 +388,7 @@ async function renderAdmin(tab) {
   if (s.user.role !== "admin") { location.hash = "#/dashboard"; return; }
   const nav = `<a href="#/dashboard">زبائني</a><a href="#/billing">الباقات</a><a href="#/admin" style="color:#fff">الإدارة</a><a href="#" onclick="doLogout()">خروج</a>`;
 
-  app.innerHTML = `${header(nav)}
+  app.innerHTML = `${header(nav, { bottom: true, role: s.user.role, active: "admin" })}
   <div class="wrap app">
     <div class="app-hd"><div><h1>لوحة الإدارة</h1><div class="sub">مراجعة الدفعات وإدارة النظام — كل فعل مُوثّق</div></div>
     <div class="tabs"><button class="${tab === "payments" ? "on" : ""}" onclick="renderAdmin('payments')">المدفوعات</button><button class="${tab === "stats" ? "on" : ""}" onclick="renderAdmin('stats')">إحصاءات</button><button class="${tab === "users" ? "on" : ""}" onclick="renderAdmin('users')">المستخدمون</button></div></div>
@@ -387,10 +402,10 @@ async function renderAdmin(tab) {
       ? `<div class="tbl-wrap card" style="padding:8px"><table class="tbl">
           <tr><th>المستخدم</th><th>الباقة</th><th>المبلغ</th><th>المرجع</th><th>المحوّل / التاريخ</th><th>الوصل</th><th>قرار</th></tr>
           ${d.payments.map((p) => `<tr>
-            <td><b>${esc(p.name)}</b><br/><small style="color:var(--dim)">${esc(p.email)}</small>${p.risk_flag ? '<br/><span class="tag r" style="margin-top:4px">نمط مكرر — تحقّق</span>' : ""}</td>
-            <td>${esc(planName(p.plan_id))}</td><td>${dzd(p.amount_dzd)}</td><td dir="ltr"><b>${esc(p.reference)}</b></td>
-            <td>${esc(p.transfer_name ?? "—")}<br/><small style="color:var(--dim)" dir="ltr">${esc(p.transfer_date ?? "")}</small></td>
-            <td>${p.filename ? `<a class="btn btn-g btn-sm" href="/api/admin/payments/${p.id}/receipt" target="_blank">عرض الوصل</a>` : "—"}</td>
+            <td data-label="المستخدم"><b>${esc(p.name)}</b><br/><small style="color:var(--dim)">${esc(p.email)}</small>${p.risk_flag ? '<br/><span class="tag r" style="margin-top:4px">نمط مكرر — تحقّق</span>' : ""}</td>
+            <td data-label="الباقة">${esc(planName(p.plan_id))}</td><td data-label="المبلغ">${dzd(p.amount_dzd)}</td><td dir="ltr"><b>${esc(p.reference)}</b></td>
+            <td data-label="المرجع">${esc(p.transfer_name ?? "—")}<br/><small style="color:var(--dim)" dir="ltr">${esc(p.transfer_date ?? "")}</small></td>
+            <td data-label="المحوّل / التاريخ">${p.filename ? `<a class="btn btn-g btn-sm" href="/api/admin/payments/${p.id}/receipt" target="_blank">عرض الوصل</a>` : "—"}</td>
             <td style="white-space:nowrap">
               <button class="btn btn-p btn-sm" onclick="decide('${p.id}','approve')">اعتماد</button>
               <button class="btn btn-d btn-sm" onclick="decideReject('${p.id}')">رفض</button>
@@ -415,9 +430,9 @@ async function renderAdmin(tab) {
     const d = await api("/api/admin/users");
     area.innerHTML = `<div class="tbl-wrap card" style="padding:8px"><table class="tbl">
       <tr><th>المستخدم</th><th>الباقة</th><th>الحالة</th><th>التجديد</th><th>منذ</th></tr>
-      ${d.users.map((u) => `<tr><td><b>${esc(u.name)}</b><br/><small style="color:var(--dim)">${esc(u.email)}</small>${u.role === "admin" ? ' <span class="tag v">إدارة</span>' : ""}</td>
-      <td>${esc(planName(u.plan_id))}</td><td>${u.sub_status === "active" ? '<span class="tag g">نشط</span>' : '<span class="tag gr">—</span>'}</td>
-      <td>${u.renews_at ? new Date(u.renews_at).toLocaleDateString("ar-DZ") : "—"}</td><td>${relTime(u.created_at)}</td></tr>`).join("")}
+      ${d.users.map((u) => `<tr><td data-label="المستخدم"><b>${esc(u.name)}</b><br/><small style="color:var(--dim)">${esc(u.email)}</small>${u.role === "admin" ? ' <span class="tag v">إدارة</span>' : ""}</td>
+      <td data-label="الباقة">${esc(planName(u.plan_id))}</td><td data-label="الحالة">${u.sub_status === "active" ? '<span class="tag g">نشط</span>' : '<span class="tag gr">—</span>'}</td>
+      <td data-label="التجديد">${u.renews_at ? new Date(u.renews_at).toLocaleDateString("ar-DZ") : "—"}</td><td data-label="منذ">${relTime(u.created_at)}</td></tr>`).join("")}
     </table></div>`;
   }
 }
