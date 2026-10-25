@@ -20,7 +20,7 @@ radarRoutes.post("/api/radar/scan", async (c) => {
     .bind(user.id)
     .first<{ profession_id: string }>();
 
-  const { fetched, kept } = await scan(profile?.profession_id ? [profile.profession_id] : []);
+  const { fetched, kept, errors } = await scan(profile?.profession_id ? [profile.profession_id] : []);
 
   // تخزين فوري — التفرد على source_url يمنع التكرار، والقناة الرسمية مسجلة
   const now = Date.now();
@@ -58,6 +58,7 @@ radarRoutes.post("/api/radar/scan", async (c) => {
 
   return c.json({
     ok: true,
+    errors,
     fetched,
     matched: kept.length,
     inserted,
