@@ -36,7 +36,7 @@ jobs:
       - name: النشر إلى Cloudflare
         working-directory: production
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           RECEIPT_ENCRYPTION_KEY: ${{ secrets.RECEIPT_ENCRYPTION_KEY }}
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
