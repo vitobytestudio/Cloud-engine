@@ -13,6 +13,7 @@ trap 'echo "::error::فشل النشر عند السطر $1 — راجع الخ�
 command -v npx >/dev/null || fail "node/npm مطلوب"
 command -v python3 >/dev/null || fail "python3 مطلوب"
 [ -n "${CLOUDFLARE_API_TOKEN:-}" ] || fail "سر CLOUDFLARE_API_TOKEN غير مضبوط في المستودع — أضفه من Settings → Secrets and variables → Actions"
+npx wrangler whoami >/dev/null 2>&1 && echo "::notice::0-التوكن صالح" || fail "التوكن مرفوض من Cloudflare — غير صالح أو ناقص الصلاحيات"
 
 # ——— 1/6 قاعدة البيانات D1 ———
 step "1/6 قاعدة البيانات D1 (mirsal-db)"
@@ -35,11 +36,13 @@ t = re.sub(r'(database_id = ")[^"]*(")', r'\g<1>' + sys.argv[1] + r'\g<2>', t)
 p.write_text(t, encoding="utf-8")
 PY
 echo "  D1 جاهزة"
+echo "::notice::1-D1 ok ($DB_ID)"
 
 # ——— 2/6 تخزين R2 ———
 step "2/6 تخزين الوصولات R2 (mirsal-receipts)"
 npx wrangler r2 bucket list 2>/dev/null | grep -q "mirsal-receipts" || npx wrangler r2 bucket create mirsal-receipts
 echo "  R2 جاهز"
+echo "::notice::2-R2 ok"
 
 # ——— 3/6 مساحة KV ———
 step "3/6 مساحة KV (حدود المعدل والأقفال)"
@@ -62,15 +65,18 @@ t = re.sub(r'(kv_namespaces[\s\S]*?id = ")[^"]*(")', r'\g<1>' + sys.argv[1] + r'
 p.write_text(t, encoding="utf-8")
 PY
 echo "  KV جاهزة"
+echo "::notice::3-KV ok ($KV_ID)"
 
 # ——— 4/6 ترحيلات المخطط ———
 step "4/6 تطبيق ترحيلات قاعدة البيانات"
 npx wrangler d1 migrations apply mirsal-db --remote
+echo "::notice::4-migrations ok"
 
 # ——— 5/6 نشر العامل (قبل الأسرار — الأسرار تحتاج عاملاً منشوراً) ———
 step "5/6 نشر العامل والواجهة"
 DEPLOY_OUT=$(npx wrangler deploy)
 printf '%s\n' "$DEPLOY_OUT" | grep -E "Version|Uploaded|Published|workers\.dev|Current Version" || printf '%s\n' "$DEPLOY_OUT" | tail -6
+echo "::notice::5-worker-deployed"
 
 # ——— 6/6 الأسرار (قيمها لا تُطبع في أي سجل) ———
 step "6/6 أسرار الإنتاج"
