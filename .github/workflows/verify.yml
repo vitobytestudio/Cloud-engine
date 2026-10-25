@@ -19,5 +19,9 @@ jobs:
           echo "::notice::plans: $P"
           S=$(curl -s -o /dev/null -w "%{http_code}" -m 15 https://mirsal.vitobytestudio.workers.dev/)
           echo "::notice::landing: HTTP $S"
+          F=$(curl -s -o /dev/null -w "%{http_code}" -m 15 https://mirsal.vitobytestudio.workers.dev/fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2)
+          echo "::notice::الخط العربي: HTTP $F"
+          CS=$(curl -s -m 15 https://mirsal.vitobytestudio.workers.dev/styles.css | grep -c "IBM Plex Sans Arabic")
+          echo "::notice::نظام التصميم الجديد: $CS إشارة للخط"
           R=$(curl -s -o /dev/null -w "%{http_code}" -m 15 https://mirsal.vitobytestudio.workers.dev/api/clients)
           echo "::notice::حماية الجلسة (401 متوقع): HTTP $R"
