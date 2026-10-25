@@ -6,6 +6,7 @@ import { authRoutes } from "./routes/auth";
 import { paymentRoutes } from "./routes/payments";
 import { clientRoutes } from "./routes/clients";
 import { adminRoutes, ingestHandler } from "./routes/admin";
+import { radarRoutes } from "./routes/radar";
 import { PROFESSIONS, WILAYAS } from "./lib/matching";
 import { PLANS } from "./lib/plans";
 import { randomId } from "./lib/crypto";
@@ -23,12 +24,14 @@ app.route("/", authRoutes);
 // المسارات المحمية
 app.use("/api/payments/*", requireAuth);
 app.use("/api/clients/*", requireAuth);
+app.use("/api/radar/*", requireAuth);
 app.use("/api/me/*", requireAuth);
 app.use("/api/profile", requireAuth);
 app.use("/api/admin/*", requireAuth);
 app.use("/api/plans", async (c, next) => next()); // عامة
 app.route("/", paymentRoutes);
 app.route("/", clientRoutes);
+app.route("/", radarRoutes);
 app.route("/", adminRoutes);
 app.post("/api/ingest", ingestHandler);
 

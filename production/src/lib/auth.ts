@@ -120,7 +120,7 @@ export async function rateLimit(
   const key = `rl:${bucket}:${Math.floor(Date.now() / windowMs)}`;
   const current = parseInt((await c.env.KV.get(key)) ?? "0", 10);
   if (current >= limit) return false;
-  await c.env.KV.put(key, String(current + 1), { expirationTtl: Math.ceil(windowMs / 1000) });
+  await c.env.KV.put(key, String(current + 1), { expirationTtl: Math.max(60, Math.ceil(windowMs / 1000)) });
   return true;
 }
 

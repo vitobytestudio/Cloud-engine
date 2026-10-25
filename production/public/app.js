@@ -62,9 +62,13 @@ function bottomNav(role, active) {
 }
 function header(nav, opts = {}) {
   const bn = opts.bottom ? bottomNav(opts.role, opts.active) : "";
+  const navHtml = opts.active
+    ? nav.replace(/href="#\/([a-z]+)"/g, (m, r) => `href="#/${r}" data-active="${r}"`)
+    : nav;
+  const navFinal = opts.active ? navHtml.replace(/data-active="${opts.active}"/g, 'class="on" data-active="' + opts.active + '"') : navHtml;
   return `<header><div class="wrap hd">
     <a href="#/" class="logo"><span class="logo-mark">${LOGO_SVG}</span><span><b>مِرسال</b><small>توصيل زبائن جاهزين — الجزائر</small></span></a>
-    <nav>${nav}</nav>
+    <nav>${navFinal}</nav>
   </div></header>${bn}`;
 }
 
@@ -223,6 +227,14 @@ async function renderDashboard() {
       </div>
     </div>
     ${profileBanner}${orderBanner}
+    <div class="card" style="margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-color:rgba(124,108,255,.4)">
+      <div style="flex:1;min-width:230px">
+        <b style="font-size:15px">الرادار الفوري</b>
+        <p style="font-size:12.5px;color:var(--sub)">بحث حقيقي الآن في القنوات العامة (أخبار + مجتمعات) عن طلبات تخصصك — النتائج تصل للجميع فوراً</p>
+      </div>
+      <button class="btn btn-p" id="radar-btn" onclick="runRadar()">ابدأ البحث الآن</button>
+    </div>
+    <div id="radar-result"></div>
     <div id="clients-area">${s.profile.setup_done ? '<div class="skel" style="min-height:128px"></div><div class="skel" style="min-height:196px"></div><div class="skel" style="min-height:196px"></div>' : ""}</div>
   </div>`;
   if (s.profile.setup_done) await loadClients();
@@ -266,6 +278,26 @@ async function loadClients() {
   } catch (e) {
     area.innerHTML = `<div class="err">${esc(e.message)}</div>`;
   }
+}
+async function runRadar() {
+  const btn = $("#radar-btn");
+  const area = $("#radar-result");
+  btn.disabled = true; btn.textContent = "جارٍ البحث في القنوات…";
+  area.innerHTML = "";
+  try {
+    const d = await api("/api/radar/scan", { method: "POST", body: "{}" });
+    if (d.inserted > 0) {
+      area.innerHTML = `<div class="ok">وجد ${d.matched} طلباً مطابقاً — أُضيف ${d.inserted} جديداً إلى اللوحة</div>`;
+      loadClients();
+    } else if (d.matched > 0) {
+      area.innerHTML = `<div class="ok">وجد ${d.matched} طلباً — لكنها موجودة في لوحتك بالفعل</div>`;
+    } else {
+      area.innerHTML = `<div class="ok">لم يُعثر على جديد في هذه اللحظة — المصادر تعمل وتُفحص دورياً كل 15 دقيقة</div>`;
+    }
+  } catch (e) {
+    area.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = "ابدأ البحث الآن";
 }
 function copyText(btn, i) {
   navigator.clipboard.writeText(myClients[i].opening).then(() => { btn.textContent = "تم النسخ"; setTimeout(() => (btn.textContent = "نسخ"), 1500); });
@@ -499,4 +531,4 @@ window.doLogin = doLogin; window.doRegister = doRegister; window.doLogout = doLo
 window.copyText = copyText; window.copyRef = copyRef; window.clientAct = clientAct; window.loadClients = loadClients;
 window.createOrder = createOrder; window.uploadReceipt = uploadReceipt;
 window.renderAdmin = renderAdmin; window.decide = decide; window.decideReject = decideReject;
-window.setProf = setProf;
+window.setProf = setProf; window.runRadar = runRadar;
