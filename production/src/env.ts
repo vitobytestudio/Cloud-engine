@@ -1,6 +1,5 @@
 export interface Env {
   DB: D1Database;
-  RECEIPTS: R2Bucket;
   KV: KVNamespace;
   ASSETS: Fetcher;
 

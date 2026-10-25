@@ -142,18 +142,18 @@ paymentRoutes.post("/api/payments/orders/:id/receipt", async (c) => {
   const key = c.env.RECEIPT_ENCRYPTION_KEY;
   if (!/^[0-9a-f]{64}$/i.test(key ?? "")) return c.json({ error: "خطأ إعداد الخادم" }, 500);
   const encrypted = await aesEncrypt(key, bytes.buffer as ArrayBuffer);
-  const r2Key = `receipts/${order.id}/${randomId("r_")}.bin`;
-  await c.env.RECEIPTS.put(r2Key, encrypted);
+  const storageKey = `receipts/${order.id}/${randomId("r_")}.bin`;
+  await c.env.KV.put(storageKey, encrypted);
 
   const receiptId = randomId("pr_");
   const stmts = [
     c.env.DB.prepare(
       `INSERT INTO payment_receipts
-       (id, order_id, filename, content_type, size, sha256, transfer_name, transfer_date, r2_key, ip_hash, created_at)
+       (id, order_id, filename, content_type, size, sha256, transfer_name, transfer_date, storage_key, ip_hash, created_at)
        VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)`
     ).bind(
       receiptId, order.id, file.name.slice(0, 120), file.type, file.size, fileHash,
-      transferName, transferDate, r2Key, await clientIpHash(c), now
+      transferName, transferDate, storageKey, await clientIpHash(c), now
     ),
     c.env.DB.prepare("UPDATE payment_orders SET status = 'submitted', risk_flag = ?2, updated_at = ?3 WHERE id = ?1").bind(
       order.id,

@@ -43,8 +43,8 @@ except Exception:
 fi
 [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ] || fail "تعذر تحديد الحساب آلياً — أضف سراً باسم CLOUDFLARE_ACCOUNT_ID (معرفه من dash.cloudflare.com)"
 
-# ——— 1/6 قاعدة البيانات D1 ———
-step "1/6 قاعدة البيانات D1 (mirsal-db)"
+# ——— 1/5 قاعدة البيانات D1 ———
+step "1/5 قاعدة البيانات D1 (mirsal-db)"
 D1_OUT=$(npx wrangler d1 list --json 2>&1) || fail2 "$D1_OUT" "فشل قراءة قوائم D1 — راجع صلاحية D1 في التوكن"
 DB_ID=$(printf '%s' "$D1_OUT" | python3 -c "
 import json, sys
@@ -66,14 +66,8 @@ p.write_text(t, encoding="utf-8")
 PY
 echo "::notice::1-D1 ok ($DB_ID)"
 
-# ——— 2/6 تخزين R2 ———
-step "2/6 تخزين الوصولات R2 (mirsal-receipts)"
-R2_OUT=$(npx wrangler r2 bucket list 2>&1) || fail2 "$R2_OUT" "فشل قراءة قوائم R2 — راجع صلاحية R2 في التوكن"
-printf '%s' "$R2_OUT" | grep -q "mirsal-receipts" || { OUT=$(npx wrangler r2 bucket create mirsal-receipts 2>&1) || fail2 "$OUT" "تعذر إنشاء حاوية R2"; }
-echo "::notice::2-R2 ok"
-
-# ——— 3/6 مساحة KV ———
-step "3/6 مساحة KV (حدود المعدل والأقفال)"
+# ——— 2/5 مساحة KV ———
+step "2/5 مساحة KV (حدود المعدل والأقفال)"
 KV_OUT=$(npx wrangler kv namespace list 2>&1) || fail2 "$KV_OUT" "فشل قراءة مساحات KV — راجع صلاحية KV في التوكن"
 KV_ID=$(printf '%s' "$KV_OUT" | python3 -c "
 import json, sys
@@ -93,20 +87,20 @@ t = p.read_text(encoding="utf-8")
 t = re.sub(r'(kv_namespaces[\s\S]*?id = ")[^"]*(")', r'\g<1>' + sys.argv[1] + r'\g<2>', t, count=1)
 p.write_text(t, encoding="utf-8")
 PY
-echo "::notice::3-KV ok ($KV_ID)"
+echo "::notice::2-KV ok ($KV_ID)"
 
-# ——— 4/6 ترحيلات المخطط ———
+# ——— 3/5 ترحيلات المخطط ———
 step "4/6 تطبيق ترحيلات قاعدة البيانات"
 MIG_OUT=$(npx wrangler d1 migrations apply mirsal-db --remote 2>&1) || fail2 "$MIG_OUT" "فشل تطبيق الترحيلات"
-echo "::notice::4-migrations ok"
+echo "::notice::3-migrations ok"
 
-# ——— 5/6 نشر العامل ———
-step "5/6 نشر العامل والواجهة"
+# ——— 4/5 نشر العامل ———
+step "4/5 نشر العامل والواجهة"
 DEPLOY_OUT=$(npx wrangler deploy 2>&1) || fail2 "$DEPLOY_OUT" "فشل نشر العامل"
 printf '%s\n' "$DEPLOY_OUT" | grep -E "Version|Uploaded|Published|workers\.dev|Current Version" || printf '%s\n' "$DEPLOY_OUT" | tail -6
-echo "::notice::5-worker-deployed"
+echo "::notice::4-worker-deployed"
 
-# ——— 6/6 الأسرار ———
+# ——— 5/5 الأسرار ———
 step "6/6 أسرار الإنتاج"
 has_secret() { npx wrangler secret list 2>&1 | grep -q "\"$1\""; }
 put_secret() { local out; out=$(printf '%s' "$2" | npx wrangler secret put "$1" 2>&1) || fail2 "$out" "فشل ضبط السر $1"; }
