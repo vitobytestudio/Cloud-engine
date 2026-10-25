@@ -25,4 +25,3 @@ jobs:
           echo "::notice::نظام التصميم الجديد: $CS إشارة للخط"
           R=$(curl -s -o /dev/null -w "%{http_code}" -m 15 https://mirsal.vitobytestudio.workers.dev/api/clients)
           echo "::notice::حماية الجلسة (401 متوقع): HTTP $R"
-<!-- فحص نهائي للواجهة الجديدة -->
