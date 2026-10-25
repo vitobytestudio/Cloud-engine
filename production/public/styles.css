@@ -289,3 +289,6 @@ body:has(.bottomnav) .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 
 /* على الجوال: bottomnav يتولى التنقل */
 @media(max-width:900px){.hd nav{display:none}}
+
+/* حالة الصفحة النشطة في شريط الهيدر */
+.hd nav a.on{color:#fff;background:var(--brand-soft)}
