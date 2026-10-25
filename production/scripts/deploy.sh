@@ -9,6 +9,8 @@ step() { printf '\033[1;32m▸\033[0m %s\n' "$1"; }
 fail() { printf '\033[1;33m✗ %s\033[0m\n' "$1"; echo "::error::$1"; exit 1; }
 # يُبلّغ نص خطأ الأمر (بلا أسرار) ثم يخرج
 fail2() { printf '\033[1;33m✗ %s\033[0m\n' "$2"; echo "::error::$2"; printf '%s\n' "${1:-}" | tail -6 | while IFS= read -r l; do [ -n "$l" ] && echo "::error::↳ $l"; done; exit 1; }
+# أي أمر يفشل دون قُدرة: يُبلّغ رقم السطر والرمز (الأسرار مقنعة آلياً في السجلات)
+trap 'rc=$?; echo "::error::فشل غير معلوم — السطر $1 (رمز $rc)"; exit $rc' ERR
 
 command -v npx >/dev/null || fail "node/npm مطلوب"
 command -v python3 >/dev/null || fail "python3 مطلوب"
