@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: انشاء النفق الدائم + ارسال الرابط لـ my-vault
+      - name: انشاء النفق + ارسال الرابط لـ my-vault
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
@@ -45,21 +45,26 @@ jobs:
 
           LINK="https://opencode.vitobytestudio.workers.dev"
 
-          # ارسال الرابط للخاص my-vault
-          git clone https://$GH_API_TOKEN@github.com/$PRIVATE_REPO.git private
-          mkdir -p private
-          echo "# 🔗 رابط OpenCode الدائم" > private/LINK.md
-          echo "" >> private/LINK.md
-          echo "**الرابط:** $LINK" >> private/LINK.md
-          echo "**Username:** opencode" >> private/LINK.md
-          echo "**Password:** نفس SERVER_PASS" >> private/LINK.md
-          echo "**آخر تحديث:** $(date)" >> private/LINK.md
+          # --- هنا نرسلو للخاص قبل ما نشغلو النفق ---
+          echo "📤 ارسال الرابط لـ my-vault/ACCESS-LINK.md ..."
+          rm -rf private
+          git clone https://oauth2:$GH_API_TOKEN@github.com/$PRIVATE_REPO.git private
+          echo "# 🔗 رابط OpenCode الدائم" > private/ACCESS-LINK.md
+          echo "" >> private/ACCESS-LINK.md
+          echo "**الرابط:** $LINK" >> private/ACCESS-LINK.md
+          echo "**Username:** opencode" >> private/ACCESS-LINK.md
+          echo "**Password:** SERVER_PASS" >> private/ACCESS-LINK.md
+          echo "**Tunnel ID:** $TUNNEL_ID" >> private/ACCESS-LINK.md
+          echo "**آخر تحديث:** $(date -u)" >> private/ACCESS-LINK.md
           cd private
           git config user.name "vito-bot"
           git config user.email "bot@vitobytestudio.dev"
-          git add LINK.md
-          git commit -m "update permanent link" || true
-          git push
+          git add ACCESS-LINK.md
+          git commit -m "update permanent link $(date -u)" || echo "لا يوجد تغيير"
+          git push https://oauth2:$GH_API_TOKEN@github.com/$PRIVATE_REPO.git
 
+          echo "✅ تم الارسال! روح شوف my-vault/ACCESS-LINK.md"
           cd ..
+
+          # الآن شغل النفق الدائم
           ./cloudflared tunnel run --token $TUNNEL_TOKEN
