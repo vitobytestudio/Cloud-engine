@@ -1,0 +1,18 @@
+# الحاسوب السحابي — فارغ وجاهز لكودك أنت
+# عدّل هذا الملف، ضع كودك في خطوة «ابدأ»، ثم شغّله من تبويب Actions
+
+name: cloud
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: ابدأ
+        run: |
+          # ======== ضع كودك هنا ========
+          echo "الحاسوب السحابي جاهز — أدخل كودك في هذا الملف"
