@@ -104,7 +104,7 @@ jobs:
           git config --global user.name "vito-cloud"
           git config --global user.email "actions@users.noreply.github.com"
 
-      - name: تشغيل الحاسوب السحابي (طرفية + قناة صادرة)
+      - name: تشغيل الحاسوب السحابي (OpenCode مباشرة + قناة صادرة)
         run: |
           if [ -n "$SERVER_PASS" ]; then
             PW="$SERVER_PASS"
@@ -113,20 +113,14 @@ jobs:
             PW=$(openssl rand -hex 6)
           fi
           echo "TERMINAL_PW=$PW" >> "$GITHUB_ENV"
-          cat > /tmp/cloud-init.sh <<'SH'
-          export PS1='\[\e[38;5;141m\]vito-cloud\[\e[0m\] \w \$ '
-          cd "$GITHUB_WORKSPACE" 2>/dev/null || cd ~
-          clear
-          echo "=================================================="
-          echo "  VITO CLOUD — حاسوبك السحابي جاهز"
-          echo "  المستودع كامل أمامك (production = مِرسال، agents = وكيل)"
-          echo "  OpenCode يعمل الآن — اكتب طلبك بالعربية مباشرة"
-          echo "  Ctrl+C مرتان للخروج من OpenCode وتحصل على طرفية كاملة"
-          echo "=================================================="
-          opencode || true
-          exec bash
-          SH
-          nohup ttyd -W -p 7681 -c "root:$PW" -t fontSize=15 bash --init-file /tmp/cloud-init.sh >/tmp/ttyd.log 2>&1 &
+          command -v tmux >/dev/null 2>&1 || sudo apt-get install -y -q tmux
+          MODEL=$(python3 -c "import json;print(json.load(open('$HOME/.config/opencode/opencode.json'))['model'])")
+          timeout 150 opencode run -m "$MODEL" "قل: جاهز" >/dev/null 2>&1 \
+            && echo "::notice::الإحماء اكتمل — OpenCode سيفتح فوراً" \
+            || echo "::warning::الإحماء تأخر — قد يكمل OpenCode تجهيزه عند الفتح الأول"
+          tmux kill-session -t cloud 2>/dev/null || true
+          tmux new-session -d -s cloud -x 200 -y 50 "cd '$GITHUB_WORKSPACE' && while true; do opencode; echo; echo '— يُعاد فتح OpenCode خلال ثانيتين —'; sleep 2; done"
+          nohup ttyd -W -p 7681 -c "root:$PW" -t fontSize=15 tmux attach -t cloud >/tmp/ttyd.log 2>&1 &
           for i in $(seq 1 10); do
             sleep 1
             [ "$(curl -s -o /dev/null -w "%{http_code}" -u "root:$PW" -m 3 http://127.0.0.1:7681/)" = "200" ] && break
@@ -170,7 +164,9 @@ jobs:
           echo "**العقل:** $BRAIN"
           echo ""
           echo "- تظهر نافذة كلمة المرور مرة واحدة في المتصفح — أدخل root وكلمة المرور المذكورة أعلاه."
-            echo "- OpenCode يفتح تلقائياً على المستودع الكامل. اكتب طلبك بالعربية."
+            echo "- يفتح OpenCode مباشرة أمامك (لا طرفية عادية). إن سأل عن فتح المجلد أول مرة اضغط Enter."
+            echo "- أي انقطاع لحظي: حدّث الصفحة (أو اضغط إعادة الاتصال) وستعود لنفس شاشتك داخل OpenCode بلا فقدان."
+            echo "- إن أُغلق OpenCode بأي طريقة يعيد فتح نفسه خلال ثانيتين."
             echo "- الوكيل يستطيع الالتزام والدفع؛ دفعة إلى main تُحدّث الإنتاج تلقائياً (طلب الدفع يحتاج موافقتك داخل الطرفية)."
             echo "- الجلسة 5:30 ساعة ثم تنتهي بالتصميم — أعد تشغيل هذا السير عمل ليعود الرابط نفسه للحياة."
             echo "- لترقية العقل إلى Gemini: أضف سراً باسم OPENHANDS_LLM_API_KEY وأعد التشغيل."
@@ -180,9 +176,13 @@ jobs:
         run: |
           for i in $(seq 1 330); do
             sleep 60
+            tmux has-session -t cloud 2>/dev/null || {
+              echo "إعادة إنشاء جلسة OpenCode…"
+              tmux new-session -d -s cloud -x 200 -y 50 "cd '$GITHUB_WORKSPACE' && while true; do opencode; echo; echo '— يُعاد فتح OpenCode خلال ثانيتين —'; sleep 2; done"
+            }
             if ! pgrep -x ttyd >/dev/null; then
               echo "إعادة تشغيل الطرفية…"
-              nohup ttyd -W -p 7681 -c "root:$TERMINAL_PW" -t fontSize=15 bash --init-file /tmp/cloud-init.sh >>/tmp/ttyd.log 2>&1 &
+              nohup ttyd -W -p 7681 -c "root:$TERMINAL_PW" -t fontSize=15 tmux attach -t cloud >>/tmp/ttyd.log 2>&1 &
             fi
             if ! pgrep -f "runner.mjs" >/dev/null; then
               echo "إعادة تشغيل القناة…"
