@@ -43,9 +43,14 @@ async function onMsg(raw) {
 
   if (m.t === "wsopen") {
     const h = { ...(m.h ?? {}) };
-    for (const k of ["host", "connection", "sec-websocket-extensions", "origin"]) delete h[k];
-    const up = new WebSocket(`ws://127.0.0.1:3000${m.p}`, {
-      headers: h["sec-websocket-protocol"] ? { "sec-websocket-protocol": h["sec-websocket-protocol"] } : undefined,
+    for (const k of ["host", "connection", "upgrade", "origin", "sec-websocket-key", "sec-websocket-version", "sec-websocket-extensions"]) delete h[k];
+    // workerd يحذف sec-websocket-protocol من ترويسات الطلب الوارد — نعيد حقن بروتوكول طرفية ttyd.
+    // مهم: يمرَّر كوسيط protocols رسمي — مكتبة ws ترفض المصافحة لو أعاد الخادم بروتوكولاً وصلها كترويسة عادية.
+    const proto = h["sec-websocket-protocol"] ?? "tty";
+    delete h["sec-websocket-protocol"];
+    const wsBase = UP.replace(/^http/, "ws");
+    const up = new WebSocket(`${wsBase}${m.p}`, proto, {
+      headers: h,
       maxPayload: 64 * 1024 * 1024,
     });
     sockets.set(m.id, up);
