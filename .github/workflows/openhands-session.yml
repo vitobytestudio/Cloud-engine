@@ -1,0 +1,136 @@
+name: "OpenHands — جلسة سحابية عبر workers.dev"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openhands-session
+  cancel-in-progress: true
+
+jobs:
+  session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+      SERVER_PASS: ${{ secrets.SERVER_PASS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: تثبيت OpenHands (إصدارات متوافقة مضمونة)
+        run: |
+          python -m pip install --upgrade pip -q
+          pip install -q "e2b==0.17.2a40"
+          pip install -q openhands-ai
+          pip install -q "fastapi==0.115.12"
+          echo "OHV=$(pip show openhands-ai | awk '/^Version/{print $2}')" >> "$GITHUB_ENV"
+
+      - name: استرجاع/بناء الواجهة الرسمية
+        id: fe
+        uses: actions/cache@v4
+        with:
+          path: ~/openhands-ui/frontend/dist
+          key: openhands-frontend-${{ env.OHV }}
+
+      - name: بناء الواجهة من المصدر المطابق (أول مرة فقط)
+        if: steps.fe.outputs.cache-hit != 'true'
+        run: |
+          curl -sL -o /tmp/oh.tar.gz "https://codeload.github.com/All-Hands-AI/OpenHands/tar.gz/refs/tags/${{ env.OHV }}"
+          mkdir -p /tmp/ohsrc && tar -xzf /tmp/oh.tar.gz -C /tmp/ohsrc
+          cd "/tmp/ohsrc/OpenHands-${{ env.OHV }}/frontend"
+          npm ci --no-audit --no-fund --silent
+          npm run build --silent
+          mkdir -p ~/openhands-ui/frontend
+          cp -r dist ~/openhands-ui/frontend/
+
+      - name: تجهيز مجلد التشغيل
+        run: |
+          mkdir -p ~/openhands-ui ~/workspace
+          cp openhands-relay/serve.py ~/openhands-ui/serve.py
+          [ -d ~/openhands-ui/frontend/dist ] || { echo "::error::الواجهة غير مبنية"; exit 1; }
+
+      - name: نشر المرحّل الرسمي على workers.dev
+        working-directory: openhands-relay
+        run: |
+          npx wrangler deploy 2>&1 | tee /tmp/deploy.log
+          SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['subdomain'])")
+          echo "RELAY_URL=https://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
+          echo "::notice::رابط الجلسة الرسمي: https://oh-relay.$SUB.workers.dev"
+
+      - name: ضبط رمز القناة (من أسرار المستودع — بلا طباعة)
+        working-directory: openhands-relay
+        run: |
+          [ -n "$SERVER_PASS" ] || { echo "::error::أضف سراً باسم SERVER_PASS في المستودع"; exit 1; }
+          printf '%s' "$SERVER_PASS" | npx wrangler secret put SERVER_PASS >/dev/null 2>&1
+          echo "::notice::رمز القناة مضبوط (قيمته لا تُطبع أبداً)"
+
+      - name: تشغيل خادم OpenHands
+        env:
+          GEMINI_API_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY }}
+        run: |
+          cd ~/openhands-ui
+          nohup python3 serve.py > ~/openhands.log 2>&1 &
+          for i in $(seq 1 40); do
+            sleep 3
+            if curl -s -m 3 http://127.0.0.1:3000/ | grep -qi "<!DOCTYPE\|<html"; then
+              echo "::notice::خادم OpenHands يعمل محلياً"; break
+            fi
+          done
+          curl -s -m 3 http://127.0.0.1:3000/ | grep -qi "<!DOCTYPE\|<html" || { echo "::error::الخادم لم يبدأ"; tail -30 ~/openhands.log; exit 1; }
+
+      - name: تشغيل عدّاء القناة (الاتصال الصادر بالمرحّل)
+        run: |
+          cd openhands-relay
+          npm i --no-save ws --silent
+          nohup env RELAY_URL="wss://$(echo ${{ env.RELAY_URL }} | sed 's|https://||')" \
+            SERVER_PASS="$SERVER_PASS" node runner.mjs > ~/relay.log 2>&1 &
+          sleep 6
+          grep -q "متصل بالمرحّل" ~/relay.log && echo "::notice::القناة متصلة — الرابط حي الآن" \
+            || { echo "::error::فشل اتصال القناة"; cat ~/relay.log; exit 1; }
+
+      - name: تحقق نهائي عبر الرابط العام
+        run: |
+          sleep 3
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "$RELAY_URL/")
+          echo "::notice::فحص الرابط العام: HTTP $CODE"
+          [ "$CODE" = "200" ] || { echo "::error::الرابط العام لا يستجيب"; exit 1; }
+
+      - name: لوحة الجلسة
+        run: |
+          {
+            echo "### 🟢 OpenHands حي على workers.dev"
+            echo ""
+            echo "**الرابط (ثابت دائماً):** $RELAY_URL"
+            echo ""
+            echo "- الجلسة تعمل 5 ساعات و30 دقيقة من الآن، ثم تنتهي بالتصميم (حد التشغيل الواحد)."
+            echo "- الرابط نفسه يعمل متى شغّلت هذا السير عمل مرة أخرى — لا يتغير أبداً."
+            echo "- سجلات الجلسة: ~/openhands.log و ~/relay.log داخل العدّاء."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: إبقاء الجلسة حية (5:30 ساعة)
+        run: |
+          for i in $(seq 1 330); do
+            sleep 60
+            pgrep -f serve.py > /dev/null || { echo "::error::خادم OpenHands توقف عند الدقيقة $i"; tail -20 ~/openhands.log; exit 1; }
+            pgrep -f runner.mjs > /dev/null || {
+              echo "::warning::إعادة تشغيل القناة (الدقيقة $i)"
+              cd openhands-relay
+              nohup env RELAY_URL="wss://$(echo ${{ env.RELAY_URL }} | sed 's|https://||')" \
+                SERVER_PASS="$SERVER_PASS" node runner.mjs >> ~/relay.log 2>&1 &
+              cd - > /dev/null
+            }
+            if [ $((i % 5)) -eq 0 ]; then
+              curl -s -o /dev/null -m 15 "$RELAY_URL/" || echo "::warning::الرابط العام لم يستجب (الدقيقة $i)"
+            fi
+          done
+          echo "::notice::انتهت مدة الجلسة المخططة (5 ساعات و30 دقيقة) — شغّل السير عمل مجدداً لجلسة جديدة بنفس الرابط"
