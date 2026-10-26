@@ -1,4 +1,4 @@
-name: OpenCode - Link to my-vault
+name: OpenCode - Fixed Permanent Link
 
 on:
   workflow_dispatch:
@@ -12,13 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: انشاء النفق + ارسال الرابط لـ my-vault
+      - name: انشاء الرابط الدائم + ارساله لـ my-vault
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
           OPENCODE_SERVER_PASSWORD: ${{ secrets.SERVER_PASS }}
           ANTHROPIC_API_KEY: ${{ secrets.AI_KEY }}
-          PRIVATE_REPO: "${{ github.repository_owner }}/my-vault"
         run: |
           sudo apt-get install -y jq -qq
           curl -fsSL https://opencode.ai/install | bash
@@ -28,6 +27,7 @@ jobs:
           wget -q https://github.[STRIPPED 75 bytes] -O cloudflared
           chmod +x cloudflared
 
+          # انشاء النفق
           ACCOUNT_ID=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
           CREATE=$(curl -s -X POST -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" -d '{"name":"opencode-vito"}' https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel)
           TUNNEL_ID=$(echo $CREATE | jq -r '.result.id // empty')
@@ -39,32 +39,27 @@ jobs:
             TUNNEL_TOKEN=$(echo $TOKEN_RESP | jq -r '.result')
           fi
 
-          curl -s -X PUT -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
-          -d '{"config":{"ingress":[{"hostname":"opencode.vitobytestudio.workers.dev","service":"http://localhost:3000"},{"service":"http_status:404"}]}}' \
-          https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/configurations > /dev/null
+          # الرابط الدائم الحقيقي اللي ما يسقطش
+          LINK="https://$TUNNEL_ID.cfargotunnel.com"
+          echo "🔗 رابطك الدائم: $LINK"
 
-          LINK="https://opencode.vitobytestudio.workers.dev"
-
-          # --- هنا نرسلو للخاص قبل ما نشغلو النفق ---
-          echo "📤 ارسال الرابط لـ my-vault/ACCESS-LINK.md ..."
+          # ارسلو لـ my-vault/ACCESS-LINK.md
           rm -rf private
-          git clone https://oauth2:$GH_API_TOKEN@github.com/$PRIVATE_REPO.git private
+          git clone https://oauth2:$GH_API_TOKEN@github.com/${{ github.repository_owner }}/my-vault.git private
           echo "# 🔗 رابط OpenCode الدائم" > private/ACCESS-LINK.md
           echo "" >> private/ACCESS-LINK.md
-          echo "**الرابط:** $LINK" >> private/ACCESS-LINK.md
-          echo "**Username:** opencode" >> private/ACCESS-LINK.md
-          echo "**Password:** SERVER_PASS" >> private/ACCESS-LINK.md
-          echo "**Tunnel ID:** $TUNNEL_ID" >> private/ACCESS-LINK.md
-          echo "**آخر تحديث:** $(date -u)" >> private/ACCESS-LINK.md
+          echo "الرابط الدائم: $LINK" >> private/ACCESS-LINK.md
+          echo "Username: opencode" >> private/ACCESS-LINK.md
+          echo "Password: SERVER_PASS" >> private/ACCESS-LINK.md
+          echo "تاريخ: $(date)" >> private/ACCESS-LINK.md
           cd private
           git config user.name "vito-bot"
           git config user.email "bot@vitobytestudio.dev"
           git add ACCESS-LINK.md
-          git commit -m "update permanent link $(date -u)" || echo "لا يوجد تغيير"
-          git push https://oauth2:$GH_API_TOKEN@github.com/$PRIVATE_REPO.git
+          git commit -m "update link $LINK" || true
+          git push
 
-          echo "✅ تم الارسال! روح شوف my-vault/ACCESS-LINK.md"
           cd ..
-
-          # الآن شغل النفق الدائم
+          echo "✅ تم الارسال لـ my-vault"
+          # شغل النفق
           ./cloudflared tunnel run --token $TUNNEL_TOKEN
