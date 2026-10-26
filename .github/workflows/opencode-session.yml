@@ -114,12 +114,13 @@ jobs:
           fi
           echo "TERMINAL_PW=$PW" >> "$GITHUB_ENV"
           command -v tmux >/dev/null 2>&1 || sudo apt-get install -y -q tmux
+          printf 'set -g default-terminal "xterm-256color"\nset -g mouse on\nset -g history-limit 10000\n' > ~/.tmux.conf
           MODEL=$(python3 -c "import json;print(json.load(open('$HOME/.config/opencode/opencode.json'))['model'])")
           timeout 150 opencode run -m "$MODEL" "قل: جاهز" >/dev/null 2>&1 \
             && echo "::notice::الإحماء اكتمل — OpenCode سيفتح فوراً" \
             || echo "::warning::الإحماء تأخر — قد يكمل OpenCode تجهيزه عند الفتح الأول"
           tmux kill-session -t cloud 2>/dev/null || true
-          tmux new-session -d -s cloud -x 200 -y 50 "cd '$GITHUB_WORKSPACE' && while true; do opencode; echo; echo '— يُعاد فتح OpenCode خلال ثانيتين —'; sleep 2; done"
+          tmux new-session -d -s cloud -x 200 -y 50 "cd '$GITHUB_WORKSPACE' && while true; do opencode; echo \"— خرج OpenCode (رمز \$?) — يعاد فتحه خلال ثانيتين —\"; echo \"$(date -u +%H:%M:%S) exit=\$?\" >> /tmp/cloud.log; sleep 2; done"
           nohup ttyd -W -p 7681 -c "root:$PW" -t fontSize=15 tmux attach -t cloud >/tmp/ttyd.log 2>&1 &
           for i in $(seq 1 10); do
             sleep 1
@@ -167,6 +168,7 @@ jobs:
             echo "- يفتح OpenCode مباشرة أمامك (لا طرفية عادية). إن سأل عن فتح المجلد أول مرة اضغط Enter."
             echo "- أي انقطاع لحظي: حدّث الصفحة (أو اضغط إعادة الاتصال) وستعود لنفس شاشتك داخل OpenCode بلا فقدان."
             echo "- إن أُغلق OpenCode بأي طريقة يعيد فتح نفسه خلال ثانيتين."
+            echo "- إذا ظهرت رسالة إعادة الاتصال: اضغط Enter مرة واحدة. إن عادت، انتظر دقيقة (الشفاء الذاتي يعمل) ثم Enter مجدداً."
             echo "- الوكيل يستطيع الالتزام والدفع؛ دفعة إلى main تُحدّث الإنتاج تلقائياً (طلب الدفع يحتاج موافقتك داخل الطرفية)."
             echo "- الجلسة 5:30 ساعة ثم تنتهي بالتصميم — أعد تشغيل هذا السير عمل ليعود الرابط نفسه للحياة."
             echo "- لترقية العقل إلى Gemini: أضف سراً باسم OPENHANDS_LLM_API_KEY وأعد التشغيل."
@@ -174,14 +176,16 @@ jobs:
 
       - name: إبقاء الجلسة حية (5:30 ساعة)
         run: |
+          echo "| الدقيقة | جلسة OpenCode | عملية الوكيل | الطرفية | الرابط |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
           for i in $(seq 1 330); do
             sleep 60
             tmux has-session -t cloud 2>/dev/null || {
-              echo "إعادة إنشاء جلسة OpenCode…"
-              tmux new-session -d -s cloud -x 200 -y 50 "cd '$GITHUB_WORKSPACE' && while true; do opencode; echo; echo '— يُعاد فتح OpenCode خلال ثانيتين —'; sleep 2; done"
+              echo "$(date -u +%H:%M:%S) — إعادة إنشاء جلسة OpenCode" >> /tmp/cloud.log
+              tmux new-session -d -s cloud -x 200 -y 50 "cd '$GITHUB_WORKSPACE' && while true; do opencode; echo \"— خرج OpenCode (رمز \$?) — يعاد فتحه خلال ثانيتين —\"; echo \"$(date -u +%H:%M:%S) exit=\$?\" >> /tmp/cloud.log; sleep 2; done"
             }
             if ! pgrep -x ttyd >/dev/null; then
-              echo "إعادة تشغيل الطرفية…"
+              echo "$(date -u +%H:%M:%S) — إعادة تشغيل الطرفية" >> /tmp/cloud.log
               nohup ttyd -W -p 7681 -c "root:$TERMINAL_PW" -t fontSize=15 tmux attach -t cloud >>/tmp/ttyd.log 2>&1 &
             fi
             if ! pgrep -f "runner.mjs" >/dev/null; then
@@ -191,6 +195,9 @@ jobs:
             fi
             if [ $((i % 5)) -eq 0 ]; then
               C=$(curl -s -o /dev/null -w "%{http_code}" -m 20 -u "root:$TERMINAL_PW" "$PUBLIC_URL/") || C=000
-              echo "دقيقة $i — الحالة: $C"
+              T=$(pgrep -x ttyd >/dev/null && echo "✓" || echo "✗")
+              O=$(pgrep -x opencode >/dev/null && echo "✓" || echo "✗")
+              S=$(tmux has-session -t cloud 2>/dev/null && echo "✓" || echo "✗")
+              echo "| $i | $S | $O | $T | $C |" >> "$GITHUB_STEP_SUMMARY"
             fi
           done
