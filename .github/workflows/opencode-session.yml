@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
       SERVER_PASS: ${{ secrets.SERVER_PASS }}
       GEMINI_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY || secrets.GEMINI_API_KEY }}
@@ -44,10 +44,12 @@ jobs:
       - name: نشر المرحّل الرسمي على workers.dev
         working-directory: openhands-relay
         run: |
-          npx wrangler deploy 2>&1 | tail -5
-          SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['subdomain'])")
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "::error::لا يوجد سر CLOUDFLARE_API_TOKEN ولا CF_API_TOKEN في المستودع"; exit 1; }
+          npx wrangler deploy
+          SUBJSON=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain")
+          SUB=$(echo "$SUBJSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result']['subdomain'])") \
+            || { echo "::error::تعذر جلب النطاق الفرعي — تحقق من صلاحية رمز Cloudflare"; echo "$SUBJSON" | head -3; exit 1; }
           echo "RELAY_URL=wss://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
           echo "PUBLIC_URL=https://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
 
