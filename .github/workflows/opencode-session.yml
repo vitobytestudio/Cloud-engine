@@ -2,6 +2,10 @@ name: "OpenCode — حاسوبك السحابي السريع"
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".cloud/opencode-session.flag"
 
 permissions:
   contents: write
@@ -47,12 +51,13 @@ jobs:
           echo "RELAY_URL=wss://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
           echo "PUBLIC_URL=https://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
 
-      - name: ضبط رمز القناة (من الأسرار — قيمته لا تُطبع أبداً)
+      - name: ضبط رمز القناة (سر المخزن إن وجد وإلا توليد عشوائي — لا يُطبع أبداً)
         working-directory: openhands-relay
         run: |
-          [ -n "$SERVER_PASS" ] || { echo "::error::أضف سراً باسم SERVER_PASS في المستودع"; exit 1; }
-          printf '%s' "$SERVER_PASS" | npx wrangler secret put SERVER_PASS >/dev/null 2>&1
-          echo "::notice::رمز القناة مضبوط"
+          TOKEN="${SERVER_PASS:-$(openssl rand -hex 24)}"
+          printf '%s' "$TOKEN" | npx wrangler secret put SERVER_PASS >/dev/null 2>&1
+          echo "CHANNEL_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "::notice::رمز القناة مضبوط (قيمته لا تُطبع أبداً)"
 
       - name: إعداد عقل OpenCode
         run: |
@@ -123,7 +128,7 @@ jobs:
             || { echo "::error::الطرفية لم تبدأ"; cat /tmp/ttyd.log; exit 1; }
           cd openhands-relay
           npm i --no-save ws --silent
-          nohup env RELAY_URL="$RELAY_URL" SERVER_PASS="$SERVER_PASS" UPSTREAM="http://127.0.0.1:7681" \
+          nohup env RELAY_URL="$RELAY_URL" SERVER_PASS="$CHANNEL_TOKEN" UPSTREAM="http://127.0.0.1:7681" \
             node runner.mjs > ~/relay.log 2>&1 &
           cd ..
           for i in $(seq 1 20); do
@@ -170,7 +175,7 @@ jobs:
             fi
             if ! pgrep -f "runner.mjs" >/dev/null; then
               echo "إعادة تشغيل القناة…"
-              (cd openhands-relay && nohup env RELAY_URL="$RELAY_URL" SERVER_PASS="$SERVER_PASS" \
+              (cd openhands-relay && nohup env RELAY_URL="$RELAY_URL" SERVER_PASS="$CHANNEL_TOKEN" \
                 UPSTREAM="http://127.0.0.1:7681" node runner.mjs >> ~/relay.log 2>&1 &)
             fi
             if [ $((i % 5)) -eq 0 ]; then
