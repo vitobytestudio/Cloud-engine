@@ -65,7 +65,7 @@ export class Relay {
 
     // ——— حركة الزوار ———
     if (!this.server) return new Response(
-      JSON.stringify({ error: "الجلسة السحابية غير متصلة الآن — شغّل سير عمل OpenHands من Actions ليعمل الرابط" }),
+      JSON.stringify({ error: "الجلسة السحابية غير متصلة الآن — شغّل سير عمل الجلسة (OpenCode أو OpenHands) من Actions ليعمل الرابط" }),
       { status: 503, headers: { "content-type": "application/json; charset=utf-8" } }
     );
 

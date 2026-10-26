@@ -1,0 +1,180 @@
+name: "OpenCode — حاسوبك السحابي السريع"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  models: read
+
+concurrency:
+  group: openhands-session
+  cancel-in-progress: true
+
+jobs:
+  cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+      SERVER_PASS: ${{ secrets.SERVER_PASS }}
+      GEMINI_KEY: ${{ secrets.OPENHANDS_LLM_API_KEY || secrets.GEMINI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: تثبيت OpenCode والطرفية (ثوانٍ معدودة)
+        run: |
+          npm i -g opencode-ai@latest --silent
+          curl -fsSL -o /usr/local/bin/ttyd https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64
+          chmod +x /usr/local/bin/ttyd
+          echo "OpenCode: $(opencode --version)"
+          ttyd --version | head -1
+
+      - name: نشر المرحّل الرسمي على workers.dev
+        working-directory: openhands-relay
+        run: |
+          npx wrangler deploy 2>&1 | tail -5
+          SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin)['result']['subdomain'])")
+          echo "RELAY_URL=wss://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
+          echo "PUBLIC_URL=https://oh-relay.$SUB.workers.dev" >> "$GITHUB_ENV"
+
+      - name: ضبط رمز القناة (من الأسرار — قيمته لا تُطبع أبداً)
+        working-directory: openhands-relay
+        run: |
+          [ -n "$SERVER_PASS" ] || { echo "::error::أضف سراً باسم SERVER_PASS في المستودع"; exit 1; }
+          printf '%s' "$SERVER_PASS" | npx wrangler secret put SERVER_PASS >/dev/null 2>&1
+          echo "::notice::رمز القناة مضبوط"
+
+      - name: إعداد عقل OpenCode
+        run: |
+          mkdir -p ~/.config/opencode
+          if [ -n "$GEMINI_KEY" ]; then
+            cat > ~/.config/opencode/opencode.json <<'JSON'
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "autoupdate": false,
+              "share": "disabled",
+              "model": "google/gemini-2.5-flash",
+              "small_model": "google/gemini-2.5-flash",
+              "permission": { "edit": "allow", "bash": { "git push": "ask", "*": "allow" }, "webfetch": "allow" },
+              "provider": { "google": { "options": { "apiKey": "{env:GEMINI_KEY}" } } }
+            }
+          JSON
+            echo "BRAIN=Gemini — gemini-2.5-flash" >> "$GITHUB_ENV"
+          else
+            cat > ~/.config/opencode/opencode.json <<'JSON'
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "autoupdate": false,
+              "share": "disabled",
+              "model": "github-models/openai/gpt-4.1-mini",
+              "small_model": "github-models/openai/gpt-4.1-mini",
+              "permission": { "edit": "allow", "bash": { "git push": "ask", "*": "allow" }, "webfetch": "allow" },
+              "provider": {
+                "github-models": {
+                  "npm": "@ai-sdk/openai-compatible",
+                  "name": "GitHub Models",
+                  "options": { "baseURL": "https://models.github.ai/inference", "apiKey": "{env:GITHUB_TOKEN}" },
+                  "models": { "openai/gpt-4.1-mini": { "name": "GPT-4.1 mini" } }
+                }
+              }
+            }
+          JSON
+            echo "BRAIN=GitHub Models — gpt-4.1-mini (بدون أي مفتاح إضافي)" >> "$GITHUB_ENV"
+          fi
+
+      - name: هوية Git (حتى يستطيع الوكيل الالتزام والدفع)
+        run: |
+          git config --global user.name "vito-cloud"
+          git config --global user.email "actions@users.noreply.github.com"
+
+      - name: تشغيل الحاسوب السحابي (طرفية + قناة صادرة)
+        run: |
+          PW=$(openssl rand -hex 6)
+          echo "TERMINAL_PW=$PW" >> "$GITHUB_ENV"
+          cat > /tmp/cloud-init.sh <<'SH'
+          export PS1='\[\e[38;5;141m\]vito-cloud\[\e[0m\] \w \$ '
+          cd "$GITHUB_WORKSPACE" 2>/dev/null || cd ~
+          clear
+          echo "=================================================="
+          echo "  VITO CLOUD — حاسوبك السحابي جاهز"
+          echo "  المستودع كامل أمامك (production = مِرسال، agents = وكيل)"
+          echo "  OpenCode يعمل الآن — اكتب طلبك بالعربية مباشرة"
+          echo "  Ctrl+C مرتان للخروج من OpenCode وتحصل على طرفية كاملة"
+          echo "=================================================="
+          opencode || true
+          exec bash
+          SH
+          nohup ttyd -W -p 7681 -c "root:$PW" -t fontSize=15 bash --init-file /tmp/cloud-init.sh >/tmp/ttyd.log 2>&1 &
+          for i in $(seq 1 10); do
+            sleep 1
+            [ "$(curl -s -o /dev/null -w "%{http_code}" -u "root:$PW" -m 3 http://127.0.0.1:7681/)" = "200" ] && break
+          done
+          [ "$(curl -s -o /dev/null -w "%{http_code}" -u "root:$PW" -m 3 http://127.0.0.1:7681/)" = "200" ] \
+            || { echo "::error::الطرفية لم تبدأ"; cat /tmp/ttyd.log; exit 1; }
+          cd openhands-relay
+          npm i --no-save ws --silent
+          nohup env RELAY_URL="$RELAY_URL" SERVER_PASS="$SERVER_PASS" UPSTREAM="http://127.0.0.1:7681" \
+            node runner.mjs > ~/relay.log 2>&1 &
+          cd ..
+          for i in $(seq 1 20); do
+            sleep 3
+            grep -q "متصل بالمرحّل" ~/relay.log && break
+          done
+          grep -q "متصل بالمرحّل" ~/relay.log && echo "::notice::القناة متصلة — الرابط حي الآن" \
+            || { echo "::error::فشل اتصال القناة"; cat ~/relay.log; exit 1; }
+
+      - name: تحقق نهائي عبر الرابط الرسمي
+        run: |
+          sleep 3
+          C1=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "$PUBLIC_URL/")
+          C2=$(curl -s -o /dev/null -w "%{http_code}" -m 20 -u "root:$TERMINAL_PW" "$PUBLIC_URL/")
+          echo "بلا كلمة مرور: $C1 — بكلمة المرور: $C2"
+          [ "$C1" = "401" ] || { echo "::error::الحماية لا تعمل"; exit 1; }
+          [ "$C2" = "200" ] || { echo "::error::الطرفية لا تستجيب عبر الرابط"; exit 1; }
+
+      - name: لوحة الجلسة
+        run: |
+          {
+            echo "## ☁ حاسوبك السحابي جاهز"
+            echo ""
+            echo "**الرابط الثابت:** $PUBLIC_URL"
+            echo ""
+            echo "**كلمة مرور الطرفية:** root / \`$TERMINAL_PW\`"
+            echo ""
+            echo "**العقل:** $BRAIN"
+            echo ""
+            echo "- تظهر نافذة كلمة المرور مرة واحدة في المتصفح — أدخل root وكلمة المرور أعلاه."
+            echo "- OpenCode يفتح تلقائياً على المستودع الكامل. اكتب طلبك بالعربية."
+            echo "- الوكيل يستطيع الالتزام والدفع؛ دفعة إلى main تُحدّث الإنتاج تلقائياً (طلب الدفع يحتاج موافقتك داخل الطرفية)."
+            echo "- الجلسة 5:30 ساعة ثم تنتهي بالتصميم — أعد تشغيل هذا السير عمل ليعود الرابط نفسه للحياة."
+            echo "- لترقية العقل إلى Gemini: أضف سراً باسم OPENHANDS_LLM_API_KEY وأعد التشغيل."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: إبقاء الجلسة حية (5:30 ساعة)
+        run: |
+          for i in $(seq 1 330); do
+            sleep 60
+            if ! pgrep -x ttyd >/dev/null; then
+              echo "إعادة تشغيل الطرفية…"
+              nohup ttyd -W -p 7681 -c "root:$TERMINAL_PW" -t fontSize=15 bash --init-file /tmp/cloud-init.sh >>/tmp/ttyd.log 2>&1 &
+            fi
+            if ! pgrep -f "runner.mjs" >/dev/null; then
+              echo "إعادة تشغيل القناة…"
+              (cd openhands-relay && nohup env RELAY_URL="$RELAY_URL" SERVER_PASS="$SERVER_PASS" \
+                UPSTREAM="http://127.0.0.1:7681" node runner.mjs >> ~/relay.log 2>&1 &)
+            fi
+            if [ $((i % 5)) -eq 0 ]; then
+              C=$(curl -s -o /dev/null -w "%{http_code}" -m 20 -u "root:$TERMINAL_PW" "$PUBLIC_URL/") || C=000
+              echo "دقيقة $i — الحالة: $C"
+            fi
+          done
