@@ -106,7 +106,12 @@ jobs:
 
       - name: تشغيل الحاسوب السحابي (طرفية + قناة صادرة)
         run: |
-          PW=$(openssl rand -hex 6)
+          if [ -n "$SERVER_PASS" ]; then
+            PW="$SERVER_PASS"
+            echo "CUSTOM_PASS=1" >> "$GITHUB_ENV"
+          else
+            PW=$(openssl rand -hex 6)
+          fi
           echo "TERMINAL_PW=$PW" >> "$GITHUB_ENV"
           cat > /tmp/cloud-init.sh <<'SH'
           export PS1='\[\e[38;5;141m\]vito-cloud\[\e[0m\] \w \$ '
@@ -156,11 +161,15 @@ jobs:
             echo ""
             echo "**الرابط الثابت:** $PUBLIC_URL"
             echo ""
+          if [ "${CUSTOM_PASS:-0}" = "1" ]; then
+            echo "**كلمة مرور الطرفية:** نفس قيمة سر SERVER_PASS التي ضبطها في أسرار المستودع (لا تُطبع هنا أبداً)"
+          else
             echo "**كلمة مرور الطرفية:** root / \`$TERMINAL_PW\`"
-            echo ""
-            echo "**العقل:** $BRAIN"
-            echo ""
-            echo "- تظهر نافذة كلمة المرور مرة واحدة في المتصفح — أدخل root وكلمة المرور أعلاه."
+          fi
+          echo ""
+          echo "**العقل:** $BRAIN"
+          echo ""
+          echo "- تظهر نافذة كلمة المرور مرة واحدة في المتصفح — أدخل root وكلمة المرور المذكورة أعلاه."
             echo "- OpenCode يفتح تلقائياً على المستودع الكامل. اكتب طلبك بالعربية."
             echo "- الوكيل يستطيع الالتزام والدفع؛ دفعة إلى main تُحدّث الإنتاج تلقائياً (طلب الدفع يحتاج موافقتك داخل الطرفية)."
             echo "- الجلسة 5:30 ساعة ثم تنتهي بالتصميم — أعد تشغيل هذا السير عمل ليعود الرابط نفسه للحياة."
