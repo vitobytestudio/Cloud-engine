@@ -1,54 +1,65 @@
-name: OpenCode - Cloud Server vitobytestudio
+name: OpenCode - Link to my-vault
 
 on:
   workflow_dispatch:
-    inputs:
-      task:
-        description: 'ماذا تريد من الوكيل؟'
-        default: 'ابدأ العمل'
   schedule:
-    - cron: '0 */5 * * *'  # يعاود يقلع كل 5 ساعات باش ما ينقطعش أبدا
+    - cron: '0 */5 * * *'
 
 jobs:
-  opencode-cloud:
+  server:
     runs-on: ubuntu-latest
-    timeout-minutes: 330  # 5.5 ساعات
-    permissions:
-      contents: write
-
+    timeout-minutes: 330
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: تثبيت OpenCode مباشرة
-        run: curl -fsSL https://opencode.ai/install | bash
-
-      - name: تشغيل سيرفر OpenCode المحمي
-        env:
-          OPENCODE_SERVER_PASSWORD: ${{ secrets.SERVER_PASS }}
-          ANTHROPIC_API_KEY: ${{ secrets.AI_KEY }}
-          OPENAI_API_KEY: ${{ secrets.AI_KEY }}
-          # يدعم Claude, Llama, Gemini كلهم عبر AI_KEY
-        run: |
-          echo "السيرفر محمي بكلمة المرور من SERVER_PASS"
-          ~/.opencode/bin/opencode web --host 0.0.0.0 --port 3000 &
-          sleep 5
-          echo "OpenCode شاعل على http://localhost:3000"
-
-      - name: ربطه بـ Cloudflare worker.dev تاعك vitobytestudio
+      - name: انشاء النفق الدائم + ارسال الرابط لـ my-vault
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          OPENCODE_SERVER_PASSWORD: ${{ secrets.SERVER_PASS }}
+          ANTHROPIC_API_KEY: ${{ secrets.AI_KEY }}
+          PRIVATE_REPO: "${{ github.repository_owner }}/my-vault"
         run: |
-          # نثبت cloudflared
-          curl -L https://github.[STRIPPED 75 bytes] -o cloudflared
+          sudo apt-get install -y jq -qq
+          curl -fsSL https://opencode.ai/install | bash
+          export PATH="$HOME/.opencode/bin:$PATH"
+          nohup opencode web --host 0.0.0.0 --port 3000 > /dev/null 2>&1 &
+          sleep 5
+          wget -q https://github.[STRIPPED 75 bytes] -O cloudflared
           chmod +x cloudflared
-          
-          # نطلق النفق باسم حسابك vitobytestudio
-          ./cloudflared tunnel --url http://localhost:3000 --no-autoupdate &
-          sleep 10
-          
-          echo "الرابط تاعك راه واجد في Logs الفوق"
-          echo "مثال: https://xxxx-xxxx.trycloudflare.com"
-          echo "تقدر تربطو بـ vitobytestudio.workers.dev عبر Cloudflare Dashboard > Tunnels"
 
-      - name: إبقاء السيرفر شاعل 5.5 ساعات
-        run: sleep 19800  # 5.5 ساعات
+          ACCOUNT_ID=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id')
+          CREATE=$(curl -s -X POST -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" -d '{"name":"opencode-vito"}' https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel)
+          TUNNEL_ID=$(echo $CREATE | jq -r '.result.id // empty')
+          TUNNEL_TOKEN=$(echo $CREATE | jq -r '.result.token // empty')
+          if [ -z "$TUNNEL_ID" ]; then
+            LIST=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel?name=opencode-vito)
+            TUNNEL_ID=$(echo $LIST | jq -r '.result[0].id')
+            TOKEN_RESP=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/token)
+            TUNNEL_TOKEN=$(echo $TOKEN_RESP | jq -r '.result')
+          fi
+
+          curl -s -X PUT -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" \
+          -d '{"config":{"ingress":[{"hostname":"opencode.vitobytestudio.workers.dev","service":"http://localhost:3000"},{"service":"http_status:404"}]}}' \
+          https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/configurations > /dev/null
+
+          LINK="https://opencode.vitobytestudio.workers.dev"
+
+          # ارسال الرابط للخاص my-vault
+          git clone https://$GH_API_TOKEN@github.com/$PRIVATE_REPO.git private
+          mkdir -p private
+          echo "# 🔗 رابط OpenCode الدائم" > private/LINK.md
+          echo "" >> private/LINK.md
+          echo "**الرابط:** $LINK" >> private/LINK.md
+          echo "**Username:** opencode" >> private/LINK.md
+          echo "**Password:** نفس SERVER_PASS" >> private/LINK.md
+          echo "**آخر تحديث:** $(date)" >> private/LINK.md
+          cd private
+          git config user.name "vito-bot"
+          git config user.email "bot@vitobytestudio.dev"
+          git add LINK.md
+          git commit -m "update permanent link" || true
+          git push
+
+          cd ..
+          ./cloudflared tunnel run --token $TUNNEL_TOKEN
