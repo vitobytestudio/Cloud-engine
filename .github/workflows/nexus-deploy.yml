@@ -105,6 +105,32 @@ jobs:
           [ "$C" = "200" ] || { echo "::error::الرابط لا يستجيب"; exit 1; }
           curl -s -m 20 "$NEXUS_URL/api/feed" | head -c 60; echo
 
+      - name: تشخيص النطاق + جرد الدومينات + ربط تلقائي إن وجد دومين نشط وحيد
+        run: |
+          ZR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?per_page=50&account.id=$CLOUDFLARE_ACCOUNT_ID")
+          if [ "$(echo "$ZR" | jq -r '.success')" != "true" ]; then
+            echo "::warning::zones-list: $(echo "$ZR" | jq -c '.errors')"
+          else
+            ACT=$(echo "$ZR" | jq -r '[.result[] | select(.status=="active")] | length')
+            echo "::notice::دومينات نشطة على الحساب: $ACT"
+            echo "$ZR" | jq -r '.result[] | "دومين: \(.name) — \(.status)"' | while read -r L; do echo "::notice::$L"; done
+            if [ "$ACT" = "1" ]; then
+              ZN=$(echo "$ZR" | jq -r '[.result[] | select(.status=="active")][0].name')
+              ZID=$(echo "$ZR" | jq -r '[.result[] | select(.status=="active")][0].id')
+              AT=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+                "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains" \
+                -d "{\"zone_id\":\"$ZID\",\"hostname\":\"nexus.$ZN\",\"service\":\"nexus-b2b\",\"environment\":\"production\"}")
+              echo "::notice::ربط nexus.$ZN: $(echo "$AT" | jq -c 'if .success then "نجح" else .errors end')"
+              sleep 8
+              CC=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "https://nexus.$ZN/")
+              echo "::notice::استجابة الدومين الخاص=HTTP_$CC"
+            fi
+          fi
+          DR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains")
+          echo "$DR" | jq -r '.result[]? | "نطاق مرتبط: \(.hostname) → \(.service)"' | while read -r L; do echo "::notice::$L"; done
+
       - name: لوحة النشر
         run: |
           {
