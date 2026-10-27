@@ -51,14 +51,20 @@ window.addEventListener("hashchange", route);
 
 (async function init() {
   setLang(localStorage.getItem("nx_lang") || "ar");
+  // إقلاع فوري من الذاكرة المؤقتة — الشبكة تلحق في الخلفية
+  try {
+    const cached = JSON.parse(localStorage.getItem("nx_me") || "null");
+    if (cached?.user) { state.user = cached.user; state.csrf = cached.csrf; state.balance = cached.balance ?? 0; drawMe(); }
+  } catch {}
   const r = await api.get("/api/me");
   state.user = r.data.user ?? null;
   state.csrf = r.data.csrf ?? null;
   state.balance = r.data.balance_cents ?? 0;
+  try { localStorage.setItem("nx_me", JSON.stringify({ user: state.user, csrf: state.csrf, balance: state.balance })); } catch {}
   drawMe();
   if (!localStorage.getItem("nx_seen")) {
     showOnboarding(() => route());
-  } else {
+  } else if (!document.querySelector("#view > *")) {
     await route();
   }
   // نبضة الحضور

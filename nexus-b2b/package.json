@@ -2,6 +2,16 @@
   "name": "nexus-b2b",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "wrangler dev", "deploy": "wrangler deploy" },
-  "devDependencies": { "wrangler": "^4.154.0", "@cloudflare/workers-types": "^5.0.0", "typescript": "^5.5.0" }
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.0.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^4.154.0"
+  },
+  "dependencies": {
+    "@ibm/plex-sans-arabic": "^1.1.0"
+  }
 }
