@@ -86,16 +86,25 @@ export async function vote(req: Request, env: Env, s: Session, p: Record<string,
   const postId = p.id;
   const post = await env.DB.prepare("SELECT id FROM posts WHERE id=? AND quarantined=0").bind(postId).first();
   if (!post) return json({ error: "not_found" }, 404);
+  // الفرق التلقائي: نحفظ تأثير صوت هذا المستخدم فقط على العدادات المخزنة
+  // (إعادة العد من الصفر تمحو أعداد الإعجاب التاريخية للبيانات التجريبية)
+  const prev = await env.DB.prepare("SELECT vote FROM post_votes WHERE post_id=? AND user_id=?")
+    .bind(postId, s.userId).first<{ vote: number }>();
+  const prevV = prev?.vote ?? 0;
+  if (prevV === v) {
+    const cur = await env.DB.prepare("SELECT likes_count, downvotes_count FROM posts WHERE id=?").bind(postId).first<{ likes_count: number; downvotes_count: number }>();
+    return json({ ok: true, likes: cur?.likes_count ?? 0, downvotes: cur?.downvotes_count ?? 0 });
+  }
   if (v === 0) await env.DB.prepare("DELETE FROM post_votes WHERE post_id=? AND user_id=?").bind(postId, s.userId).run();
   else await env.DB.prepare(
     "INSERT INTO post_votes (post_id,user_id,vote) VALUES (?,?,?) ON CONFLICT(post_id,user_id) DO UPDATE SET vote=excluded.vote"
   ).bind(postId, s.userId, v).run();
-  const c = await env.DB.prepare(
-    "SELECT COALESCE(SUM(vote=1),0) AS likes, COALESCE(SUM(vote=-1),0) AS downs FROM post_votes WHERE post_id=?"
-  ).bind(postId).first<{ likes: number; downs: number }>();
-  await env.DB.prepare("UPDATE posts SET likes_count=?, downvotes_count=? WHERE id=?")
-    .bind(c?.likes ?? 0, c?.downs ?? 0, postId).run();
-  return json({ ok: true, likes: c?.likes ?? 0, downvotes: c?.downs ?? 0 });
+  const dLike = (v === 1 ? 1 : 0) - (prevV === 1 ? 1 : 0);
+  const dDown = (v === -1 ? 1 : 0) - (prevV === -1 ? 1 : 0);
+  const row = await env.DB.prepare(
+    "UPDATE posts SET likes_count=MAX(0,likes_count+?), downvotes_count=MAX(0,downvotes_count+?) WHERE id=? RETURNING likes_count, downvotes_count"
+  ).bind(dLike, dDown, postId).first<{ likes_count: number; downvotes_count: number }>();
+  return json({ ok: true, likes: row?.likes_count ?? 0, downvotes: row?.downvotes_count ?? 0 });
 }
 
 export async function save(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
