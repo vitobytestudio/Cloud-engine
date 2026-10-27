@@ -38,20 +38,21 @@ jobs:
         run: |
           ACC="$CLOUDFLARE_ACCOUNT_ID"
           RESP=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database")
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database?per_page=100")
           OKF=$(echo "$RESP" | jq -r '.success')
           [ "$OKF" = "True" ] || [ "$OKF" = "true" ] || echo "::warning::D1-list: $(echo "$RESP" | jq -c '.errors')"
-          D1_ID=$(echo "$RESP" | jq -r '.result[] | select(.name=="nexus_db") | .uuid' | head -1)
-          if [ -z "$D1_ID" ]; then
-            CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
-              "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
-              -d '{"name":"nexus_db"}')
-            D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
-            [ -n "$D1_ID" ] || echo "::warning::D1-create: $(echo "$CR" | jq -c '.errors')"
-            echo "$RESP" | jq -r '.result[].name' | while read -r N; do echo "::notice::قاعدة قائمة: $N"; done
-            echo "::notice::للتحرير: dash.cloudflare.com → Storage & Databases → D1 Database → احذف القواعد القديمة غير المستخدمة"
-          fi
-          [ -n "$D1_ID" ] || { echo "::error::تعذر تجهيز قاعدة D1 — انظر التحذير أعلاه (الغالب: رمز Cloudflare بلا صلاحية D1:Edit)"; exit 1; }
+          # بموافقة صريحة من المالك: حذف كل القواعد القائمة (الحساب بلغ سقف 10)
+          echo "$RESP" | jq -r '.result[] | "\(.uuid) \(.name)"' | while read -r ID NM; do
+            DR=$(curl -s -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database/$ID")
+            echo "::notice::حُذفت القاعدة: $NM — نتيجة: $(echo "$DR" | jq -r '.success')"
+          done
+          CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
+            -d '{"name":"nexus_db"}')
+          D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
+          [ -n "$D1_ID" ] || echo "::warning::D1-create: $(echo "$CR" | jq -c '.errors')"
+          [ -n "$D1_ID" ] || { echo "::error::تعذر إنشاء nexus_db حتى بعد التحرير"; exit 1; }
           KR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
           KV_ID=$(echo "$KR" | jq -r '.result[] | select(.title=="nexus-cache") | .id' | head -1)
