@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT DEFAULT '',
     reputation_score INTEGER DEFAULT 100,
     company_name TEXT DEFAULT '',
+    verified INTEGER DEFAULT 1,
+    avatar_data TEXT DEFAULT '',
     vat_number TEXT DEFAULT '',
     portfolio_website TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP

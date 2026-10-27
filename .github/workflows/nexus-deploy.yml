@@ -74,6 +74,11 @@ jobs:
           npx wrangler d1 execute DB --remote -y --file schema.sql
           npx wrangler d1 execute DB --remote -y --file seed.sql
           npx wrangler d1 execute DB --remote -y --file refresh.sql
+          # ترحيلات متسامحة: أعمدة الجولات الأحدث على قاعدة قائمة
+          for M in "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1" "ALTER TABLE users ADD COLUMN avatar_data TEXT DEFAULT ''"; do
+            npx wrangler d1 execute DB --remote -y --command "$M" >/dev/null 2>&1 || true
+          done
+          echo "::notice::الترحيلات مكتملة"
 
       - name: رمز التمليح (سر المخزن إن وجد وإلا توليد لهذه الجولة — لا يُطبع)
         working-directory: nexus-b2b
@@ -117,6 +122,7 @@ jobs:
           curl -s -m 20 "$NEXUS_URL/api/feed" | head -c 60; echo
           curl -s -m 20 "$NEXUS_URL/p/salma" | grep -o "og:title" | head -1 || { echo "::error::بطاقة OG لا تعمل"; exit 1; }
           curl -s -m 20 -o /dev/null -w "legal=%{http_code}\n" "$NEXUS_URL/legal.html"
+          curl -s -m 20 -o /dev/null -w "avatar401ok=%{http_code}\n" "$NEXUS_URL/api/avatar/nobody-here"
 
       - name: تشخيص النطاق + جرد الدومينات + ربط تلقائي إن وجد دومين نشط وحيد
         run: |

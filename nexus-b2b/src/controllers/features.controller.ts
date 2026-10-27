@@ -174,3 +174,13 @@ export async function pulse(req: Request, env: Env): Promise<Response> {
   ].sort((a, b) => a.mins - b.mins).slice(0, 12);
   return json({ events, members: breadth?.members ?? 0, countries: breadth?.countries ?? 0 });
 }
+
+// ——— تقديم صورة البروفايل (تُخزن data-url، تُقدَّم صورة حقيقية مع كاش) ———
+export async function getAvatar(_req: Request, env: Env, _s: Session, p: Record<string, string>): Promise<Response> {
+  const u = await env.DB.prepare("SELECT avatar_data FROM users WHERE username=?").bind(p.username).first<{ avatar_data: string }>();
+  if (!u || !u.avatar_data) return json({ error: "none" }, 404);
+  const m = u.avatar_data.match(/^data:(image\/(?:jpeg|png));base64,(.+)$/);
+  if (!m) return json({ error: "none" }, 404);
+  const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+  return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=300" } });
+}

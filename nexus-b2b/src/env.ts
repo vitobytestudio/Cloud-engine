@@ -7,6 +7,9 @@ export type Env = {
   ENVIRONMENT?: string;
   CF_ACCOUNT_ID?: string;
   STREAM_API_TOKEN?: string;
+  RESEND_API_KEY?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 };
 
 export type Session = {

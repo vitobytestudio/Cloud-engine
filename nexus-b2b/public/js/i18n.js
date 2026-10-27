@@ -231,3 +231,53 @@ Object.assign(DICTS.fr, {
   rate_project: "Par projet", rate_hourly: "Horaire", add_item: "Ajouter", item_added: "Ajouté", item_deleted: "Supprimé",
   n_message: "vous a envoyé un message", share: "Partager", link_copied: "Lien copié — partagez-le", legal_link: "Conditions & Confidentialité",
 });
+
+// ——— v0.7.0: البوابة الحقيقية + المحرر — إلحاق آمن ———
+Object.assign(DICTS.ar, {
+  auth_join: "انضم إلى الشبكة", google_login: "المتابعة بحساب ڨوڨل", or_email: "أو بالبريد",
+  forgot_pass: "نسيت كلمة المرور؟", forgot_note: "أدخل بريدك ونجدد لك مفتاح العبور خلال دقائق.", send_reset: "أرسل رابط الاسترجاع",
+  reset_sent: "📬 تم الإرسال — افحص بريدك (وضجّد مجلد الرسائل غير المرغوبة)", reset_off: "خدمة البريد لم تُفعَّل بعد — تواصل معنا مؤقتاً",
+  verify_sent: "راسلة في طريقها إليك", verify_note: "أرسلنا رابط تأكيد إلى بريدك — اضغطه لتفعيل حسابك التجاري بالكامل.",
+  resend_mail: "إعادة إرسال الرسالة", continue: "متابعة", terms_note: "بإنشائك حساباً توافق على",
+  err_weak: "كلمة المرور ضعيفة — 8 أحرف فأكثر مع رقم",
+  editor_available: "🎬 المحرر جاهز: قصّ، نصوص، ستيكرز، وموسيقى من جهازك", editor_unavailable: "متصفحك لا يدعم المحرر — سيُنشر مقطعك كما هو",
+  editor_title: "محرر NEXUS", trim_from: "من", trim_to: "إلى",
+  ed_text: "نص", ed_sticker: "ستيكر", ed_music: "موسيقى", ed_delete: "حذف المحدد",
+  ed_skip: "نشر بلا تعديل", ed_export: "تصدير وتابعه نشر", ed_your_text: "اكتب هنا",
+  ed_size: "الحجم", ed_pick_music: "اختر أغنية من جهازك", ed_volume: "مستوى الصوت", ed_mstart: "بداية المقطع الصوتي",
+  exported_ok: "🎬 صُدِّر مقطعك المعدّل", export_fail: "تعذر التصدير — سينشر مقطعك الأصلي",
+  publish_ready: "منشورك جاهز للنشر", ed_replace: "استبدال المقطع / إعادة التعديل",
+  change_photo: "تغيير الصورة", photo_set: "🖼 صارت صورتك هويتك", photo_big: "الصورة كبيرة — جرّب أصغر",
+});
+Object.assign(DICTS.en, {
+  auth_join: "Join the network", google_login: "Continue with Google", or_email: "or with email",
+  forgot_pass: "Forgot password?", forgot_note: "Enter your email and we will send you a secure reset link.", send_reset: "Send reset link",
+  reset_sent: "📬 Sent — check your inbox (and spam)", reset_off: "Email service not enabled yet — contact us for now",
+  verify_sent: "A message is on its way", verify_note: "We sent a confirmation link — tap it to fully activate your business account.",
+  resend_mail: "Resend the message", continue: "Continue", terms_note: "By creating an account you agree to the",
+  err_weak: "Weak password — 8+ characters with a digit",
+  editor_available: "🎬 Editor ready: trim, text, stickers & your own music", editor_unavailable: "Your browser cannot edit — your clip publishes as-is",
+  editor_title: "NEXUS Editor", trim_from: "From", trim_to: "To",
+  ed_text: "Text", ed_sticker: "Sticker", ed_music: "Music", ed_delete: "Delete selected",
+  ed_skip: "Publish unedited", ed_export: "Export & continue", ed_your_text: "Your text",
+  ed_size: "Size", ed_pick_music: "Pick a song from your device", ed_volume: "Volume", ed_mstart: "Audio start",
+  exported_ok: "🎬 Edited clip exported", export_fail: "Export failed — your original clip will publish",
+  publish_ready: "Your post is ready", ed_replace: "Replace clip / re-edit",
+  change_photo: "Change photo", photo_set: "🖼 Your photo is now your identity", photo_big: "Image too large — try a smaller one",
+});
+Object.assign(DICTS.fr, {
+  auth_join: "Rejoindre le réseau", google_login: "Continuer avec Google", or_email: "ou par e-mail",
+  forgot_pass: "Mot de passe oublié ?", forgot_note: "Entrez votre e-mail et nous vous envoyons un lien sécurisé.", send_reset: "Envoyer le lien",
+  reset_sent: "📬 Envoyé — vérifiez votre boîte (et les spams)", reset_off: "Service e-mail pas encore activé — contactez-nous",
+  verify_sent: "Un message arrive", verify_note: "Nous avons envoyé un lien de confirmation — touchez-le pour activer votre compte.",
+  resend_mail: "Renvoyer le message", continue: "Continuer", terms_note: "En créant un compte vous acceptez les",
+  err_weak: "Mot de passe faible — 8+ caractères avec un chiffre",
+  editor_available: "🎬 Éditeur prêt : coupe, textes, stickers et votre musique", editor_unavailable: "Votre navigateur ne peut pas éditer — publication telle quelle",
+  editor_title: "Éditeur NEXUS", trim_from: "Du", trim_to: "Au",
+  ed_text: "Texte", ed_sticker: "Sticker", ed_music: "Musique", ed_delete: "Supprimer la sélection",
+  ed_skip: "Publier sans modifier", ed_export: "Exporter et continuer", ed_your_text: "Écrivez ici",
+  ed_size: "Taille", ed_pick_music: "Choisir un morceau de l'appareil", ed_volume: "Volume", ed_mstart: "Début audio",
+  exported_ok: "🎬 Clip exporté", export_fail: "Échec de l'export — votre clip original sera publié",
+  publish_ready: "Votre publication est prête", ed_replace: "Remplacer / rééditer",
+  change_photo: "Changer la photo", photo_set: "🖼 Votre photo est votre identité", photo_big: "Image trop grande — essayez plus petite",
+});

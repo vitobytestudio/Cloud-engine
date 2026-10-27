@@ -27,7 +27,7 @@ export async function renderProfile(view, username) {
   view.innerHTML = `
     <div class="pf-head">
       <div class="pf-top">
-        <div class="pf-ava" style="background:${u.avatar_color}">${(u.full_name ?? "?").trim()[0]}</div>
+        <div class="pf-ava" style="background:url(/api/avatar/${u.username}) center/cover, ${u.avatar_color}">${(u.full_name ?? "?").trim()[0]}</div>
         <div class="pf-names">
           <h2>${u.full_name} <span class="badge ${u.badge_tier}">${u.badge_tier.replace("_", " ")}</span>${r.data.founding ? `<span class="chip founding">${t("founding_badge")}</span>` : ""}</h2>
           <div class="sub">@${u.username}${u.company_name ? " · " + u.company_name : ""}${u.country_code ? " · " + u.country_code : ""}</div>
