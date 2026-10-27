@@ -17,7 +17,7 @@ export async function renderChat(view, convId) {
         <h3 style="padding:6px 4px 2px">${t("chat_title")}</h3>
         ${items.length ? items.map((c) => `
           <a class="conv-row" href="#/chat/${c.id}">
-            <span class="who-avatar" style="background:${c.avatar_color}">${(c.full_name ?? "?")[0]}</span>
+            <span class="who-avatar" style="background:url(/api/avatar/${c.username ?? ""}) center/cover, ${c.avatar_color}">${(c.full_name ?? "?")[0]}</span>
             <span class="txt">
               <b>${c.full_name}</b>
               <small>${(c.snippet ?? "").slice(0, 60) || (c.snippet_type === "PROPOSAL" ? t("send_proposal") : "")}</small>

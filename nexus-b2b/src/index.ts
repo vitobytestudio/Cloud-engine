@@ -27,6 +27,15 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "POST",   pat: "/api/account/tier",              h: accounts.updateTier,     auth: true, csrf: true, limit: [15, 3600] },
   { m: "POST",   pat: "/api/account/sector",            h: accounts.updateSector,   auth: true, csrf: true, limit: [15, 3600] },
   { m: "POST",   pat: "/api/account/profile",           h: accounts.updateProfile,  auth: true, csrf: true, limit: [10, 3600] },
+  { m: "POST",   pat: "/api/account/avatar",            h: accounts.setAvatar,      auth: true, csrf: true, limit: [10, 3600] },
+  { m: "GET",    pat: "/api/avatar/:username",          h: features.getAvatar },
+  { m: "GET",    pat: "/api/auth/verify",               h: auth.verify },
+  { m: "POST",   pat: "/api/auth/resend",               h: auth.resendVerification, auth: true, csrf: true, limit: [3, 3600] },
+  { m: "POST",   pat: "/api/auth/forgot",               h: auth.forgot,             limit: [5, 3600] },
+  { m: "GET",    pat: "/api/auth/reset",                h: auth.resetPage },
+  { m: "POST",   pat: "/api/auth/reset",                h: auth.reset,              limit: [8, 3600] },
+  { m: "GET",    pat: "/api/auth/google/start",         h: auth.googleStart },
+  { m: "GET",    pat: "/api/auth/google/callback",      h: auth.googleCallback },
   { m: "POST",   pat: "/api/account/products",          h: accounts.addProduct,     auth: true, csrf: true, limit: [20, 3600] },
   { m: "DELETE", pat: "/api/account/products/:id",      h: accounts.deleteProduct,  auth: true, csrf: true, limit: [30, 3600] },
   { m: "POST",   pat: "/api/account/services",          h: accounts.addService,     auth: true, csrf: true, limit: [20, 3600] },
@@ -125,7 +134,7 @@ export default {
       return json({ error: "not_found" }, 404);
     }
 
-    // ——— روابط المشاركة الغنية (OG): /p/:username و /post/:id ———
+
     const surl = new URL(req.url);
     const mUser = surl.pathname.match(/^\/p\/([a-zA-Z0-9_.-]+)$/);
     const mPost = surl.pathname.match(/^\/post\/([a-zA-Z0-9-]+)$/);
@@ -160,8 +169,14 @@ export default {
       return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
     }
 
-    // الأصول الثابتة (SPA)
-    return env.ASSETS.fetch(req);
+    // الأصول الثابتة (SPA) + رؤوس الحماية على كل شيء
+    const res = await env.ASSETS.fetch(req);
+    const h = new Headers(res.headers);
+    h.set("x-content-type-options", "nosniff");
+    h.set("x-frame-options", "DENY");
+    h.set("referrer-policy", "strict-origin-when-cross-origin");
+    h.set("permissions-policy", "camera=(self), microphone=(), geolocation=()");
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
   },
 };
 

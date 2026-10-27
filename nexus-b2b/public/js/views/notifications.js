@@ -22,7 +22,7 @@ export async function renderNotifications(view) {
             : `#/profile/${n.actor_username ?? ""}`;
           return `
           <a class="notif-row ${n.is_read ? "" : "fresh"}" href="${href}">
-            <span class="who-avatar" style="background:${n.actor_color ?? "#1a1a22"}">${(n.actor_name ?? "?").trim()[0]}</span>
+            <span class="who-avatar" style="background:url(/api/avatar/${n.actor_username ?? ""}) center/cover, ${n.actor_color ?? "#1a1a22"}">${(n.actor_name ?? "?").trim()[0]}</span>
             <div class="minw0">
               <b>${n.actor_name ?? "—"}</b> <span>${t(kindText(n.kind))}</span>
               <small>${(n.created_at ?? "").slice(0, 16).replace("T", " ")}</small>

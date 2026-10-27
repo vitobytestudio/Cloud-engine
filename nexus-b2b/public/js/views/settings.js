@@ -118,6 +118,11 @@ export function openProfileEditor(onDone) {
     <div class="backdrop" id="pe-bk"></div>
     <div class="sheet">
       <h3>${t("profile_edit")}</h3>
+      <div class="pe-ava-row">
+        <span class="pe-ava" id="pe-ava" style="background:${color}">${(u.full_name ?? "?").trim()[0]}</span>
+        <label class="mini-btn" for="pe-file">${t("change_photo")}</label>
+        <input type="file" id="pe-file" accept="image/*" hidden />
+      </div>
       <label class="pe-f"><span>${t("name_lbl")}</span><input id="pe-name" maxlength="60" value="${(u.full_name ?? "").replace(/"/g, "&quot;")}" /></label>
       <label class="pe-f"><span>${t("bio_lbl")}</span><textarea id="pe-bio" maxlength="300" rows="3">${u.bio ?? ""}</textarea></label>
       <label class="pe-f"><span>${t("company_lbl")}</span><input id="pe-co" maxlength="60" value="${(u.company_name ?? "").replace(/"/g, "&quot;")}" /></label>
@@ -142,6 +147,26 @@ export function openProfileEditor(onDone) {
   const close = () => (root.innerHTML = "");
   root.querySelector("#pe-bk").addEventListener("click", close);
   root.querySelector("#pe-x").addEventListener("click", close);
+  root.querySelector("#pe-file")?.addEventListener("change", async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const img = new Image();
+    img.onload = async () => {
+      const c = document.createElement("canvas");
+      c.width = 256; c.height = 256;
+      const x = c.getContext("2d");
+      const s = Math.min(img.width, img.height);
+      x.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
+      const data = c.toDataURL("image/jpeg", 0.82);
+      const r2 = await api.post("/api/account/avatar", { data });
+      if (r2.ok) {
+        root.querySelector("#pe-ava").style.background = `url(${data}) center/cover`;
+        if (state.user) state.user.avatar_data = "1";
+        toast(t("photo_set"));
+      } else toast(t(r2.data?.error === "too_large" ? "photo_big" : "err_generic"));
+    };
+    img.src = URL.createObjectURL(f);
+  });
   root.querySelector("#pe-save").addEventListener("click", async () => {
     const r = await api.post("/api/account/profile", {
       full_name: root.querySelector("#pe-name").value,

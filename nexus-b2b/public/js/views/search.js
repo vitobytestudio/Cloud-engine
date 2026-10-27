@@ -31,7 +31,7 @@ export async function renderSearch(view) {
         ${us.length ? `<h4 class="sec-h">${t("search_users")}</h4>` : ""}
         ${us.map((u) => `
           <a class="user-row" href="#/profile/${u.username}">
-            <span class="who-avatar" style="background:${u.avatar_color}">${(u.full_name ?? "?").trim()[0]}</span>
+            <span class="who-avatar" style="background:url(/api/avatar/${u.username}) center/cover, ${u.avatar_color}">${(u.full_name ?? "?").trim()[0]}</span>
             <span class="minw0"><b>${u.full_name}</b><small>@${u.username}${u.company_name ? " · " + u.company_name : ""}</small></span>
             <span class="badge ${u.badge_tier}">${u.badge_tier.replace("_", " ")}</span>
           </a>`).join("")}

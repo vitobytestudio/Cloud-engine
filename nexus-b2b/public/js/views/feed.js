@@ -92,7 +92,7 @@ async function loadStories() {
     .map(
       (g, i) => `
       <button class="story-orb ${g.all_seen ? "seen" : ""}" data-i="${i}">
-        <span class="story-ring"><div style="background:${g.user.avatar_color}">${(g.user.full_name ?? "?").trim()[0]}</div></span>
+        <span class="story-ring"><div style="background:url(/api/avatar/${g.user.username}) center/cover, ${g.user.avatar_color}">${(g.user.full_name ?? "?").trim()[0]}</div></span>
         <small>${g.user.full_name}</small>
       </button>`
     )
@@ -114,7 +114,7 @@ function storyViewer(groups, gi) {
         <video src="${st.playback_url}" autoplay playsinline></video>
         <div class="story-progress">${grp.items.map((_, j) => `<i class="${j < item ? "done" : ""}"><b></b></i>`).join("")}</div>
         <div class="story-head">
-          <span class="who-avatar" style="background:${grp.user.avatar_color};width:34px;height:34px;font-size:13px">${(grp.user.full_name ?? "?")[0]}</span>
+          <span class="who-avatar" style="background:url(/api/avatar/${grp.user.username}) center/cover, ${grp.user.avatar_color};width:34px;height:34px;font-size:13px">${(grp.user.full_name ?? "?")[0]}</span>
           <b style="font-size:13px">${grp.user.full_name}</b>
         </div>
         <div class="story-caption">${st.caption ?? ""}</div>
@@ -170,7 +170,7 @@ function reelEl(p) {
     ${p.is_boosted ? `<span class="boost-ribbon">${t("why_boost")}</span>` : ""}
     <div class="reel-meta">
       <div class="who-row">
-        <a class="who-avatar" style="background:${p.avatar_color}" href="#/profile/${p.username}">${(p.full_name ?? "?").trim()[0]}</a>
+        <a class="who-avatar" style="background:url(/api/avatar/${p.username}) center/cover, ${p.avatar_color}" href="#/profile/${p.username}">${(p.full_name ?? "?").trim()[0]}</a>
         <div>
           <div class="who-name">
             <a href="#/profile/${p.username}">${p.full_name}</a>

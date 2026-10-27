@@ -265,6 +265,35 @@ check("بطاقة المقطع OG بصورته المصغرة", ogV.includes("og
 const lg = await fetch(`${BASE}/legal.html`);
 check("صفحة الثقة تعمل بمحتواها", lg.status === 200 && (await lg.text()).includes("الخصوصية"));
 
+// ——— v0.7: البوابة الحقيقية — تسجيل، قوة، تكرار، دخول، أفاتار، حماية ———
+const weak = await (await w.fetch("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ full_name: "آلي", username: "autotest1", email: "auto@test.io", password: "12345678", sector: "FOUNDER" }) })).json();
+check("كلمة المرور الضعيفة تُرفض", weak.error === "weak_password", JSON.stringify(weak));
+const reg = await w.fetch("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ full_name: "مستخدم آلي", username: "autotest1", email: "auto@test.io", password: "passw0rd9", sector: "FOUNDER" }) });
+check("التسجيل الحقيقي يعمل (201)", reg.status === 201, String(reg.status));
+const dup = await (await w.fetch("/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ full_name: "x", username: "autotest1", email: "auto2@test.io", password: "passw0rd9", sector: "FOUNDER" }) })).json();
+check("تكرار اسم المستخدم يُرفض", dup.error === "exists");
+const meNew = await (await w.fetch("/api/me")).json();
+check("الحساب الجديد مسجّل دخوله فوراً", meNew.user?.username === "autotest1");
+const tiny = "data:image/jpeg;base64," + "A".repeat(300);
+const avSet = await (await w.fetch("/api/account/avatar", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meNew.csrf }, body: JSON.stringify({ data: tiny }) })).json();
+check("رفع صورة البروفايل يعمل", avSet.ok === true);
+const avGet = await fetch(`${BASE}/api/avatar/autotest1`);
+check("صورة البروفايل تُقدَّم صورةً حقيقية", avGet.status === 200 && (avGet.headers.get("content-type") ?? "").includes("image"));
+const homeH = await fetch(`${BASE}/`);
+check("رؤوس الحماية مفعّلة", homeH.headers.get("x-frame-options") === "DENY" && homeH.headers.get("x-content-type-options") === "nosniff");
+const badLogin = await (await w.fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "auto@test.io", password: "wrong1234" }) })).status;
+check("كلمة المرور الخطأ تُرفض", badLogin === 401);
+const goodLogin = await w.fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "auto@test.io", password: "passw0rd9" }) });
+check("الدخول بالحساب الحقيقي يعمل", goodLogin.status === 200);
+const fg = await (await w.fetch("/api/auth/forgot", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "auto@test.io" }) })).json();
+check("استرجاع كلمة المرور (بلا كشف)", fg.ok === true && fg.sent === false, JSON.stringify(fg));
+const g404 = (await w.fetch("/api/auth/google/start")).status;
+check("ڨوڨل محروس بأمان (404 بلا مفاتيح)", g404 === 404, String(g404));
+
+// ——— محرر الاستوديو (جاهزية الواجهة) ———
+await navClick("studio");
+check("شاشة الاستوديو تعرض حالة المحرر", !!$(".studio-wrap") && ($(".hint")?.textContent ?? "").length > 4);
+
 // ——— تسجيل الخروج (الأخير — ينهي الجلسة) ———
 w.location.hash = "#/settings";
 await sleep(900);

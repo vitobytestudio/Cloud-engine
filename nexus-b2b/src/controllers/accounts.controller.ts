@@ -99,3 +99,15 @@ export async function deleteService(req: Request, env: Env, s: Session, p: Recor
   if (!r) return json({ error: "not_found" }, 404);
   return json({ ok: true });
 }
+
+// ——— صورة البروفايل: تُصغَّر وتُقطَّع في المتصفح → تخزين مباشر آمن ———
+export async function setAvatar(req: Request, env: Env, s: Session): Promise<Response> {
+  if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
+  const b = (await req.json().catch(() => ({}))) as { data?: string };
+  const d = b.data ?? "";
+  const m = d.match(/^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) return json({ error: "invalid_image" }, 400);
+  if (m[2].length > 110_000) return json({ error: "too_large" }, 413);
+  await env.DB.prepare("UPDATE users SET avatar_data=? WHERE id=?").bind(d, s.userId).run();
+  return json({ ok: true });
+}
