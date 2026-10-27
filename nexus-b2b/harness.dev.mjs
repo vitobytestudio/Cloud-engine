@@ -119,7 +119,7 @@ check("تفعيل الذهبية تجريبياً يعمل", !!$(".plan-card.g.c
 
 // ——— أزرار ملفي المستقلة ———
 await navClick("profile");
-check("ملفي يعرض أزرار الباقات والتحليلات والإعدادات", $$(".icon-tile").length === 3, `عدد=${$$(".icon-tile").length}`);
+check("ملفي يعرض الباقات والتحليلات والتحرير والإعدادات", $$(".icon-tile").length === 4, `عدد=${$$(".icon-tile").length}`);
 
 // ——— الإعدادات (صفحة مستقلة) ———
 w.location.hash = "#/settings";
@@ -150,6 +150,7 @@ await sleep(900);
 check("البحث العالمي يجد المبدعين", $$(".user-row").length >= 1, `نتائج=${$$(".user-row").length}`);
 
 // ——— الإشعارات ———
+await sleep(900);
 check("جرس الإشعارات يُظهر غير المقروء", $("#notif-dot")?.hidden === false);
 w.location.hash = "#/notifications";
 await sleep(1100);
@@ -205,6 +206,64 @@ check("شريط النبض الحي يعمل بمحتوى عالمي", !!pb && p
 // ——— شارة المؤسِّس ———
 await navClick("profile");
 check("شارة مؤسِّس على ملفي (أول 100)", !!$(".chip.founding"));
+
+// ——— v0.6: محرر الملف الشخصي ———
+await navClick("profile");
+$("#edit-tile")?.click();
+await sleep(500);
+check("محرر الملف يفتح من ملفي", !!$("#pe-bio"));
+$("#pe-bio").value = "نبذة اختبار آلي 42 — أطور منتجات تُلمس";
+$("#pe-save")?.click();
+await sleep(1100);
+await navClick("profile");
+check("النبذة المعدلة ظاهرة في الملف", (d.getElementById("view")?.textContent ?? "").includes("نبذة اختبار آلي 42"));
+
+// ——— إضافة باقة (مستقل) ثم حذفها ———
+const meS = await (await w.fetch("/api/me")).json();
+await w.fetch("/api/account/sector", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meS.csrf }, body: JSON.stringify({ sector: "FREELANCER" }) });
+w.location.hash = "#/feed";
+await sleep(500);
+w.location.hash = "#/profile/amin";
+await sleep(1200);
+$('.pf-tab[data-tab=items]')?.click();
+await sleep(400);
+const svBefore = $$(".item-row").length;
+$("#add-item")?.click();
+await sleep(400);
+$("#if-title").value = "باقة اختبار آلي — مراجعة كود";
+$("#if-price").value = "250";
+$("#if-days").value = "5";
+$("#if-go")?.click();
+await sleep(1300);
+$('.pf-tab[data-tab=items]')?.click();
+await sleep(400);
+check("الباقة الجديدة ظهرت في الملف", $$(".item-row").length === svBefore + 1, `${svBefore}→${$$(".item-row").length}`);
+const delBtn = $$("[data-del]").pop();
+delBtn?.click();
+await sleep(1300);
+$('.pf-tab[data-tab=items]')?.click();
+await sleep(400);
+check("حذف الباقة يعمل", $$(".item-row").length === svBefore, `${$$(".item-row").length}`);
+
+// ——— رسالة → إشعار الطرف الآخر (إثبات خادمي) ———
+const meM = await (await w.fetch("/api/me")).json();
+await w.fetch("/api/chat/c-demo-1/messages", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meM.csrf }, body: JSON.stringify({ content: "رسالة اختبار إشعار" }) });
+await sleep(400);
+
+// ——— زر المشاركة في الفيد ———
+await navClick("feed");
+await sleep(800);
+$(".rail-btn[data-act=share]")?.click();
+await sleep(400);
+check("المشاركة تعمل (نسخ احتياطي + توست)", !!$(".toast"));
+
+// ——— روابط المشاركة الغنية OG ———
+const ogP = await (await fetch(`${BASE}/p/salma`)).text();
+check("بطاقة الملف OG بلقب صاحبها", ogP.includes("og:title") && ogP.includes("سلمى"));
+const ogV = await (await fetch(`${BASE}/post/p1`)).text();
+check("بطاقة المقطع OG بصورته المصغرة", ogV.includes("og:image") && ogV.includes("poster1"));
+const lg = await fetch(`${BASE}/legal.html`);
+check("صفحة الثقة تعمل بمحتواها", lg.status === 200 && (await lg.text()).includes("الخصوصية"));
 
 // ——— تسجيل الخروج (الأخير — ينهي الجلسة) ———
 w.location.hash = "#/settings";

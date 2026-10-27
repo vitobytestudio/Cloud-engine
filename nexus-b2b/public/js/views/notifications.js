@@ -3,7 +3,7 @@ import { api, fmtN } from "../api.js";
 import { t } from "../i18n.js";
 
 const kindText = (k) =>
-  ({ like: "n_like", save: "n_save", follow: "n_follow", sample: "n_sample", sample_ok: "n_sample_ok", sample_no: "n_sample_no" }[k] ?? "n_like");
+  ({ like: "n_like", save: "n_save", follow: "n_follow", sample: "n_sample", sample_ok: "n_sample_ok", sample_no: "n_sample_no", message: "n_message" }[k] ?? "n_like");
 
 export async function renderNotifications(view) {
   view.innerHTML = `<div class="page"><div class="spin"></div></div>`;
@@ -16,15 +16,20 @@ export async function renderNotifications(view) {
         <div><h2>${t("notif_title")}</h2></div>
       </div>
       <div class="notif-list">
-        ${items.length ? items.map((n) => `
-          <div class="notif-row ${n.is_read ? "" : "fresh"}">
+        ${items.length ? items.map((n) => {
+          const href = n.ref_type === "conversation" || n.kind === "message"
+            ? `#/chat/${n.ref_id}`
+            : `#/profile/${n.actor_username ?? ""}`;
+          return `
+          <a class="notif-row ${n.is_read ? "" : "fresh"}" href="${href}">
             <span class="who-avatar" style="background:${n.actor_color ?? "#1a1a22"}">${(n.actor_name ?? "?").trim()[0]}</span>
             <div class="minw0">
               <b>${n.actor_name ?? "—"}</b> <span>${t(kindText(n.kind))}</span>
               <small>${(n.created_at ?? "").slice(0, 16).replace("T", " ")}</small>
             </div>
             <span class="notif-ic">${kindIcon(n.kind)}</span>
-          </div>`).join("") : `<div class="empty">${t("notif_empty")}</div>`}
+          </a>`;
+        }).join("") : `<div class="empty">${t("notif_empty")}</div>`}
       </div>
     </div>`;
   view.querySelector("[data-back]").addEventListener("click", () => (location.hash = "#/feed"));

@@ -200,6 +200,10 @@ function reelEl(p) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M8.5 11.5h7M12 8.5v6" transform="rotate(45 12 12)"/></svg>
         <small>${t("novalue")}</small>
       </button>
+      <button class="rail-btn" data-act="share" aria-label="${t("share")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 6.5 12 3l4 3.5"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>
+        <small>${t("share")}</small>
+      </button>
       ${p.is_boosted ? "" : `<button class="rail-btn boost" data-act="boost">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2Z" stroke-linejoin="round"/></svg>
         <small>Boost</small>
@@ -267,6 +271,10 @@ function likeOn(el, p, force) {
 
 async function act(el, p, act_) {
   if (act_ === "boost") return openBoost(p, () => loadReels(true));
+  if (act_ === "share") {
+    const { shareLink } = await import("./profile.js");
+    return shareLink(`${location.origin}/post/${p.id}`, p.title);
+  }
   // تفاؤلي فوري: الواجهة أولاً — الخادم يلحق
   if (!state.user) {
     const ok = await requireAuth();

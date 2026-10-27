@@ -26,6 +26,11 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "POST",   pat: "/api/auth/logout",               h: auth.logout,             csrf: true },
   { m: "POST",   pat: "/api/account/tier",              h: accounts.updateTier,     auth: true, csrf: true, limit: [15, 3600] },
   { m: "POST",   pat: "/api/account/sector",            h: accounts.updateSector,   auth: true, csrf: true, limit: [15, 3600] },
+  { m: "POST",   pat: "/api/account/profile",           h: accounts.updateProfile,  auth: true, csrf: true, limit: [10, 3600] },
+  { m: "POST",   pat: "/api/account/products",          h: accounts.addProduct,     auth: true, csrf: true, limit: [20, 3600] },
+  { m: "DELETE", pat: "/api/account/products/:id",      h: accounts.deleteProduct,  auth: true, csrf: true, limit: [30, 3600] },
+  { m: "POST",   pat: "/api/account/services",          h: accounts.addService,     auth: true, csrf: true, limit: [20, 3600] },
+  { m: "DELETE", pat: "/api/account/services/:id",      h: accounts.deleteService,  auth: true, csrf: true, limit: [30, 3600] },
   { m: "GET",    pat: "/api/analytics",                 h: features.analytics,      auth: true },
   { m: "GET",    pat: "/api/search",                    h: features.search },
   { m: "GET",    pat: "/api/pulse",                     h: features.pulse },
@@ -118,6 +123,41 @@ export default {
         }
       }
       return json({ error: "not_found" }, 404);
+    }
+
+    // ——— روابط المشاركة الغنية (OG): /p/:username و /post/:id ———
+    const surl = new URL(req.url);
+    const mUser = surl.pathname.match(/^\/p\/([a-zA-Z0-9_.-]+)$/);
+    const mPost = surl.pathname.match(/^\/post\/([a-zA-Z0-9-]+)$/);
+    if (mUser || mPost) {
+      let title = "NEXUS B2B", desc = "شبكة الفرص التجارية بالفيديو العمودي", img = "/media/poster1.jpg", to = "/#/feed";
+      if (mUser) {
+        const u = await env.DB.prepare(
+          "SELECT full_name, username, bio, company_name, badge_tier, avatar_color FROM users WHERE username=?"
+        ).bind(mUser[1]).first<{ full_name: string; username: string; bio: string; company_name: string; badge_tier: string; avatar_color: string }>();
+        if (u) {
+          title = `${u.full_name} (@${u.username}) — NEXUS B2B`;
+          desc = [u.company_name, u.bio].filter(Boolean).join(" · ").slice(0, 180) || "عضو في شبكة NEXUS B2B";
+          to = `/#/profile/${u.username}`;
+        }
+      } else {
+        const r = await env.DB.prepare(
+          `SELECT p.title, p.description, p.thumbnail_url, p.category_tag, u.full_name, u.username
+           FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id=? AND p.quarantined=0`
+        ).bind(mPost![1]).first<{ title: string; description: string; thumbnail_url: string; category_tag: string; full_name: string; username: string }>();
+        if (r) {
+          title = `${r.title} — ${r.full_name}`;
+          desc = (r.description || "مقطع موثّق على NEXUS B2B").slice(0, 180);
+          img = r.thumbnail_url || img;
+          to = `/#/profile/${r.username}`;
+        }
+      }
+      const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      const base = await env.ASSETS.fetch(new Request(new URL("/", surl)));
+      let html = await base.text();
+      const og = `<meta property="og:title" content="${esc(title)}" />\n<meta property="og:description" content="${esc(desc)}" />\n<meta property="og:image" content="${esc(new URL(img, surl).href)}" />\n<meta property="og:url" content="${esc(surl.href)}" />\n<meta name="twitter:card" content="summary_large_image" />\n`;
+      html = html.replace("</head>", og + "</head>").replace("</body>", `<script>location.replace("${to}")</script></body>`);
+      return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
     }
 
     // الأصول الثابتة (SPA)

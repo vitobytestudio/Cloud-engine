@@ -7,6 +7,16 @@ const json = (obj: unknown, status = 200) =>
 
 export async function notify(env: Env, userId: string, actorId: string, kind: string, refType = "", refId = "") {
   if (userId === actorId) return;
+  if (kind === "message") {
+    // جرس واحد غير مقروء لكل مُرسل — يُحدَّث مرجعه لآخر محادثة (بلا إغراق)
+    const ex = await env.DB.prepare(
+      "SELECT id FROM notifications WHERE user_id=? AND actor_id=? AND kind='message' AND is_read=0"
+    ).bind(userId, actorId).first<{ id: string }>();
+    if (ex) {
+      await env.DB.prepare("UPDATE notifications SET ref_id=?, created_at=datetime('now') WHERE id=?").bind(refId, ex.id).run();
+      return;
+    }
+  }
   await env.DB.prepare(
     "INSERT INTO notifications (id,user_id,actor_id,kind,ref_type,ref_id) VALUES (?,?,?,?,?,?)"
   ).bind(`n-${crypto.randomUUID().slice(0, 12)}`, userId, actorId, kind, refType, refId).run();

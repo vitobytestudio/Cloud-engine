@@ -202,3 +202,32 @@ export function setLang(l) {
   const lb = document.getElementById("lang-btn");
   if (lb) lb.textContent = l === "ar" ? "EN" : l === "en" ? "FR" : "ع";
 }
+
+// ——— v0.6.0: العضو الحقيقي — إلحاق آمن بالقواميس ———
+Object.assign(DICTS.ar, {
+  profile_edit: "تحرير الملف الشخصي", profile_edit_s: "اسمك ونبذتك وشركتك وهويتك البصرية",
+  name_lbl: "الاسم الكامل", bio_lbl: "النبذة", company_lbl: "الشركة", country_lbl: "الدولة (DZ، FR…)", website_lbl: "موقعك", color_lbl: "لون صورتك",
+  save_profile: "حفظ التعديلات", saved_ok: "حُفظ تعديل ملفك",
+  add_product: "منتج جديد", add_service: "باقة جديدة", item_title: "الاسم", price_eur: "السعر (يورو)",
+  inventory: "المخزون", sample_avail: "عينة متاحة", delivery_days_lbl: "أيام التسليم", rate_lbl: "نوع التسعير",
+  rate_project: "للمشروع", rate_hourly: "للساعة", add_item: "إضافة", item_added: "أُضيف بنجاح", item_deleted: "حُذف",
+  n_message: "أرسل إليك رسالة", share: "مشاركة", link_copied: "نُسخ الرابط — شاركه", legal_link: "الشروط والخصوصية",
+});
+Object.assign(DICTS.en, {
+  profile_edit: "Edit profile", profile_edit_s: "Name, bio, company and visual identity",
+  name_lbl: "Full name", bio_lbl: "Bio", company_lbl: "Company", country_lbl: "Country (DZ, FR…)", website_lbl: "Website", color_lbl: "Avatar color",
+  save_profile: "Save changes", saved_ok: "Profile saved",
+  add_product: "New product", add_service: "New package", item_title: "Name", price_eur: "Price (EUR)",
+  inventory: "Inventory", sample_avail: "Sample available", delivery_days_lbl: "Delivery days", rate_lbl: "Pricing",
+  rate_project: "Per project", rate_hourly: "Hourly", add_item: "Add", item_added: "Added", item_deleted: "Deleted",
+  n_message: "sent you a message", share: "Share", link_copied: "Link copied — share it", legal_link: "Terms & Privacy",
+});
+Object.assign(DICTS.fr, {
+  profile_edit: "Modifier le profil", profile_edit_s: "Nom, bio, entreprise et identité visuelle",
+  name_lbl: "Nom complet", bio_lbl: "Bio", company_lbl: "Entreprise", country_lbl: "Pays (DZ, FR…)", website_lbl: "Site web", color_lbl: "Couleur d'avatar",
+  save_profile: "Enregistrer", saved_ok: "Profil enregistré",
+  add_product: "Nouveau produit", add_service: "Nouvelle offre", item_title: "Nom", price_eur: "Prix (EUR)",
+  inventory: "Stock", sample_avail: "Échantillon dispo", delivery_days_lbl: "Délai (jours)", rate_lbl: "Tarification",
+  rate_project: "Par projet", rate_hourly: "Horaire", add_item: "Ajouter", item_added: "Ajouté", item_deleted: "Supprimé",
+  n_message: "vous a envoyé un message", share: "Partager", link_copied: "Lien copié — partagez-le", legal_link: "Conditions & Confidentialité",
+});

@@ -1,5 +1,6 @@
 // ——— المحادثات وصفقات الضمان (حالات عبر D1 + بث حي عبر ChatRoom DO) ———
 import type { Env, Session } from "../env";
+import { notify as pushNotify } from "./features.controller";
 import { rateLimit } from "../lib/rate";
 
 const json = (obj: unknown, status = 200) =>
@@ -75,6 +76,8 @@ export async function send(req: Request, env: Env, s: Session, p: Record<string,
     type === "TEXT" ? null : Math.max(0, Math.round(b.deal_amount_cents ?? 0)),
     type === "TEXT" ? null : "PENDING").run();
   await env.DB.prepare("UPDATE conversations SET last_message_at=datetime('now') WHERE id=?").bind(p.id).run();
+  const partner = c.participant_one === s.userId ? c.participant_two : c.participant_one;
+  await pushNotify(env, partner, s.userId, "message", "conversation", p.id);
   const full = await env.DB.prepare(
     "SELECT m.*, u.username, u.full_name, u.avatar_color FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.id=?"
   ).bind(id).first();
