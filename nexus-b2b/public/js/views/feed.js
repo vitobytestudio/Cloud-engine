@@ -35,7 +35,43 @@ export async function renderFeed(view) {
   await loadReels(true);
   setupObserver();
   heartbeat();
+  loadPulse();
 }
+
+// ——— نبض الشبكة: حركة عالمية حية أعلى الفيد ———
+async function loadPulse() {
+  const r = await api.get("/api/pulse");
+  if (!r.ok) return;
+  const bar = document.createElement("div");
+  bar.className = "pulse-bar";
+  bar.id = "pulse-bar";
+  wrap()?.insertBefore(bar, wrap()?.firstChild);
+  const evs = r.data.events ?? [];
+  if (!evs.length) return;
+  const fmt = (e) => {
+    const c = e.c ? ` · ${e.c}` : "";
+    const ago = e.mins >= 60 ? `${Math.round(e.mins / 60)}h` : `${e.mins}m`;
+    if (e.kind === "join") return `${t("pulse_join").replace("{n}", e.n)}${c} · ${ago}`;
+    if (e.kind === "deal") return `${t("pulse_deal").replace("{n}", e.n).replace("{a}", "€" + fmtN((e.amt ?? 0) / 100))}${c} · ${ago}`;
+    return `${t("pulse_post").replace("{n}", e.n)}${c} · ${ago}`;
+  };
+  let i = 0;
+  const tick = () => {
+    if (!document.getElementById("pulse-bar")) return;
+    const el = document.getElementById("pulse-bar");
+    el.classList.remove("show");
+    setTimeout(() => {
+      if (!document.getElementById("pulse-bar")) return;
+      el.textContent = `${fmt(evs[i % evs.length])}  —  ${fmtN(r.data.members)} ${t("members_lbl")} · ${r.data.countries} ${t("countries_lbl")}`;
+      el.classList.add("show");
+      i++;
+    }, 260);
+  };
+  tick();
+  setInterval(tick, 3400);
+}
+
+const wrap = () => document.getElementById("reels");
 
 function heartbeat() {
   api.post("/api/presence");

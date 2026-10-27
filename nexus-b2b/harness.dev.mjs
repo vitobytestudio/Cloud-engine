@@ -56,6 +56,7 @@ const navClick = async (name) => {
 w.eval(bundle);
 await sleep(900);
 check("الإدماج يظهر لأول زيارة", $(".onb"));
+check("الإفصاح المؤسسي ظاهر في الإدماج", !!$(".demo-note"));
 check("لا أخطاء JS عند الإقلاع", errors.length === 0, errors.join(" | ").slice(0, 200));
 
 // ——— الدخول كضيف → الفيد ———
@@ -194,6 +195,16 @@ const balAfter = (await (await w.fetch("/api/wallet")).json()).balance_cents;
 check("المحفظة لم تُخصم", balBefore === balAfter, `${balBefore}=${balAfter}`);
 const g2 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: "p3", tier: "DOMINANCE_DROP" }) })).json();
 check("المحاولة الثانية تُرفض (منحة مستهلَكة/حماية معدل)", g2.error === "insufficient_balance" || g2.error === "too_many", `err=${g2.error}`);
+
+// ——— v0.5: نبض الشبكة الحي ———
+await navClick("feed");
+await sleep(4600);
+const pb = $("#pulse-bar");
+check("شريط النبض الحي يعمل بمحتوى عالمي", !!pb && pb.classList.contains("show") && (pb.textContent ?? "").length > 8, (pb?.textContent ?? "").slice(0, 60));
+
+// ——— شارة المؤسِّس ———
+await navClick("profile");
+check("شارة مؤسِّس على ملفي (أول 100)", !!$(".chip.founding"));
 
 // ——— تسجيل الخروج (الأخير — ينهي الجلسة) ———
 w.location.hash = "#/settings";

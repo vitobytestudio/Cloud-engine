@@ -61,6 +61,8 @@ export async function profile(env: Env, s: Session, p: Record<string, string>): 
     "SELECT id,service_title,starting_price_cents,rate_unit,delivery_days FROM freelancer_services WHERE user_id=?"
   ).bind(uid).all();
   const isSelf = s.userId === uid;
+  const rankRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM users WHERE created_at <= (SELECT created_at FROM users WHERE id=?)").bind(uid).first<{ c: number }>();
+  const founding = (rankRow?.c ?? 999) <= 100;
   const conv = s.userId
     ? await env.DB.prepare(
         "SELECT id FROM conversations WHERE (participant_one=? AND participant_two=?) OR (participant_one=? AND participant_two=?)"
@@ -73,5 +75,5 @@ export async function profile(env: Env, s: Session, p: Record<string, string>): 
     : null;
   return json({ user: u, posts: posts.results ?? [], products: products.results ?? [], services: services.results ?? [],
     conversation_id: conv?.id ?? null, is_self: isSelf,
-    followers_count: followers?.c ?? 0, following_count: following?.c ?? 0, is_following: !!isFollowing });
+    followers_count: followers?.c ?? 0, following_count: following?.c ?? 0, is_following: !!isFollowing, founding });
 }

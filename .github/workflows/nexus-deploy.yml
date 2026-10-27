@@ -41,18 +41,18 @@ jobs:
             "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database?per_page=100")
           OKF=$(echo "$RESP" | jq -r '.success')
           [ "$OKF" = "True" ] || [ "$OKF" = "true" ] || echo "::warning::D1-list: $(echo "$RESP" | jq -c '.errors')"
-          # بموافقة صريحة من المالك: حذف كل القواعد القائمة (الحساب بلغ سقف 10)
-          echo "$RESP" | jq -r '.result[] | "\(.uuid) \(.name)"' | while read -r ID NM; do
-            DR=$(curl -s -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database/$ID")
-            echo "::notice::حُذفت القاعدة: $NM — نتيجة: $(echo "$DR" | jq -r '.success')"
-          done
-          CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
-            -d '{"name":"nexus_db"}')
-          D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
-          [ -n "$D1_ID" ] || echo "::warning::D1-create: $(echo "$CR" | jq -c '.errors')"
-          [ -n "$D1_ID" ] || { echo "::error::تعذر إنشاء nexus_db حتى بعد التحرير"; exit 1; }
+          # المرحلة الحية: نستخدم nexus_db القائمة — بيانات المستخدمين الحقيقيين لا تُمس أبداً
+          D1_ID=$(echo "$RESP" | jq -r '.result[] | select(.name=="nexus_db") | .uuid' | head -1)
+          if [ -z "$D1_ID" ]; then
+            CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
+              -d '{"name":"nexus_db"}')
+            D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
+            echo "::notice::أُنشئت قاعدة nexus_db لأول مرة"
+          else
+            echo "::notice::nexus_db القائمة قيد الاستخدام — حسابات المستخدمين محفوظة"
+          fi
+          [ -n "$D1_ID" ] || { echo "::error::تعذر تأمين قاعدة nexus_db"; exit 1; }
           KR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
           KV_ID=$(echo "$KR" | jq -r '.result[] | select(.title=="nexus-cache") | .id' | head -1)
@@ -83,8 +83,16 @@ jobs:
           if [ -n "$AUTH_PEPPER" ]; then
             printf '%s' "$AUTH_PEPPER" | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
           else
-            openssl rand -hex 32 | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
-            echo "::warning::AUTH_PEPPER وُلّد لهذه الجولة — أضف سراً باسم AUTH_PEPPER في المخزن لثبات كلمات المرور عبر النشر"
+            # التمليح الدائم: يُنشأ مرة واحدة ويُخزَّن في KV — كلمات المرور لا تنكسر بين النشرات (لا يُطبع أبداً)
+            PEPPER=$(npx wrangler kv key get "auth_pepper" --binding CACHE_KV --remote 2>/dev/null || true)
+            if [ -z "$PEPPER" ]; then
+              PEPPER=$(openssl rand -hex 32)
+              printf '%s' "$PEPPER" | npx wrangler kv key put "auth_pepper" --binding CACHE_KV --remote >/dev/null 2>&1
+              echo "::notice::أُنشئ رمز تمليح دائم وخُزِّن في KV"
+            else
+              echo "::notice::رمز التمليح الدائم جُلب من KV — ثابت عبر النشرات"
+            fi
+            printf '%s' "$PEPPER" | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
           fi
 
       - name: النشر على workers.dev
@@ -94,8 +102,11 @@ jobs:
           SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
             | jq -r '.result.subdomain')
-          echo "NEXUS_URL=https://nexus-b2b.$SUB.workers.dev" >> "$GITHUB_ENV"
-          echo "::notice::رابط NEXUS B2B: https://nexus-b2b.$SUB.workers.dev"
+          echo "NEXUS_URL=https://nexus.$SUB.workers.dev" >> "$GITHUB_ENV"
+          echo "::notice::رابط NEXUS B2B: https://nexus.$SUB.workers.dev"
+          OLDW=$(curl -s -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/nexus-b2b")
+          echo "::notice::العامل القديم nexus-b2b: $(echo "$OLDW" | jq -r 'if .success then "حُذف" else (.errors[0].message // "غير موجود") end')"
 
       - name: تحقق نهائي عبر الرابط العالمي
         run: |
