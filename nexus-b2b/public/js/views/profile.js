@@ -18,7 +18,7 @@ export async function renderProfile(view, username) {
 
   const ctaKey = { FOUNDER: "cta_founder", MERCHANT: "cta_merchant", FREELANCER: "cta_freelancer" }[u.sector];
   const tabs = u.sector === "MERCHANT"
-    ? [["reels", "pf_reels"], ["items", "pf_products"], ...(isSelf ? [["wallet", "pf_wallet"]] : [])]
+    ? [["reels", "pf_reels"], ["items", "pf_products"], ...(isSelf ? [["samples", "samples_tab"], ["wallet", "pf_wallet"]] : [])]
     : u.sector === "FREELANCER"
       ? [["reels", "pf_reels"], ["items", "pf_services"], ...(isSelf ? [["wallet", "pf_wallet"]] : [])]
       : [["reels", "pf_reels"], ...(isSelf ? [["wallet", "pf_wallet"]] : [])];
@@ -40,15 +40,18 @@ export async function renderProfile(view, username) {
       <div class="pf-stats">
         <div class="pf-stat"><b>${fmtN((r.data.posts ?? []).reduce((a, p) => a + (p.views_count ?? 0), 0))}</b><span>${t("views")}</span></div>
         <div class="pf-stat"><b>${(r.data.posts ?? []).length}</b><span>${t("pf_reels")}</span></div>
+        <div class="pf-stat"><b>${fmtN(r.data.followers_count ?? 0)}</b><span>${t("followers")}</span></div>
+        <div class="pf-stat"><b>${fmtN(r.data.following_count ?? 0)}</b><span>${t("following_lbl")}</span></div>
         <div class="pf-stat"><b>${u.sector === "MERCHANT" ? (r.data.products ?? []).length : u.sector === "FREELANCER" ? (r.data.services ?? []).length : "—"}</b><span>${u.sector === "MERCHANT" ? t("pf_products") : u.sector === "FREELANCER" ? t("pf_services") : "B2B"}</span></div>
       </div>
       ${isSelf
         ? `<div class="pf-cta-row">
              <a class="cta ghost grow" href="#/studio">${t("studio_title")}</a>
              <a class="icon-tile" href="#/plans" aria-label="${t("plans_title")}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l4 4 5-6 5 6 4-4v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-linejoin="round"/></svg></a>
+             <a class="icon-tile" href="#/analytics" aria-label="${t("analytics_title")}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/></svg></a>
              <a class="icon-tile" href="#/settings" aria-label="${t("settings_title")}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.2h-4l-.3 2.7a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.3 2.7h4l.3-2.7a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5-2.1-1.6Z" stroke-linejoin="round"/></svg></a>
            </div>`
-        : `<div class="pf-cta"><button class="cta" id="contact-btn">${t(ctaKey)}</button></div>`}
+        : `<div class="pf-cta"><button class="cta" id="contact-btn">${t(ctaKey)}</button><button class="cta ghost" id="follow-btn">${r.data.is_following ? t("unfollow") : t("follow")}</button></div>`}
     </div>
     <div class="pf-tabs">${tabs.map(([id, k], i) => `<button class="pf-tab ${i === 0 ? "on" : ""}" data-tab="${id}">${t(k)}</button>`).join("")}</div>
     <div class="pf-body" id="pf-body"></div>`;
@@ -68,7 +71,7 @@ export async function renderProfile(view, username) {
         ? (r.data.products ?? []).map((pr) => `
             <div class="item-row">
               <span><b>${pr.title}</b><small>${t("sample_available")}: ${pr.sample_available ? "✓" : "—"} · ${fmtN(pr.inventory_count)}</small></span>
-              <span class="price">${fmtEur(pr.price_cents)}</span>
+              <span class="row-end">${!isSelf && pr.sample_available ? `<button class="mini-btn" data-sample="${pr.id}">${t("sample_req")}</button>` : ""}<span class="price">${fmtEur(pr.price_cents)}</span></span>
             </div>`)
         : (r.data.services ?? []).map((sv) => `
             <div class="item-row">
@@ -76,6 +79,8 @@ export async function renderProfile(view, username) {
               <span class="price">${fmtEur(sv.starting_price_cents)}</span>
             </div>`);
       body.innerHTML = rows.length ? rows.join("") : `<div class="empty">—</div>`;
+    } else if (tab === "samples") {
+      drawSamples(body);
     } else if (tab === "wallet") {
       drawWallet(body);
     }
@@ -87,6 +92,43 @@ export async function renderProfile(view, username) {
     })
   );
   draw(tabs[0][0]);
+
+  view.querySelector("#follow-btn")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const res = await api.post(`/api/follow/${u.username}`);
+    if (res.ok) { btn.textContent = res.data.following ? t("unfollow") : t("follow"); btn.classList.toggle("ghost", res.data.following); }
+    else toast(t("err_generic"));
+  });
+  body.addEventListener("click", async (e) => {
+    const sbtn = e.target.closest("[data-sample]");
+    if (!sbtn) return;
+    const res = await api.post(`/api/samples/${sbtn.dataset.sample}`);
+    if (res.ok) { sbtn.disabled = true; sbtn.textContent = "✓"; toast(t("sample_req_ok")); }
+    else if (res.data?.error === "already_requested") { sbtn.disabled = true; sbtn.textContent = "✓"; }
+    else toast(t("err_generic"));
+  });
+
+  async function drawSamples(el) {
+    const res = await api.get("/api/samples/incoming");
+    if (res.data?.locked) {
+      el.innerHTML = `<div class="lock-card"><span class="lock-ic"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"/></svg></span><h3>${t("samples_locked")}</h3><p>${t("samples_locked_s")}</p><a class="cta" href="#/plans">${t("see_plans")}</a></div>`;
+      return;
+    }
+    const rows = res.data?.items ?? [];
+    el.innerHTML = rows.length ? rows.map((s) => `
+      <div class="item-row">
+        <span><b>${s.requester_name}</b><small>${s.product_title} · ${(s.created_at ?? "").slice(0, 10)}</small></span>
+        <span class="row-end">${s.status === "PENDING"
+          ? `<button class="mini-btn" data-sr-yes="${s.id}">${t("samples_accept")}</button><button class="mini-btn danger" data-sr-no="${s.id}">${t("samples_decline")}</button>`
+          : `<span class="badge FREE">${s.status === "ACCEPTED" ? "✓" : "—"}</span>`}</span>
+      </div>`).join("") : `<div class="empty">${t("samples_empty")}</div>`;
+    el.querySelectorAll("[data-sr-yes],[data-sr-no]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const rr = await api.post(`/api/samples/action/${b.dataset.srYes || b.dataset.srNo}`, { action: b.dataset.srYes ? "accept" : "decline" });
+        if (rr.ok) drawSamples(el); else toast(t("err_generic"));
+      })
+    );
+  }
 
   const contact = view.querySelector("#contact-btn");
   contact?.addEventListener("click", async () => {

@@ -170,3 +170,45 @@ CREATE TABLE IF NOT EXISTS reports (
     reason TEXT CHECK(reason IN ('FRAUD','HARASSMENT','SPAM','IP_VIOLATION')) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ——— v0.4.0: جداول القيمة الحقيقية للاشتراكات ———
+CREATE TABLE IF NOT EXISTS post_stats_daily (
+    post_id TEXT NOT NULL REFERENCES posts(id),
+    day TEXT NOT NULL,
+    views INTEGER DEFAULT 0,
+    likes INTEGER DEFAULT 0,
+    saves INTEGER DEFAULT 0,
+    PRIMARY KEY (post_id, day)
+);
+CREATE INDEX IF NOT EXISTS idx_stats_day ON post_stats_daily(day);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    actor_id TEXT DEFAULT '',
+    kind TEXT NOT NULL,
+    ref_type TEXT DEFAULT '',
+    ref_id TEXT DEFAULT '',
+    is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS follows (
+    follower_id TEXT NOT NULL REFERENCES users(id),
+    followee_id TEXT NOT NULL REFERENCES users(id),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (follower_id, followee_id)
+);
+
+CREATE TABLE IF NOT EXISTS sample_requests (
+    id TEXT PRIMARY KEY,
+    product_id TEXT NOT NULL REFERENCES merchant_products(id),
+    merchant_id TEXT NOT NULL REFERENCES users(id),
+    requester_id TEXT NOT NULL REFERENCES users(id),
+    qty INTEGER DEFAULT 1,
+    note TEXT DEFAULT '',
+    status TEXT CHECK(status IN ('PENDING','ACCEPTED','DECLINED')) DEFAULT 'PENDING',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_samples_merchant ON sample_requests(merchant_id, status);

@@ -10,6 +10,7 @@ import * as profiles from "./controllers/profiles.controller";
 import * as chat from "./controllers/chat.controller";
 import * as boost from "./controllers/boost.controller";
 import * as accounts from "./controllers/accounts.controller";
+import * as features from "./controllers/features.controller";
 import { ChatRoom } from "./durable-objects/ChatRoom";
 
 export { ChatRoom };
@@ -25,6 +26,14 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "POST",   pat: "/api/auth/logout",               h: auth.logout,             csrf: true },
   { m: "POST",   pat: "/api/account/tier",              h: accounts.updateTier,     auth: true, csrf: true, limit: [15, 3600] },
   { m: "POST",   pat: "/api/account/sector",            h: accounts.updateSector,   auth: true, csrf: true, limit: [15, 3600] },
+  { m: "GET",    pat: "/api/analytics",                 h: features.analytics,      auth: true },
+  { m: "GET",    pat: "/api/search",                    h: features.search },
+  { m: "GET",    pat: "/api/notifications",             h: features.notifications,  auth: true },
+  { m: "POST",   pat: "/api/notifications/read",        h: features.readAll,        auth: true, csrf: true },
+  { m: "POST",   pat: "/api/follow/:username",          h: features.follow,         auth: true, csrf: true, limit: [40, 3600] },
+  { m: "GET",    pat: "/api/samples/incoming",          h: features.incomingSamples, auth: true },
+  { m: "POST",   pat: "/api/samples/:id",               h: features.requestSample,  auth: true, csrf: true, limit: [20, 3600] },
+  { m: "POST",   pat: "/api/samples/action/:id",        h: features.sampleAction,   auth: true, csrf: true, limit: [30, 3600] },
   { m: "GET",    pat: "/api/feed",                      h: feed.feed },
   { m: "POST",   pat: "/api/posts",                     h: profiles.createPost,     auth: true, csrf: true, limit: [3, 3600] },
   { m: "POST",   pat: "/api/posts/:id/vote",            h: feed.vote,               auth: true, csrf: true, limit: [30, 60] },

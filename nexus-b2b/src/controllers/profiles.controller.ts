@@ -66,5 +66,12 @@ export async function profile(env: Env, s: Session, p: Record<string, string>): 
         "SELECT id FROM conversations WHERE (participant_one=? AND participant_two=?) OR (participant_one=? AND participant_two=?)"
       ).bind(s.userId, uid, uid, s.userId).first<{ id: string }>()
     : null;
-  return json({ user: u, posts: posts.results ?? [], products: products.results ?? [], services: services.results ?? [], conversation_id: conv?.id ?? null, is_self: isSelf });
+    const followers = await env.DB.prepare("SELECT COUNT(*) AS c FROM follows WHERE followee_id=?").bind(uid).first<{ c: number }>();
+  const following = await env.DB.prepare("SELECT COUNT(*) AS c FROM follows WHERE follower_id=?").bind(uid).first<{ c: number }>();
+  const isFollowing = s.userId
+    ? await env.DB.prepare("SELECT 1 AS x FROM follows WHERE follower_id=? AND followee_id=?").bind(s.userId, uid).first()
+    : null;
+  return json({ user: u, posts: posts.results ?? [], products: products.results ?? [], services: services.results ?? [],
+    conversation_id: conv?.id ?? null, is_self: isSelf,
+    followers_count: followers?.c ?? 0, following_count: following?.c ?? 0, is_following: !!isFollowing });
 }

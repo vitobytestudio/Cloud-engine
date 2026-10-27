@@ -8,6 +8,9 @@ import { renderProfile } from "./views/profile.js";
 import { renderStudio } from "./views/studio.js";
 import { renderSettings } from "./views/settings.js";
 import { renderPlans } from "./views/plans.js";
+import { renderSearch } from "./views/search.js";
+import { renderNotifications } from "./views/notifications.js";
+import { renderAnalytics } from "./views/analytics.js";
 
 const view = document.getElementById("view");
 
@@ -25,6 +28,9 @@ async function route() {
   else if (page === "profile") { setActive("profile"); await renderProfile(view, param); }
   else if (page === "settings") { setActive(""); await renderSettings(view); }
   else if (page === "plans") { setActive(""); await renderPlans(view); }
+  else if (page === "search") { setActive(""); await renderSearch(view); }
+  else if (page === "notifications") { setActive(""); await renderNotifications(view); }
+  else if (page === "analytics") { setActive(""); await renderAnalytics(view); }
   else { setActive("feed"); await renderFeed(view); }
 }
 
@@ -42,9 +48,21 @@ function drawMe() {
     btn.style.color = "var(--text-dim)";
     btn.onclick = () => showOnboarding(() => route());
   }
+  refreshNotifDot();
 }
 
 document.addEventListener("state-changed", drawMe);
+setInterval(refreshNotifDot, 60000);
+
+document.getElementById("search-btn")?.addEventListener("click", () => (location.hash = "#/search"));
+document.getElementById("notif-btn")?.addEventListener("click", () => (location.hash = "#/notifications"));
+
+async function refreshNotifDot() {
+  if (!state.user) return;
+  const r = await api.get("/api/notifications");
+  const dot = document.getElementById("notif-dot");
+  if (dot) dot.hidden = !r.data?.unread;
+}
 
 document.getElementById("lang-btn").addEventListener("click", () => {
   setLang(lang === "ar" ? "en" : lang === "en" ? "fr" : "ar");

@@ -28,7 +28,10 @@ export async function conversations(env: Env, s: Session): Promise<Response> {
 
 export async function openWith(req: Request, env: Env, s: Session): Promise<Response> {
   if (!s.userId) return json({ error: "auth_required" }, 401);
-  if (!(await rateLimit(env, `conv:${s.userId}`, 5, 86400))) return json({ error: "daily_limit" }, 429);
+  // قيمة الباقة: المجاني 5 محادثات/يوم · الباقات المدفوعة 25/يوم
+  const tierRow = await env.DB.prepare("SELECT badge_tier FROM users WHERE id=?").bind(s.userId).first<{ badge_tier: string }>();
+  const convCap = tierRow && tierRow.badge_tier !== "FREE" ? 25 : 5;
+  if (!(await rateLimit(env, `conv:${s.userId}`, convCap, 86400))) return json({ error: "daily_limit" }, 429);
   const b = (await req.json().catch(() => ({}))) as { username?: string };
   const other = await env.DB.prepare("SELECT id FROM users WHERE username=?").bind(b.username ?? "").first<{ id: string }>();
   if (!other || other.id === s.userId) return json({ error: "not_found" }, 404);
