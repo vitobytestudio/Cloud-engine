@@ -16,7 +16,7 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["ChatRoom"]
+new_sqlite_classes = ["ChatRoom"]
 
 # ——— قاعدة البيانات العلائقية ———
 [[d1_databases]]

@@ -90,7 +90,7 @@ jobs:
       - name: النشر على workers.dev
         working-directory: nexus-b2b
         run: |
-          npx wrangler deploy
+          npx wrangler deploy 2>&1 | tee /tmp/deploy.log || { echo "::warning::wrangler: $(tail -8 /tmp/deploy.log | tr '\n' ' · ')"; exit 1; }
           SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
             | jq -r '.result.subdomain')
