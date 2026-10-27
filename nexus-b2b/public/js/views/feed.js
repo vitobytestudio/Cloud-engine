@@ -1,4 +1,4 @@
-// ——— الفيد العمودي: تمرير خاطف، تشغيل ذكي، تفاعل، أفق 24 ساعة ———
+// ——— الفيد V2: تفاعل تفاؤلي فوري، ازدواج النقر = إعجاب، تحميل مسبق، نبض لمسي ———
 import { api, state, toast, fmtN } from "../api.js";
 import { t } from "../i18n.js";
 import { openBoost } from "./boost.js";
@@ -7,14 +7,15 @@ import { requireAuth } from "./authsheet.js";
 const CATS = ["ALL", "PRODUCT_DEMO", "REVENUE_WIN", "WORKFLOW_HACK", "CASE_STUDY", "SHOWCASE"];
 
 let cat = "ALL";
-let observed = new Map();
+let observer = null;
 let viewedOnce = new Set();
+const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
 
 export async function renderFeed(view) {
   viewedOnce = new Set();
   view.innerHTML = `
     <div class="reels-wrap" id="reels">
-      <div class="stories-bar" id="stories-bar"></div>
+      <div class="stories-bar skeleton" id="stories-bar" style="height:70px"></div>
       <div class="cat-chips" id="cat-chips">
         ${CATS.map((c) => `<button class="cat-chip ${c === cat ? "on" : ""}" data-cat="${c}">${t("cat_" + c)}</button>`).join("")}
       </div>
@@ -22,8 +23,10 @@ export async function renderFeed(view) {
 
   document.querySelectorAll(".cat-chip").forEach((b) =>
     b.addEventListener("click", async () => {
+      if (cat === b.dataset.cat) return;
       cat = b.dataset.cat;
       document.querySelectorAll(".cat-chip").forEach((x) => x.classList.toggle("on", x === b));
+      buzz(8);
       await loadReels(true);
     })
   );
@@ -46,7 +49,9 @@ async function loadStories() {
   const r = await api.get("/api/stories");
   const bar = document.getElementById("stories-bar");
   if (!bar) return;
+  bar.classList.remove("skeleton");
   const groups = r.data.groups ?? [];
+  bar.style.height = "";
   bar.innerHTML = groups
     .map(
       (g, i) => `
@@ -57,7 +62,7 @@ async function loadStories() {
     )
     .join("");
   bar.querySelectorAll(".story-orb").forEach((b) =>
-    b.addEventListener("click", () => openStoryViewer(groups[+b.dataset.i]))
+    b.addEventListener("click", () => { buzz(8); openStoryViewer(groups[+b.dataset.i]); })
   );
 }
 
@@ -80,9 +85,7 @@ function storyViewer(groups, gi) {
         <button class="story-close ghost-btn">${t("lang_name") === "العربية" ? "إغلاق" : "Close"}</button>
       </div>`;
     const cur = root.querySelector(".story-progress i b");
-    if (cur) {
-      cur.animate([{ width: "0%" }, { width: "100%" }], { duration: 8000, fill: "forwards" });
-    }
+    cur?.animate([{ width: "0%" }, { width: "100%" }], { duration: 8000, fill: "forwards" });
     api.post(`/api/stories/${st.id}/view`);
     const timer = setTimeout(next, 8000);
     function next() {
@@ -104,11 +107,20 @@ export function openStoryViewer(group) { storyViewer([group], 0); }
 async function loadReels(reset) {
   const wrap = document.getElementById("reels");
   if (!wrap) return;
-  if (reset) wrap.querySelectorAll(".reel").forEach((el) => el.remove());
-  const offset = wrap.querySelectorAll(".reel").length;
+  if (reset) {
+    wrap.querySelectorAll(".reel").forEach((el) => el.remove());
+    for (let i = 0; i < 3; i++) {
+      const sk = document.createElement("div");
+      sk.className = "reel skel";
+      wrap.appendChild(sk);
+    }
+  }
+  const offset = reset ? 0 : wrap.querySelectorAll(".reel:not(.skel)").length;
   const r = await api.get(`/api/feed?category=${cat}&offset=${offset}&limit=5`);
+  wrap.querySelectorAll(".reel.skel").forEach((el) => el.remove());
   const items = r.data.items ?? [];
   for (const p of items) wrap.appendChild(reelEl(p));
+  setupObserver();
 }
 
 function reelEl(p) {
@@ -128,7 +140,7 @@ function reelEl(p) {
             <a href="#/profile/${p.username}">${p.full_name}</a>
             <span class="badge ${p.badge_tier}">${p.badge_tier === "FREE" ? (p.sector || "").slice(0, 3) : ""}</span>
           </div>
-          <div class="who-sub">${p.company_name || p.username} · ${fmtN(p.views_count)} ${t("views")}</div>
+          <div class="who-sub">${p.company_name || p.username} · <span class="n-views">${fmtN(p.views_count)}</span> ${t("views")}</div>
         </div>
       </div>
       <div class="reel-title">${p.title}</div>
@@ -140,7 +152,7 @@ function reelEl(p) {
       </div>
     </div>
     <div class="action-rail">
-      <button class="rail-btn like" data-act="like">
+      <button class="rail-btn like ${p.liked ? "on" : ""}" data-act="like">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20.5c-5.2-3.1-8.5-6-8.5-9.8A4.7 4.7 0 0 1 12 7.6a4.7 4.7 0 0 1 8.5 3.1c0 3.8-3.3 6.7-8.5 9.8Z"/></svg>
         <small class="n-likes">${fmtN(p.likes_count)}</small>
       </button>
@@ -159,45 +171,113 @@ function reelEl(p) {
     </div>`;
 
   const vid = el.querySelector("video");
+  let lastTap = 0, singleT = null;
+
   el.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-act]");
-    const link = e.target.closest("a");
-    if (link) return;
+    if (e.target.closest("a") || e.target.closest(".reel-meta a")) return;
     if (btn) return act(el, p, btn.dataset.act);
-    vid.muted = !vid.muted;
+    // ازدواج النقر = إعجاب بفرقعة قلب · النقرة المفردة = كتم/تشغيل الصوت
+    const now = Date.now();
+    if (now - lastTap < 320) {
+      clearTimeout(singleT);
+      lastTap = 0;
+      heartBurst(el, e);
+      likeOn(el, p, true);
+      return;
+    }
+    lastTap = now;
+    clearTimeout(singleT);
+    singleT = setTimeout(() => {
+      vid.muted = !vid.muted;
+      const pill = document.createElement("div");
+      pill.className = "mute-pill";
+      pill.textContent = vid.muted ? "🔇" : "🔊";
+      el.appendChild(pill);
+      setTimeout(() => pill.remove(), 950);
+    }, 330);
   });
   return el;
 }
 
+function heartBurst(el, e) {
+  const rect = el.getBoundingClientRect();
+  const x = (e.clientX || rect.width / 2) - rect.left;
+  const y = (e.clientY || rect.height / 2) - rect.top;
+  const h = document.createElement("div");
+  h.className = "heart-burst";
+  h.textContent = "❤";
+  h.style.left = `${x - 48}px`;
+  h.style.top = `${y - 48}px`;
+  el.appendChild(h);
+  setTimeout(() => h.remove(), 900);
+}
+
+function likeOn(el, p, force) {
+  const btn = el.querySelector(".like");
+  const was = btn.classList.contains("on");
+  if (force && was) return; // مُعجب مسبقاً
+  btn.classList.add("pop");
+  setTimeout(() => btn.classList.remove("pop"), 520);
+  const n = el.querySelector(".n-likes");
+  n.textContent = fmtN((parseInt(n.textContent.replace(/,/g, "")) || 0) + (was ? 0 : 1));
+  btn.classList.add("on");
+  buzz(18);
+  api.post(`/api/posts/${p.id}/vote`, { vote: 1 }).then((res) => {
+    if (!res.ok && res.status === 401) { requireAuth(); }
+    else if (res.ok) n.textContent = fmtN(res.data.likes);
+  });
+}
+
 async function act(el, p, act_) {
   if (act_ === "boost") return openBoost(p, () => loadReels(true));
-  const r = await requireAuth();
-  if (!r) return;
+  // تفاؤلي فوري: الواجهة أولاً — الخادم يلحق
+  if (!state.user) {
+    const ok = await requireAuth();
+    if (!ok) return;
+  }
   if (act_ === "like") {
-    const was = el.querySelector(".like").classList.contains("on");
+    const btn = el.querySelector(".like");
+    const was = btn.classList.contains("on");
+    const n = el.querySelector(".n-likes");
+    const cur = parseInt(n.textContent.replace(/,/g, "")) || 0;
+    btn.classList.toggle("on", !was);
+    btn.classList.add("pop");
+    setTimeout(() => btn.classList.remove("pop"), 520);
+    n.textContent = fmtN(cur + (was ? -1 : 1));
+    buzz(was ? 6 : 16);
     const res = await api.post(`/api/posts/${p.id}/vote`, { vote: was ? 0 : 1 });
-    if (res.ok) {
-      el.querySelector(".like").classList.toggle("on", !was);
-      el.querySelector(".n-likes").textContent = fmtN(res.data.likes);
-    }
+    if (!res.ok) { btn.classList.toggle("on", was); n.textContent = fmtN(cur); }
+    else n.textContent = fmtN(res.data.likes);
   } else if (act_ === "down") {
-    const was = el.querySelector(".down").classList.contains("on");
+    const btn = el.querySelector(".down");
+    const was = btn.classList.contains("on");
+    btn.classList.toggle("on", !was);
+    buzz(10);
     const res = await api.post(`/api/posts/${p.id}/vote`, { vote: was ? 0 : -1 });
-    if (res.ok) {
-      el.querySelector(".down").classList.toggle("on", !was);
-      if (!was) toast(t("lang_name") === "العربية" ? "شكراً — يراجع نظام الجودة هذا المحتوى" : "Thanks — quality system notified");
-    }
+    if (res.ok && !was) toast(t("lang_name") === "العربية" ? "شكراً — نظام الجودة يراجع" : "Thanks — quality system notified");
+    if (!res.ok) btn.classList.toggle("on", was);
   } else if (act_ === "save") {
+    const btn = el.querySelector("[data-act=save]");
+    const was = btn.classList.contains("on");
+    const n = el.querySelector(".n-saves");
+    const cur = parseInt(n.textContent.replace(/,/g, "")) || 0;
+    btn.classList.toggle("on", !was);
+    btn.classList.add("pop");
+    setTimeout(() => btn.classList.remove("pop"), 520);
+    n.textContent = fmtN(cur + (was ? -1 : 1));
+    buzz(12);
     const res = await api.post(`/api/posts/${p.id}/save`);
-    if (res.ok) el.querySelector("[data-act=save]").classList.toggle("on", res.data.saved);
+    if (!res.ok) { btn.classList.toggle("on", was); n.textContent = fmtN(cur); }
+    else n.textContent = fmtN(cur + (res.data.saved ? 1 : -1));
   }
 }
 
 function setupObserver() {
-  observed.forEach((h) => h.disconnect());
-  observed = new Map();
+  observer?.disconnect();
   const wrap = document.getElementById("reels");
   if (!wrap) return;
+  const reels = wrap.querySelectorAll(".reel:not(.skel)");
   const io = new IntersectionObserver(
     (entries) => {
       for (const en of entries) {
@@ -209,11 +289,14 @@ function setupObserver() {
             viewedOnce.add(id);
             setTimeout(() => { if (document.contains(en.target)) api.post(`/api/posts/${id}/view`); }, 3000);
           }
+          // تحميل مسبق للمقطع التالي = صفر انتظار عند التمرير
+          const nxt = en.target.nextElementSibling?.querySelector("video");
+          if (nxt && nxt.preload !== "auto") nxt.preload = "auto";
         } else v?.pause();
       }
     },
     { root: wrap, threshold: [0, 0.6] }
   );
-  wrap.querySelectorAll(".reel").forEach((el) => io.observe(el));
-  observed.set("main", io);
+  reels.forEach((el) => io.observe(el));
+  observer = io;
 }
