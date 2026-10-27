@@ -284,7 +284,7 @@ function setupObserver() {
         const v = en.target.querySelector("video");
         const id = en.target.dataset.id;
         if (en.intersectionRatio > 0.6) {
-          v?.play().catch(() => {});
+          if ((localStorage.getItem("nx_autoplay") ?? "on") === "on") v?.play().catch(() => {});
           if (!viewedOnce.has(id)) {
             viewedOnce.add(id);
             setTimeout(() => { if (document.contains(en.target)) api.post(`/api/posts/${id}/view`); }, 3000);

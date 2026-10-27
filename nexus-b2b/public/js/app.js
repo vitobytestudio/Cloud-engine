@@ -6,6 +6,8 @@ import { renderFeed } from "./views/feed.js";
 import { renderChat } from "./views/chat.js";
 import { renderProfile } from "./views/profile.js";
 import { renderStudio } from "./views/studio.js";
+import { renderSettings } from "./views/settings.js";
+import { renderPlans } from "./views/plans.js";
 
 const view = document.getElementById("view");
 
@@ -21,6 +23,8 @@ async function route() {
   else if (page === "studio") { setActive("studio"); await renderStudio(view); }
   else if (page === "chat") { setActive("chat"); await renderChat(view, param); }
   else if (page === "profile") { setActive("profile"); await renderProfile(view, param); }
+  else if (page === "settings") { setActive(""); await renderSettings(view); }
+  else if (page === "plans") { setActive(""); await renderPlans(view); }
   else { setActive("feed"); await renderFeed(view); }
 }
 

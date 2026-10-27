@@ -43,7 +43,11 @@ export async function renderProfile(view, username) {
         <div class="pf-stat"><b>${u.sector === "MERCHANT" ? (r.data.products ?? []).length : u.sector === "FREELANCER" ? (r.data.services ?? []).length : "—"}</b><span>${u.sector === "MERCHANT" ? t("pf_products") : u.sector === "FREELANCER" ? t("pf_services") : "B2B"}</span></div>
       </div>
       ${isSelf
-        ? `<a class="cta ghost" href="#/studio">${t("studio_title")}</a>`
+        ? `<div class="pf-cta-row">
+             <a class="cta ghost grow" href="#/studio">${t("studio_title")}</a>
+             <a class="icon-tile" href="#/plans" aria-label="${t("plans_title")}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l4 4 5-6 5 6 4-4v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke-linejoin="round"/></svg></a>
+             <a class="icon-tile" href="#/settings" aria-label="${t("settings_title")}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.2h-4l-.3 2.7a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.3 2.7h4l.3-2.7a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5-2.1-1.6Z" stroke-linejoin="round"/></svg></a>
+           </div>`
         : `<div class="pf-cta"><button class="cta" id="contact-btn">${t(ctaKey)}</button></div>`}
     </div>
     <div class="pf-tabs">${tabs.map(([id, k], i) => `<button class="pf-tab ${i === 0 ? "on" : ""}" data-tab="${id}">${t(k)}</button>`).join("")}</div>
