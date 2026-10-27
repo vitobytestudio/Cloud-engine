@@ -1,0 +1,137 @@
+// ——— محرك الفيد التنفيذي: نقاط النية + تضاؤل زمني + طبقة التعزيز المنفصلة ———
+import type { Env, Session } from "../env";
+
+type FeedPost = {
+  id: string; user_id: string; playback_url: string; thumbnail_url: string;
+  title: string; description: string; category_tag: string;
+  artifact_type: string | null; artifact_url: string;
+  views_count: number; likes_count: number; saves_count: number; downvotes_count: number;
+  is_boosted: number; boost_expires_at: string | null; created_at: string;
+  quarantined: number;
+  username: string; full_name: string; sector: string; badge_tier: string;
+  avatar_color: string; reputation_score: number; company_name: string;
+};
+
+const json = (obj: unknown, status = 200) =>
+  new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
+
+const WEIGHT: Record<string, number> = {
+  REVENUE_WIN: 1.5, CASE_STUDY: 1.3, PRODUCT_DEMO: 1.2, WORKFLOW_HACK: 1.15, SHOWCASE: 1.0,
+};
+
+function score(p: FeedPost, viewerSector: string | null): number {
+  const ageH = Math.max(0, (Date.now() - Date.parse(p.created_at.replace(" ", "T") + "Z")) / 3_600_000);
+  const decay = Math.pow(0.5, ageH / 36);
+  const engage = 1 + Math.log1p(p.likes_count + 2 * p.saves_count - 0.5 * p.downvotes_count);
+  const intent = WEIGHT[p.category_tag] ?? 1;
+  const rep = (p.reputation_score ?? 100) / 100;
+  const sectorMatch = viewerSector && p.sector === viewerSector ? 1.1 : 1;
+  return intent * engage * decay * rep * sectorMatch;
+}
+
+function reasonFor(p: FeedPost, viewerSector: string | null): string {
+  if (p.is_boosted) return "boost";
+  if (viewerSector && p.sector === viewerSector) return "sector";
+  const ageH = (Date.now() - Date.parse(p.created_at.replace(" ", "T") + "Z")) / 3_600_000;
+  if (ageH < 8) return "fresh";
+  return "top";
+}
+
+export async function feed(req: Request, env: Env, s: Session): Promise<Response> {
+  const url = new URL(req.url);
+  const category = url.searchParams.get("category") ?? "";
+  const offset = Math.max(0, parseInt(url.searchParams.get("offset") ?? "0") || 0);
+  const limit = Math.min(10, parseInt(url.searchParams.get("limit") ?? "6") || 6);
+
+  let viewerSector: string | null = null;
+  if (s.userId) {
+    const v = await env.DB.prepare("SELECT sector FROM users WHERE id=?").bind(s.userId).first<{ sector: string }>();
+    viewerSector = v?.sector ?? null;
+  }
+
+  const catClause = category && category !== "ALL" ? "AND p.category_tag=? " : "";
+  const q = await env.DB.prepare(
+    `SELECT p.*, u.username,u.full_name,u.sector,u.badge_tier,u.avatar_color,u.reputation_score,u.company_name
+     FROM posts p JOIN users u ON u.id=p.user_id
+     WHERE p.quarantined=0 ${catClause}
+     ORDER BY p.created_at DESC LIMIT 80`
+  ).bind(...(category && category !== "ALL" ? [category] : [])).all<FeedPost>();
+
+  const nowIso = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const all = (q.results ?? []).map((p) => ({
+    ...p,
+    boost_active: !!p.is_boosted && !!p.boost_expires_at && p.boost_expires_at > nowIso,
+  }));
+
+  const organic = all.filter((p) => !p.boost_active).sort((a, b) => score(b, viewerSector) - score(a, viewerSector));
+  const boosted = all.filter((p) => p.boost_active);
+
+  // طبقة التعزيز: أعلى الصفحة الأولى فقط (≤1 لكل 8 لمنع الإرهاق)
+  let items: Array<FeedPost & { boost_active: boolean; reason: string }> = [];
+  if (offset === 0 && boosted.length) items.push({ ...boosted[0], reason: "boost" });
+  const merged = [...items, ...organic.map((p) => ({ ...p, reason: reasonFor(p, viewerSector) }))];
+  items = merged.slice(offset, offset + limit);
+
+  return json({
+    items: items.map(({ quarantined, ...rest }) => rest),
+    next_offset: offset + items.length,
+    has_more: merged.length > offset + items.length,
+  });
+}
+
+export async function vote(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
+  const b = (await req.json().catch(() => ({}))) as { vote?: number };
+  const v = b.vote === 1 ? 1 : b.vote === -1 ? -1 : 0;
+  const postId = p.id;
+  const post = await env.DB.prepare("SELECT id FROM posts WHERE id=? AND quarantined=0").bind(postId).first();
+  if (!post) return json({ error: "not_found" }, 404);
+  if (v === 0) await env.DB.prepare("DELETE FROM post_votes WHERE post_id=? AND user_id=?").bind(postId, s.userId).run();
+  else await env.DB.prepare(
+    "INSERT INTO post_votes (post_id,user_id,vote) VALUES (?,?,?) ON CONFLICT(post_id,user_id) DO UPDATE SET vote=excluded.vote"
+  ).bind(postId, s.userId, v).run();
+  const c = await env.DB.prepare(
+    "SELECT COALESCE(SUM(vote=1),0) AS likes, COALESCE(SUM(vote=-1),0) AS downs FROM post_votes WHERE post_id=?"
+  ).bind(postId).first<{ likes: number; downs: number }>();
+  await env.DB.prepare("UPDATE posts SET likes_count=?, downvotes_count=? WHERE id=?")
+    .bind(c?.likes ?? 0, c?.downs ?? 0, postId).run();
+  return json({ ok: true, likes: c?.likes ?? 0, downvotes: c?.downs ?? 0 });
+}
+
+export async function save(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  if (!s.userId) return json({ error: "auth_required" }, 401);
+  const postId = p.id;
+  const ex = await env.DB.prepare("SELECT 1 AS x FROM post_saves WHERE post_id=? AND user_id=?").bind(postId, s.userId).first();
+  if (ex) {
+    await env.DB.prepare("DELETE FROM post_saves WHERE post_id=? AND user_id=?").bind(postId, s.userId).run();
+    await env.DB.prepare("UPDATE posts SET saves_count=MAX(0,saves_count-1) WHERE id=?").bind(postId).run();
+    return json({ ok: true, saved: false });
+  }
+  await env.DB.prepare("INSERT OR IGNORE INTO post_saves (post_id,user_id) VALUES (?,?)").bind(postId, s.userId).run();
+  await env.DB.prepare("UPDATE posts SET saves_count=saves_count+1 WHERE id=?").bind(postId).run();
+  return json({ ok: true, saved: true });
+}
+
+export async function view(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  const postId = p.id;
+  const r = await env.DB.prepare("SELECT views_count, downvotes_count FROM posts WHERE id=?").bind(postId)
+    .first<{ views_count: number; downvotes_count: number }>();
+  if (!r) return json({ error: "not_found" }, 404);
+  const views = r.views_count + 1;
+  await env.DB.prepare("UPDATE posts SET views_count=? WHERE id=?").bind(views, postId).run();
+  // بوابة مكافحة المحتوى الفارغ: 3 أصوات سلبية خلال أول 20 مشاهدة → عزل من الفيد العام
+  if (views <= 20 && r.downvotes_count >= 3) {
+    await env.DB.prepare("UPDATE posts SET quarantined=1 WHERE id=?").bind(postId).run();
+  }
+  // محاسبة انطباعات التعزيز
+  const boost = await env.DB.prepare(
+    "SELECT id, impressions_bought, impressions_delivered FROM boosts WHERE post_id=? AND status='ACTIVE'"
+  ).bind(postId).first<{ id: string; impressions_bought: number; impressions_delivered: number }>();
+  if (boost && boost.impressions_delivered < boost.impressions_bought) {
+    const d = boost.impressions_delivered + 1;
+    const done = d >= boost.impressions_bought;
+    await env.DB.prepare("UPDATE boosts SET impressions_delivered=? WHERE id=?").bind(d, boost.id).run();
+    if (done) await env.DB.prepare("UPDATE boosts SET status='COMPLETED' WHERE id=?").bind(boost.id).run();
+  }
+  return json({ ok: true });
+}

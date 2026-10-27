@@ -1,0 +1,36 @@
+name = "nexus-b2b"
+workers_dev = true
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+
+# ——— الواجهة الثابتة (SPA/PWA) عبر Workers Assets ———
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# ——— الكائنات الدائمة: المحادثات الحية ———
+[durable_objects]
+bindings = [
+  { name = "CHAT_ROOM", class_name = "ChatRoom" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ChatRoom"]
+
+# ——— قاعدة البيانات العلائقية ———
+[[d1_databases]]
+binding = "DB"
+database_name = "nexus_db"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# ——— الجلسات، الحدود، الوسائط المؤقتة ———
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "00000000000000000000000000000000"
+
+[vars]
+ENVIRONMENT = "development"
+# ملاحظة أمنية: لا تُكتب الأسرار هنا أبداً (JWT/Stream/Discord...).
+# الإنتاج: npx wrangler secret put <NAME>
+# التطوير المحلي: ملف .dev.vars (متجاهل في Git)

@@ -1,0 +1,14 @@
+{
+  "name": "NEXUS B2B",
+  "short_name": "NEXUS",
+  "description": "شبكة الفرص التجارية بالفيديو العمودي",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070709",
+  "theme_color": "#070709",
+  "dir": "auto",
+  "lang": "ar",
+  "icons": [
+    { "src": "/icons/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

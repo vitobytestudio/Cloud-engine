@@ -1,0 +1,38 @@
+/* NEXUS B2B — رموز التصميم: OLED داكن + ذهبي/زمردي/أزرق (نيو-تك تنفيذي) */
+:root {
+  --bg: #070709;
+  --bg-elev: #0d0d12;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-strong: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f4f4f6;
+  --text-dim: #9a9aa6;
+  --text-faint: #62626e;
+
+  --gold: #e5a93c;
+  --gold-soft: rgba(229, 169, 60, 0.16);
+  --emerald: #10b981;
+  --emerald-soft: rgba(16, 185, 129, 0.16);
+  --blue: #3b82f6;
+  --blue-soft: rgba(59, 130, 246, 0.16);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.14);
+
+  --grad-brand: linear-gradient(120deg, #e5a93c, #10b981 50%, #3b82f6);
+  --grad-gold: linear-gradient(120deg, #e5a93c, #f5c96a);
+  --grad-emerald: linear-gradient(120deg, #10b981, #4ade80);
+  --grad-blue: linear-gradient(120deg, #3b82f6, #7db0ff);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  --shadow-1: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-glow-gold: 0 0 24px rgba(229, 169, 60, 0.35);
+  --font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+
+  --nav-h: 62px;
+  --top-h: 54px;
+}
