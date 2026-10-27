@@ -1,5 +1,6 @@
 // ——— محرك الفيد التنفيذي: نقاط النية + تضاؤل زمني + طبقة التعزيز المنفصلة ———
 import type { Env, Session } from "../env";
+import { notify } from "./features.controller";
 
 type FeedPost = {
   id: string; user_id: string; playback_url: string; thumbnail_url: string;
@@ -84,8 +85,9 @@ export async function vote(req: Request, env: Env, s: Session, p: Record<string,
   const b = (await req.json().catch(() => ({}))) as { vote?: number };
   const v = b.vote === 1 ? 1 : b.vote === -1 ? -1 : 0;
   const postId = p.id;
-  const post = await env.DB.prepare("SELECT id FROM posts WHERE id=? AND quarantined=0").bind(postId).first();
+  const post = await env.DB.prepare("SELECT id, user_id FROM posts WHERE id=? AND quarantined=0").bind(postId).first<{ id: string; user_id: string }>();
   if (!post) return json({ error: "not_found" }, 404);
+  if (v === 1) await notify(env, post.user_id, s.userId, "like", "post", postId);
   // الفرق التلقائي: نحفظ تأثير صوت هذا المستخدم فقط على العدادات المخزنة
   // (إعادة العد من الصفر تمحو أعداد الإعجاب التاريخية للبيانات التجريبية)
   const prev = await env.DB.prepare("SELECT vote FROM post_votes WHERE post_id=? AND user_id=?")
@@ -118,11 +120,16 @@ export async function save(req: Request, env: Env, s: Session, p: Record<string,
   }
   await env.DB.prepare("INSERT OR IGNORE INTO post_saves (post_id,user_id) VALUES (?,?)").bind(postId, s.userId).run();
   await env.DB.prepare("UPDATE posts SET saves_count=saves_count+1 WHERE id=?").bind(postId).run();
+  const owner = await env.DB.prepare("SELECT user_id FROM posts WHERE id=?").bind(postId).first<{ user_id: string }>();
+  if (owner) await notify(env, owner.user_id, s.userId, "save", "post", postId);
   return json({ ok: true, saved: true });
 }
 
 export async function view(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
   const postId = p.id;
+  await env.DB.prepare(
+    "INSERT INTO post_stats_daily (post_id,day,views) VALUES (?,date('now'),1) ON CONFLICT(post_id,day) DO UPDATE SET views=views+1"
+  ).bind(postId).run();
   const r = await env.DB.prepare("SELECT views_count, downvotes_count FROM posts WHERE id=?").bind(postId)
     .first<{ views_count: number; downvotes_count: number }>();
   if (!r) return json({ error: "not_found" }, 404);

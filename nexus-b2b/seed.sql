@@ -45,3 +45,22 @@ INSERT OR IGNORE INTO boosts (id,user_id,post_id,tier_name,target_sector,target_
 INSERT OR IGNORE INTO transactions (id,user_id,kind,amount_cents,currency,ref_type,ref_id,provider_event_id,created_at) VALUES
 ('tx-welcome','u-demo-amin','DEPOSIT',2000,'EUR','','','stub_welcome_credit',datetime('now','-1 days')),
 ('tx-klaus-b1','u-klaus','BOOST_PURCHASE',-12900,'EUR','BOOST','b1','stub_boost_b1',datetime('now','-6 hours'));
+
+-- ——— v0.4.0: بيانات حية للتحليلات والإشعارات والمتابعة ———
+INSERT OR IGNORE INTO post_stats_daily (post_id,day,views,likes,saves) VALUES
+('p3',date('now','-13 days'),34,2,1),('p3',date('now','-12 days'),41,3,0),('p3',date('now','-11 days'),38,1,1),
+('p3',date('now','-10 days'),52,4,2),('p3',date('now','-9 days'),47,2,0),('p3',date('now','-8 days'),63,5,1),
+('p3',date('now','-7 days'),71,4,2),('p3',date('now','-6 days'),58,3,1),('p3',date('now','-5 days'),84,6,3),
+('p3',date('now','-4 days'),92,7,2),('p3',date('now','-3 days'),118,9,4),('p3',date('now','-2 days'),96,6,2),
+('p3',date('now','-1 days'),131,11,5),('p3',date('now'),87,5,2),
+('p1',date('now','-5 days'),210,12,4),('p1',date('now','-4 days'),264,15,5),('p1',date('now','-3 days'),312,18,7),
+('p1',date('now','-2 days'),289,16,6),('p1',date('now','-1 days'),341,21,8),('p1',date('now'),198,11,3),
+('p2',date('now','-2 days'),44,2,1),('p2',date('now','-1 days'),61,4,2),('p2',date('now'),37,1,1);
+
+INSERT OR IGNORE INTO notifications (id,user_id,actor_id,kind,ref_type,ref_id,created_at) VALUES
+('n-seed-1','u-demo-amin','u-klaus','like','post','p3',datetime('now','-3 hours')),
+('n-seed-2','u-demo-amin','u-salma','save','post','p3',datetime('now','-9 hours')),
+('n-seed-3','u-demo-amin','u-omar','follow','user','u-demo-amin',datetime('now','-1 days'));
+
+INSERT OR IGNORE INTO follows (follower_id,followee_id) VALUES
+('u-klaus','u-demo-amin'),('u-salma','u-demo-amin'),('u-omar','u-demo-amin'),('u-demo-amin','u-klaus');

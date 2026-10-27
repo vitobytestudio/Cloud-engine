@@ -118,7 +118,7 @@ check("تفعيل الذهبية تجريبياً يعمل", !!$(".plan-card.g.c
 
 // ——— أزرار ملفي المستقلة ———
 await navClick("profile");
-check("ملفي يعرض زري الباقات والإعدادات", $$(".icon-tile").length === 2, `عدد=${$$(".icon-tile").length}`);
+check("ملفي يعرض أزرار الباقات والتحليلات والإعدادات", $$(".icon-tile").length === 3, `عدد=${$$(".icon-tile").length}`);
 
 // ——— الإعدادات (صفحة مستقلة) ———
 w.location.hash = "#/settings";
@@ -133,7 +133,71 @@ $("#sw-auto")?.click();
 await sleep(200);
 check("مفتاح التشغيل التلقائي ينقلب", $("#sw-auto")?.classList.contains("on") === !autoBefore);
 
+// ——— v0.4: التحليلات (أزرق = مفتوح) ———
+w.location.hash = "#/analytics";
+await sleep(1100);
+check("لوحة التحليلات تفتح للباقة الزرقاء", !!$(".an-bars"), `أعمدة=${$$(".an-bar-col").length}`);
+check("أعمدة 14 يوماً ببيانات حقيقية + أفضل المقاطع", $$(".an-bar-col i").length === 14 && $$(".an-post").length >= 1);
+
+// ——— البحث العالمي ———
+w.location.hash = "#/search";
+await sleep(900);
+const sin = $("#search-in");
+sin.value = "كلاوس";
+sin.dispatchEvent(new w.Event("input", { bubbles: true }));
+await sleep(900);
+check("البحث العالمي يجد المبدعين", $$(".user-row").length >= 1, `نتائج=${$$(".user-row").length}`);
+
+// ——— الإشعارات ———
+check("جرس الإشعارات يُظهر غير المقروء", $("#notif-dot")?.hidden === false);
+w.location.hash = "#/notifications";
+await sleep(1100);
+check("صفحة الإشعارات تعرض المحفّزات", $$(".notif-row").length >= 3, `عدد=${$$(".notif-row").length}`);
+check("القراءة تُخفي نقطة الجرس", $("#notif-dot")?.hidden === true);
+
+// ——— المتابعة ———
+w.location.hash = "#/profile/klaus";
+await sleep(1100);
+const fbtn = $("#follow-btn");
+check("زر المتابعة ظاهر على ملف الآخرين", !!fbtn);
+const t0 = fbtn?.textContent ?? "";
+fbtn?.click();
+await sleep(700);
+check("المتابعة تتبدل فوراً (أي اتجاه/لغة)", !!fbtn && fbtn.textContent !== t0, `${t0}→${fbtn?.textContent}`);
+
+// ——— طلب عينة (المشتري) ———
+w.location.hash = "#/profile/salma";
+await sleep(1100);
+$('.pf-tab[data-tab=items]')?.click();
+await sleep(300);
+$("[data-sample]")?.click();
+await sleep(700);
+check("طلب العينة يُرسل ويُثبَّت", $("[data-sample]")?.disabled === true);
+
+// ——— قفل العينات لغير الزمردي ———
+const meD = await (await w.fetch("/api/me")).json();
+await w.fetch("/api/account/tier", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meD.csrf }, body: JSON.stringify({ tier: "PRO_TALENT" }) });
+w.location.hash = "#/profile/amin";
+await sleep(1100);
+$('.pf-tab[data-tab=samples]')?.click();
+await sleep(700);
+check("تاجر بلا زمردية يرى قفل القيمة", !!$(".lock-card"));
+
+// ——— الذهبية: هيمنة مجانية شهرية (إثبات خادمي) ———
+const me0 = await (await w.fetch("/api/me")).json();
+const balBefore = (await (await w.fetch("/api/wallet")).json()).balance_cents;
+const gold = await (await w.fetch("/api/account/tier", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ tier: "ENTERPRISE_GOLD" }) })).json();
+check("الترقية للذهبية عبر الخادم", gold.badge_tier === "ENTERPRISE_GOLD");
+const g1 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: "p3", tier: "DOMINANCE_DROP" }) })).json();
+check("هيمنة مجانية للذهبية (بلا خصم)", g1.free_grant === true, JSON.stringify(g1).slice(0, 60));
+const balAfter = (await (await w.fetch("/api/wallet")).json()).balance_cents;
+check("المحفظة لم تُخصم", balBefore === balAfter, `${balBefore}=${balAfter}`);
+const g2 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: "p3", tier: "DOMINANCE_DROP" }) })).json();
+check("المحاولة الثانية تُرفض (منحة مستهلَكة/حماية معدل)", g2.error === "insufficient_balance" || g2.error === "too_many", `err=${g2.error}`);
+
 // ——— تسجيل الخروج (الأخير — ينهي الجلسة) ———
+w.location.hash = "#/settings";
+await sleep(900);
 $("#logout-btn")?.click();
 await sleep(1400);
 check("تسجيل الخروج يعيد الإدماج", !!$(".onb"));

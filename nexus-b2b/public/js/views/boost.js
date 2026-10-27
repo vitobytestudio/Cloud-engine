@@ -27,6 +27,7 @@ export function openBoost(post, onDone) {
               <small>${t(tr.s)}</small>
             </button>`).join("")}
         </div>
+        ${state.user?.badge_tier === "ENTERPRISE_GOLD" ? `<div class="pay-note">${t("boost_gold_note")}</div>` : ""}
         <div style="display:flex;gap:9px;margin-top:14px">
           <button class="cta" id="b-go">${t("buy_boost")}</button>
           <button class="cta ghost" id="b-x">${t("decline")}</button>
@@ -46,7 +47,7 @@ export function openBoost(post, onDone) {
         const me = await api.get("/api/me");
         state.balance = me.data.balance_cents ?? 0;
         root.innerHTML = "";
-        toast(t("boosted_ok"));
+        toast(r.data.free_grant ? t("boost_free_ok") : t("boosted_ok"));
         onDone?.();
       } else if (r.data.error === "insufficient_balance") {
         toast((t("balance") + ": " + fmtEur(r.data.balance_cents)));
