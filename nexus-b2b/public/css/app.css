@@ -556,3 +556,12 @@ a.set-row:active { background: var(--surface-strong); }
 /* أزرار الملف */
 .pf-cta { display: flex; gap: 8px; }
 .pf-cta .cta { flex: 1; }
+
+/* ============================================================
+   v0.5.0 — نبض الشبكة + المؤسسون + الإفصاح
+   ============================================================ */
+.pulse-bar { position: fixed; top: calc(var(--top-h) + 122px); inset-inline: 0; max-width: 560px; margin: 0 auto; z-index: 29; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; color: var(--text-dim); background: rgba(7,7,9,.78); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); opacity: 0; transform: translateY(-4px); transition: opacity .26s ease, transform .26s ease; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 14px; }
+.pulse-bar.show { opacity: 1; transform: translateY(0); }
+.reels-wrap { padding-top: calc(var(--top-h) + 162px); }
+.chip.founding { border: 1px solid var(--gold); color: var(--gold); font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 700; flex-shrink: 0; }
+.demo-note { margin-top: 18px; font-size: 11px; color: var(--text-faint); opacity: .8; letter-spacing: .2px; }

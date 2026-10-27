@@ -28,6 +28,7 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "POST",   pat: "/api/account/sector",            h: accounts.updateSector,   auth: true, csrf: true, limit: [15, 3600] },
   { m: "GET",    pat: "/api/analytics",                 h: features.analytics,      auth: true },
   { m: "GET",    pat: "/api/search",                    h: features.search },
+  { m: "GET",    pat: "/api/pulse",                     h: features.pulse },
   { m: "GET",    pat: "/api/notifications",             h: features.notifications,  auth: true },
   { m: "POST",   pat: "/api/notifications/read",        h: features.readAll,        auth: true, csrf: true },
   { m: "POST",   pat: "/api/follow/:username",          h: features.follow,         auth: true, csrf: true, limit: [40, 3600] },

@@ -58,6 +58,9 @@ export const DICTS = {
     samples_tab: "طلبات العينات", samples_empty: "لا طلبات بعد — طلبات المشترين ستظهر هنا", samples_locked: "إدارة العينات من صلاحيات الزمردية", samples_locked_s: "استقبل طلبات المشترين وأدِرها بقبول أو رفض — مع الباقة الزمردية التجارية 49€/شهر.",
     sample_req: "طلب عينة", sample_req_ok: "أُرسل طلب العينة إلى التاجر", samples_accept: "قبول", samples_decline: "رفض",
     boost_gold_note: "باقتك الذهبية تشمل هيمنة مجانية واحدة شهرياً — تُستخدم تلقائياً", boost_free_ok: "استُخدمت هيمنتك المجانية الشهرية — بلا خصم",
+    pulse_join: "{n} انضم إلى الشبكة", pulse_post: "{n} نشر مقطعاً جديداً", pulse_deal: "صفقة {n} بقيمة {a}",
+    members_lbl: "عضو", countries_lbl: "دولة", founding_badge: "مؤسِّس",
+    demo_disclosure: "فترة التأسيس: ملفات عرض إلى جانب الأعضاء الحقيقيين",
     lang_name: "العربية",
   },
   en: {
@@ -118,6 +121,9 @@ export const DICTS = {
     samples_tab: "Sample requests", samples_empty: "No requests yet — buyer requests will appear here", samples_locked: "Sample management is an Emerald perk", samples_locked_s: "Receive and manage buyer requests with the Merchant Emerald plan €49/mo.",
     sample_req: "Request sample", sample_req_ok: "Sample request sent to the merchant", samples_accept: "Accept", samples_decline: "Decline",
     boost_gold_note: "Your Gold plan includes one free Dominance boost monthly", boost_free_ok: "Your monthly free Dominance was used — no charge",
+    pulse_join: "{n} joined the network", pulse_post: "{n} posted a new clip", pulse_deal: "{n} closed a {a} deal",
+    members_lbl: "members", countries_lbl: "countries", founding_badge: "Founding",
+    demo_disclosure: "Founding phase: showcase profiles alongside real members",
     lang_name: "English",
   },
   fr: {
@@ -178,6 +184,9 @@ export const DICTS = {
     samples_tab: "Demandes d'échantillons", samples_empty: "Pas encore de demandes — celles des acheteurs apparaîtront ici", samples_locked: "La gestion des échantillons est une offre Émeraude", samples_locked_s: "Recevez et gérez les demandes des acheteurs avec l'offre Émeraude Commerçant 49€/mois.",
     sample_req: "Demander échantillon", sample_req_ok: "Demande envoyée au commerçant", samples_accept: "Accepter", samples_decline: "Refuser",
     boost_gold_note: "Votre offre Or inclut une Dominance gratuite par mois", boost_free_ok: "Votre Dominance mensuelle gratuite a été utilisée — sans frais",
+    pulse_join: "{n} a rejoint le réseau", pulse_post: "{n} a publié un nouveau clip", pulse_deal: "{n} a signé un contrat de {a}",
+    members_lbl: "membres", countries_lbl: "pays", founding_badge: "Fondateur",
+    demo_disclosure: "Phase fondateurs : profils de démonstration aux côtés des membres réels",
     lang_name: "Français",
   },
 };

@@ -33,7 +33,8 @@ export function showOnboarding(onDone) {
           <button class="cta" id="onb-next" style="visibility:hidden">${t("next")}</button>
           <button class="cta ghost" id="onb-demo">${t("try_demo")}</button>
           <button class="linklike" id="onb-guest">${t("enter_guest")}</button>
-        </div>`;
+        </div>
+        <div class="demo-note">${t("demo_disclosure")}</div>`;
       el.querySelectorAll("[data-sector]").forEach((b) =>
         b.addEventListener("click", () => {
           el.querySelectorAll("[data-sector]").forEach((x) => x.classList.remove("sel"));

@@ -136,3 +136,31 @@ export async function sampleAction(req: Request, env: Env, s: Session, p: Record
   await notify(env, row.requester_id, s.userId, status === "ACCEPTED" ? "sample_ok" : "sample_no", "product", row.product_id);
   return json({ ok: true, status });
 }
+
+// ——— نبض الشبكة: حركة حقيقية متدفقة (بذور + أعضاء) — إحساس عالمي بلا أي تزوير ———
+export async function pulse(req: Request, env: Env): Promise<Response> {
+  const posts = await env.DB.prepare(
+    `SELECT u.full_name AS n, u.country_code AS c, p.created_at AS t FROM posts p
+     JOIN users u ON u.id = p.user_id WHERE p.quarantined = 0 ORDER BY p.created_at DESC LIMIT 8`
+  ).all<{ n: string; c: string; t: string }>();
+  const joins = await env.DB.prepare(
+    "SELECT full_name AS n, country_code AS c, created_at AS t FROM users ORDER BY created_at DESC LIMIT 6"
+  ).all<{ n: string; c: string; t: string }>();
+  const deals = await env.DB.prepare(
+    `SELECT u.full_name AS n, u.country_code AS c, m.deal_amount_cents AS a, m.created_at AS t
+     FROM messages m JOIN conversations cv ON cv.id = m.conversation_id
+     JOIN users u ON u.id = cv.participant_one
+     WHERE m.message_type = 'PROPOSAL' AND m.deal_amount_cents IS NOT NULL ORDER BY m.created_at DESC LIMIT 5`
+  ).all<{ n: string; c: string; a: number; t: string }>();
+  const breadth = await env.DB.prepare(
+    "SELECT COUNT(*) AS members, COUNT(DISTINCT CASE WHEN country_code != '' THEN country_code END) AS countries FROM users"
+  ).first<{ members: number; countries: number }>();
+  const now = Date.now();
+  const toMin = (t: string) => Math.max(1, Math.round((now - new Date(t + "Z").getTime()) / 60000));
+  const events = [
+    ...posts.results.map((x) => ({ kind: "post", n: x.n, c: x.c, mins: toMin(x.t) })),
+    ...joins.results.map((x) => ({ kind: "join", n: x.n, c: x.c, mins: toMin(x.t) })),
+    ...deals.results.map((x) => ({ kind: "deal", n: x.n, c: x.c, amt: x.a, mins: toMin(x.t) })),
+  ].sort((a, b) => a.mins - b.mins).slice(0, 12);
+  return json({ events, members: breadth?.members ?? 0, countries: breadth?.countries ?? 0 });
+}

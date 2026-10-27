@@ -1,4 +1,4 @@
-name = "nexus-b2b"
+name = "nexus"
 workers_dev = true
 main = "src/index.ts"
 compatibility_date = "2026-03-01"

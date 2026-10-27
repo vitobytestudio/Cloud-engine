@@ -54,6 +54,7 @@ export async function renderSettings(view) {
       <div class="set-group">
         <h4>${t("about")}</h4>
         <div class="set-row"><div class="lbl2">NEXUS B2B<small>${t("about_s")}</small></div><span class="ver">${t("ver_label")} ${version}</span></div>
+        <div class="set-row"><div class="lbl2"><small>${t("demo_disclosure")}</small></div></div>
       </div>
     </div>`;
 
