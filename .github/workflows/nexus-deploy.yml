@@ -3,7 +3,9 @@ name: "NEXUS B2B — نشر على workers.dev"
 on:
   push:
     branches: [main]
-    paths: ["nexus-b2b/**"]
+    paths:
+      - "nexus-b2b/**"
+      - ".github/workflows/nexus-deploy.yml"
   workflow_dispatch:
 
 permissions:
