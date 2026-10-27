@@ -48,6 +48,8 @@ jobs:
               -d '{"name":"nexus_db"}')
             D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
             [ -n "$D1_ID" ] || echo "::warning::D1-create: $(echo "$CR" | jq -c '.errors')"
+            echo "$RESP" | jq -r '.result[] | "القاعدة القائمة: \(.name) (أُنشئت \(.created_at // "؟")[:10] // "")"' | while read -r L; do echo "::notice::$L"; done
+            echo "::notice::للتحرير: dash.cloudflare.com → Storage & Databases → D1 Database → احذف القواعد القديمة غير المستخدمة"
           fi
           [ -n "$D1_ID" ] || { echo "::error::تعذر تجهيز قاعدة D1 — انظر التحذير أعلاه (الغالب: رمز Cloudflare بلا صلاحية D1:Edit)"; exit 1; }
           KR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
