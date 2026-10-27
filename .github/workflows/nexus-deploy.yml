@@ -115,6 +115,8 @@ jobs:
           echo "::notice::استجابة الصفحة=HTTP_$C"
           [ "$C" = "200" ] || { echo "::error::الرابط لا يستجيب"; exit 1; }
           curl -s -m 20 "$NEXUS_URL/api/feed" | head -c 60; echo
+          curl -s -m 20 "$NEXUS_URL/p/salma" | grep -o "og:title" | head -1 || { echo "::error::بطاقة OG لا تعمل"; exit 1; }
+          curl -s -m 20 -o /dev/null -w "legal=%{http_code}\n" "$NEXUS_URL/legal.html"
 
       - name: تشخيص النطاق + جرد الدومينات + ربط تلقائي إن وجد دومين نشط وحيد
         run: |

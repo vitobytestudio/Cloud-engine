@@ -19,6 +19,7 @@ export async function renderSettings(view) {
         <h4>${t("set_account")}</h4>
         <div class="set-row"><div class="lbl2"><b>${u ? u.full_name : t("enter_guest")}</b><small>${u ? "@" + u.username : "—"}</small></div>
           ${u ? `<span class="badge ${u.badge_tier}">${tierName(u.badge_tier)}</span>` : ""}</div>
+        ${u ? `<button class="set-row link" id="edit-profile-row"><div class="lbl2">${t("profile_edit")}<small>${t("profile_edit_s")}</small></div><span class="chev">‹</span></button>` : ""}
         ${u ? `<a class="set-row link" href="#/plans"><div class="lbl2">${t("plans_title")}<small>${t("plans_sub")}</small></div><span class="chev">‹</span></a>` : ""}
       </div>
 
@@ -55,6 +56,7 @@ export async function renderSettings(view) {
         <h4>${t("about")}</h4>
         <div class="set-row"><div class="lbl2">NEXUS B2B<small>${t("about_s")}</small></div><span class="ver">${t("ver_label")} ${version}</span></div>
         <div class="set-row"><div class="lbl2"><small>${t("demo_disclosure")}</small></div></div>
+        <a class="set-row link" href="/legal.html" target="_blank" rel="noopener"><div class="lbl2">${t("legal_link")}</div><span class="chev">‹</span></a>
       </div>
     </div>`;
 
@@ -86,6 +88,8 @@ export async function renderSettings(view) {
     localStorage.setItem("nx_autoplay", on ? "on" : "off");
   });
 
+  view.querySelector("#edit-profile-row")?.addEventListener("click", () => openProfileEditor(() => renderSettings(view)));
+
   view.querySelector("#clear-btn")?.addEventListener("click", () => { localStorage.clear(); location.reload(); });
 
   view.querySelector("#logout-btn")?.addEventListener("click", async () => {
@@ -100,4 +104,59 @@ export async function renderSettings(view) {
 function tierName(tier) {
   const map = { ENTERPRISE_GOLD: "plan_gold", MERCHANT_EMERALD: "plan_emerald", PRO_TALENT: "plan_blue", FREE: "tier_free" };
   return t(map[tier] ?? "tier_free");
+}
+
+
+// ——— محرر الملف الشخصي: قائمة بيضاء من الخادم — يستورد من settings لملفه ———
+export function openProfileEditor(onDone) {
+  const u = state.user;
+  if (!u) return;
+  const root = document.getElementById("overlay-root");
+  const COLORS = ["#E5A93C", "#10B981", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6"];
+  let color = u.avatar_color || "#3B82F6";
+  root.innerHTML = `
+    <div class="backdrop" id="pe-bk"></div>
+    <div class="sheet">
+      <h3>${t("profile_edit")}</h3>
+      <label class="pe-f"><span>${t("name_lbl")}</span><input id="pe-name" maxlength="60" value="${(u.full_name ?? "").replace(/"/g, "&quot;")}" /></label>
+      <label class="pe-f"><span>${t("bio_lbl")}</span><textarea id="pe-bio" maxlength="300" rows="3">${u.bio ?? ""}</textarea></label>
+      <label class="pe-f"><span>${t("company_lbl")}</span><input id="pe-co" maxlength="60" value="${(u.company_name ?? "").replace(/"/g, "&quot;")}" /></label>
+      <div style="display:flex;gap:10px">
+        <label class="pe-f" style="flex:1"><span>${t("country_lbl")}</span><input id="pe-cc" maxlength="2" value="${u.country_code ?? ""}" /></label>
+        <label class="pe-f" style="flex:2"><span>${t("website_lbl")}</span><input id="pe-site" maxlength="200" value="${(u.portfolio_website ?? "").replace(/"/g, "&quot;")}" /></label>
+      </div>
+      <div class="pe-f"><span>${t("color_lbl")}</span>
+        <div class="pe-colors">${COLORS.map((c) => `<button data-c="${c}" class="${c === color ? "on" : ""}" style="background:${c}"></button>`).join("")}</div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:6px">
+        <button class="cta" id="pe-save">${t("save_profile")}</button>
+        <button class="cta ghost" id="pe-x">${t("decline")}</button>
+      </div>
+    </div>`;
+  root.querySelectorAll(".pe-colors button").forEach((b) =>
+    b.addEventListener("click", () => {
+      color = b.dataset.c;
+      root.querySelectorAll(".pe-colors button").forEach((x) => x.classList.toggle("on", x === b));
+    })
+  );
+  const close = () => (root.innerHTML = "");
+  root.querySelector("#pe-bk").addEventListener("click", close);
+  root.querySelector("#pe-x").addEventListener("click", close);
+  root.querySelector("#pe-save").addEventListener("click", async () => {
+    const r = await api.post("/api/account/profile", {
+      full_name: root.querySelector("#pe-name").value,
+      bio: root.querySelector("#pe-bio").value,
+      company_name: root.querySelector("#pe-co").value,
+      country_code: root.querySelector("#pe-cc").value,
+      portfolio_website: root.querySelector("#pe-site").value,
+      avatar_color: color,
+    });
+    if (r.ok) {
+      Object.assign(state.user, r.data.user ?? {});
+      document.dispatchEvent(new CustomEvent("state-changed"));
+      close();
+      toast(t("saved_ok"));
+      onDone?.();
+    } else toast(t("err_generic"));
+  });
 }

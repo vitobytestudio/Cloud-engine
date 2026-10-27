@@ -565,3 +565,16 @@ a.set-row:active { background: var(--surface-strong); }
 .reels-wrap { padding-top: calc(var(--top-h) + 162px); }
 .chip.founding { border: 1px solid var(--gold); color: var(--gold); font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 700; flex-shrink: 0; }
 .demo-note { margin-top: 18px; font-size: 11px; color: var(--text-faint); opacity: .8; letter-spacing: .2px; }
+
+/* ============================================================
+   v0.6.0 — محرر الملف + نماذج العناصر + الإشعارات القابلة للنقر
+   ============================================================ */
+.pe-f { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 12.5px; color: var(--text-dim); font-weight: 600; }
+.pe-f input, .pe-f textarea, .pe-f select { background: var(--surface-strong); border: 1px solid var(--border-strong); border-radius: 10px; padding: 11px 12px; color: var(--text); font: inherit; font-weight: 400; outline: none; width: 100%; }
+.pe-f input:focus, .pe-f textarea:focus, .pe-f select:focus { border-color: var(--emerald); }
+.pe-colors { display: flex; gap: 8px; }
+.pe-colors button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; transition: transform .2s var(--spring); }
+.pe-colors button.on { border-color: #fff; transform: scale(1.12); }
+.add-item { width: 100%; margin-bottom: 10px; border-style: dashed; color: var(--emerald); border-color: rgba(16,185,129,.4); }
+a.notif-row { color: var(--text); text-decoration: none; transition: background .2s; }
+a.notif-row:active { background: var(--surface-strong); }

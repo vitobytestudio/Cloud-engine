@@ -24,6 +24,7 @@ async function request(path, opts = {}, retry = 1) {
 }
 
 export const api = {
+  request: (p, o) => request(p, o),
   get: (p) => request(p),
   post: (p, body) => request(p, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   put: (p, body, ct) => request(p, { method: "PUT", body, headers: ct ? { "content-type": ct } : {} }),
