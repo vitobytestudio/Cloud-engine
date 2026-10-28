@@ -30,6 +30,22 @@ function score(p: FeedPost, viewerSector: string | null): number {
   return intent * engage * decay * rep * sectorMatch;
 }
 
+export async function postDetail(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  const row = await env.DB.prepare(
+    `SELECT p.id, p.user_id, p.playback_url, p.thumbnail_url, p.title, p.description, p.category_tag,
+            p.artifact_type, p.artifact_url, p.views_count, p.likes_count, p.saves_count, p.is_boosted, p.created_at,
+            u.username, u.full_name, u.sector, u.badge_tier, u.avatar_color, u.company_name
+     FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id=? AND p.quarantined=0`
+  ).bind(p.id).first<Record<string, unknown>>();
+  if (!row) return json({ error: "not_found" }, 404);
+  let liked = 0, saved = 0;
+  if (s.userId) {
+    liked = (await env.DB.prepare("SELECT 1 AS x FROM post_votes WHERE post_id=? AND user_id=? AND vote=1").bind(p.id, s.userId).first()) ? 1 : 0;
+    saved = (await env.DB.prepare("SELECT 1 AS x FROM post_saves WHERE post_id=? AND user_id=?").bind(p.id, s.userId).first()) ? 1 : 0;
+  }
+  return json({ ...row, liked, saved, is_self: s.userId === row.user_id });
+}
+
 function reasonFor(p: FeedPost, viewerSector: string | null): string {
   if (p.is_boosted) return "boost";
   if (viewerSector && p.sector === viewerSector) return "sector";

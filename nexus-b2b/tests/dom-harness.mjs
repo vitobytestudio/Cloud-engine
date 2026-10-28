@@ -68,6 +68,15 @@ check("الفيد يرندر (reels-wrap)", !!$(".reels-wrap"));
 check("مقاطع الفيد ظاهرة", $$(".reel").length >= 3, `عدد=${$$(".reel").length}`);
 check("الأفاق ظاهرة", $$(".story-orb").length >= 1, `عدد=${$$(".story-orb").length}`);
 check("نصوص التنقل مترجمة", ($("#bottom-nav a[data-nav=feed] span")?.textContent ?? "") !== "");
+await sleep(500);
+check("مقطع واحد نشط فقط (مشغّل أحادي = سلاسة)", $$(".reel.active").length === 1, `نشط=${$$(".reel.active").length}`);
+check("كل المقاطع برسوم مصغرة (لا إطارات سوداء)", $$(".reel video[poster]").length === $$(".reel video").length && $$(".reel video").length >= 3, `v=${$$(".reel video").length}`);
+
+// ——— v0.8.1: الصوت الأصلي — زر الصوت يفكّ الكتم ويحفظ التفضيل ———
+const vAct08 = $(".reel.active video");
+$(".reel.active .snd-btn")?.click();
+await sleep(250);
+check("زر الصوت يفكّ الكتم (الصوت الأصلي يعمل)", vAct08?.muted === false && w.localStorage.getItem("nx_sound") === "1", `muted=${vAct08?.muted}`);
 
 // ——— الاستوديو (ضيف → ورقة مصادقة → حساب تجريبي) ———
 await navClick("studio");
@@ -144,6 +153,26 @@ await sleep(350);
 const likesAfter = parseInt($(".n-likes")?.textContent.replace(/,/g, "")) || 0;
 check("ازدواج النقر يُعجب فوراً (قلب)", likesAfter === likesBefore + 1 && $(".heart-burst"), `${likesBefore}→${likesAfter}`);
 
+// ——— v0.8.1: صفحة المنشور المستقلة ———
+const curId08 = $(".reel.active")?.dataset.id ?? "p1";
+$(".reel.active .reel-title")?.click();
+await sleep(1300);
+check("النقر على العنوان يفتح صفحة المنشور المستقلة", /#\/post\//.test(w.location.hash) && !!$(".post-view"), w.location.hash);
+check("الصفحة تعرض صاحبه وعنوانه وإحصاءاته الثلاث", ($(".pv-author")?.textContent ?? "").length > 3 && ($(".pv-h2")?.textContent ?? "").length > 3 && $$(".pv-stats > div").length === 3);
+const pvL08 = parseInt($(".post-view .nl")?.textContent.replace(/,/g, "")) || 0;
+$("#pv-like")?.click();
+await sleep(900);
+check("الإعجاب من صفحة المنشور يعمل لحظياً", (parseInt($(".post-view .nl")?.textContent.replace(/,/g, "")) || 0) === pvL08 + 1, `${pvL08}→${$(".post-view .nl")?.textContent}`);
+const pvDet08 = await (await w.fetch(`/api/posts/${curId08}`)).json();
+check("الخادم يثبت حالة الإعجاب للمشاهد", pvDet08.liked === 1, `liked=${pvDet08.liked}`);
+const pubG08 = await (await globalThis.fetch(`${BASE}/api/posts/${curId08}`)).json();
+check("تفاصيل المنشور عامة للضيف بلا سياق", pubG08.id === curId08 && pubG08.liked === 0);
+$("#pv-contact")?.click();
+await sleep(1000);
+check("التواصل من الصفحة يفتح غرفة الصفقات", /#\/chat\//.test(w.location.hash), w.location.hash);
+await navClick("feed");
+check("تفضيل الصوت باقٍ عبر التنقل", w.localStorage.getItem("nx_sound") === "1" && !$(".snd-btn")?.classList.contains("off"));
+
 // ——— تبديل اللغة ———
 const before = $("#bottom-nav a[data-nav=feed] span")?.textContent;
 $("#lang-btn")?.click();
@@ -214,6 +243,11 @@ const frRate = await (await globalThis.fetch(`${BASE}/api/search?rate_min=50&rat
 check("فلتر نطاق السعر €50-150/h يعمل", Array.isArray(frRate.users), `عدد=${(frRate.users ?? []).length}`);
 const frCS = await (await globalThis.fetch(`${BASE}/api/search?q=case%20study`)).json();
 check("بحث كلمات داخل دراسات الحالة يعمل", (frCS.posts ?? []).length >= 1, `نتائج=${(frCS.posts ?? []).length}`);
+$("#search-in").value = "case study";
+$("#search-in").dispatchEvent(new w.Event("input", { bubbles: true }));
+await sleep(900);
+const sl08 = $("#search-out .grid3 a");
+check("نتائج المقاطع تفتح صفحة المنشور مباشرة", !!sl08 && (sl08.getAttribute("href") ?? "").startsWith("#/post/"), sl08?.getAttribute("href"));
 $("#filter-btn")?.click();
 await sleep(300);
 check("مودال الفلاتر يفتح بحقوله", !!$("#fl-cc") && !!$("#fl-min") && !!$("#fl-vat"));
@@ -307,6 +341,10 @@ check("شارة مؤسِّس على ملفي (أول 100)", !!$(".chip.founding"
 
 // ——— v0.6: محرر الملف الشخصي ———
 await navClick("profile");
+$('.pf-tab[data-tab=reels]')?.click();
+await sleep(400);
+const pg08 = $("#pf-body .grid3 a");
+check("شبكة مقاطعي تفتح صفحة المنشور", !!pg08 && (pg08.getAttribute("href") ?? "").startsWith("#/post/"), pg08?.getAttribute("href"));
 $("#edit-tile")?.click();
 await sleep(500);
 check("محرر الملف يفتح من ملفي", !!$("#pe-bio"));
@@ -355,7 +393,7 @@ check("المشاركة تعمل (نسخ احتياطي + توست)", !!$(".toas
 const ogP = await (await fetch(`${BASE}/p/salma`)).text();
 check("بطاقة الملف OG بلقب صاحبها", ogP.includes("og:title") && ogP.includes("سلمى"));
 const ogV = await (await fetch(`${BASE}/post/p1`)).text();
-check("بطاقة المقطع OG بصورته المصغرة", ogV.includes("og:image") && ogV.includes("poster1"));
+check("بطاقة المقطع OG بصورته وتوجيهه لصفحة المنشور", ogV.includes("og:image") && ogV.includes("poster1") && ogV.includes("#/post/p1"));
 const lg = await fetch(`${BASE}/legal.html`);
 check("صفحة الثقة تعمل بمحتواها", lg.status === 200 && (await lg.text()).includes("الخصوصية"));
 

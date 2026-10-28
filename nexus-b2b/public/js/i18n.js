@@ -340,3 +340,17 @@ Object.assign(DICTS.fr, {
   xp_dev_agencies: "Top agences dev", xp_saas_founders: "Fondateurs SaaS", xp_brands: "Marques e-commerce", xp_case_studies: "Études de cas vérifiées",
   deal_edit: "Modification demandée sur votre offre", vat_number_lbl: "N° TVA", n_deal_edit: "a demandé une modification de votre offre",
 });
+
+// ——— v0.8.1: صفحة المنشور — إلحاق آمن ———
+Object.assign(DICTS.ar, {
+  post_title: "المنشور", post_not_found: "هذا المنشور غير متاح أو تم حذفه", post_yours: "منشورك",
+  contact_pub: "تواصل واطلب عرضاً",
+});
+Object.assign(DICTS.en, {
+  post_title: "Post", post_not_found: "This post is unavailable or removed", post_yours: "Your post",
+  contact_pub: "Contact & Request Offer",
+});
+Object.assign(DICTS.fr, {
+  post_title: "Publication", post_not_found: "Publication indisponible ou supprimée", post_yours: "Votre publication",
+  contact_pub: "Contacter & demander une offre",
+});

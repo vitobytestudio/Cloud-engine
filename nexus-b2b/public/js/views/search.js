@@ -71,7 +71,7 @@ export async function renderSearch(view) {
           </a>`).join("")}
         ${ps.length ? `<h4 class="sec-h">${t("search_posts")}</h4><div class="grid3">
           ${ps.map((p) => `
-            <a href="#/profile/${p.username}">
+            <a href="#/post/${p.id}">
               <img src="${p.thumbnail_url || "/media/poster1.jpg"}" loading="lazy" alt="" />
               <span class="pv">${p.full_name}</span>
             </a>`).join("")}

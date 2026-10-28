@@ -51,6 +51,7 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "POST",   pat: "/api/samples/action/:id",        h: features.sampleAction,   auth: true, csrf: true, limit: [30, 3600] },
   { m: "GET",    pat: "/api/feed",                      h: feed.feed },
   { m: "POST",   pat: "/api/posts",                     h: profiles.createPost,     auth: true, csrf: true, limit: [3, 3600] },
+  { m: "GET",    pat: "/api/posts/:id",                 h: (r, e, s, p) => feed.postDetail(r, e, s, p) },
   { m: "POST",   pat: "/api/posts/:id/vote",            h: feed.vote,               auth: true, csrf: true, limit: [30, 60] },
   { m: "POST",   pat: "/api/posts/:id/save",            h: feed.save,               auth: true, csrf: true, limit: [30, 60] },
   { m: "POST",   pat: "/api/posts/:id/view",            h: feed.view,               limit: [120, 60] },
@@ -166,7 +167,7 @@ export default {
           title = `${r.title} — ${r.full_name}`;
           desc = (r.description || "مقطع موثّق على NEXUS B2B").slice(0, 180);
           img = r.thumbnail_url || img;
-          to = `/#/profile/${r.username}`;
+          to = `/#/post/${mPost![1]}`;
         }
       }
       const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
