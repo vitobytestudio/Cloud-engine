@@ -60,6 +60,7 @@ check("الإفصاح المؤسسي ظاهر في الإدماج", !!$(".demo-n
 check("لا أخطاء JS عند الإقلاع", errors.length === 0, errors.join(" | ").slice(0, 200));
 check("بطاقة المشتري (BUYER) ظاهرة بالإدماج", !!$('[data-sector=BUYER]'));
 check("الإنجليزية افتراضية عند أول فتح (Deal Room)", ($("#bottom-nav a[data-nav=chat] span")?.textContent ?? "") === "Deal Room", $("#bottom-nav a[data-nav=chat] span")?.textContent);
+check("زر + موجود بالأعلى والاستوديو خارج شريط التنقل", !!$("#create-btn") && !$('#bottom-nav a[data-nav=studio]') && !!$('#bottom-nav a[data-nav=posts]'));
 
 // ——— الدخول كضيف → الفيد ———
 $("#onb-guest")?.click();
@@ -79,8 +80,12 @@ await sleep(250);
 check("زر الصوت يفكّ الكتم (الصوت الأصلي يعمل)", vAct08?.muted === false && w.localStorage.getItem("nx_sound") === "1", `muted=${vAct08?.muted}`);
 
 // ——— الاستوديو (ضيف → ورقة مصادقة → حساب تجريبي) ———
-await navClick("studio");
-check("الاستوديو يطلب مصادقة للضيف", !!$(".sheet"));
+$("#create-btn")?.click();
+await sleep(400);
+check("قائمة + تعرض خياراتها الثلاثة", $$(".create-row").length === 3, `خيارات=${$$(".create-row").length}`);
+$$(".create-row")[1]?.click();
+await sleep(700);
+check("خيار الريلز يمر ببوابة المصادقة للضيف", !!$(".sheet") && !/#\/studio/.test(w.location.hash), w.location.hash);
 $(".sh-tab[data-m=register]")?.click();
 await sleep(300);
 check("خيار المشتري متاح بورقة التسجيل", !!$('#r-sector option[value=BUYER]'));
@@ -152,6 +157,31 @@ reel?.dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
 await sleep(350);
 const likesAfter = parseInt($(".n-likes")?.textContent.replace(/,/g, "")) || 0;
 check("ازدواج النقر يُعجب فوراً (قلب)", likesAfter === likesBefore + 1 && $(".heart-burst"), `${likesBefore}→${likesAfter}`);
+
+// ——— v0.9.0: صفحة المنشورات الساكنة والصور + إنشاء منشور صورة كامل ———
+w.location.hash = "#/posts";
+await sleep(1400);
+check("صفحة المنشورات تفتح بستوريات أعلاها", !!$(".photos-page") && $$("#ph-stories .story-orb").length >= 1, `ستوريات=${$$("#ph-stories .story-orb").length}`);
+check("المعرض يبدأ فارغاً برسالة أنيقة", !!$("#ph-empty-add"));
+const im08 = await (await w.fetch("/api/stream/direct-upload", { method: "POST", headers: { "content-type": "application/json", "x-csrf": (await (await w.fetch("/api/me")).json()).csrf }, body: JSON.stringify({ purpose: "POST", bytes: 20480, content_type: "video/mp4" }) })).json();
+await w.fetch(`/api/stream/upload/${im08.media_id}`, { method: "PUT", headers: { "content-type": "video/mp4" }, body: new Uint8Array(20480).fill(7) });
+const phBad = await (await w.fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json", "x-csrf": (await (await w.fetch("/api/me")).json()).csrf }, body: JSON.stringify({ title: "Imposter video post", category_tag: "SHOWCASE", media_id: im08.media_id, media_kind: "IMAGE" }) })).json();
+check("وسيط فيديو مقنّع كصورة يُرفض (حماية نوع الوسيط)", phBad.error === "not_an_image", JSON.stringify(phBad).slice(0, 50));
+const im2 = await (await w.fetch("/api/stream/direct-upload", { method: "POST", headers: { "content-type": "application/json", "x-csrf": (await (await w.fetch("/api/me")).json()).csrf }, body: JSON.stringify({ purpose: "POST", bytes: 20480, content_type: "image/png" }) })).json();
+await w.fetch(`/api/stream/upload/${im2.media_id}`, { method: "PUT", headers: { "content-type": "image/png" }, body: new Uint8Array(20480).fill(7) });
+const phPost = await (await w.fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json", "x-csrf": (await (await w.fetch("/api/me")).json()).csrf }, body: JSON.stringify({ title: "Spring collection — wholesale drop", category_tag: "SHOWCASE", media_id: im2.media_id, media_kind: "IMAGE" }) })).json();
+check("نشر منشور صورة يعمل (201)", !!phPost.id, JSON.stringify(phPost).slice(0, 50));
+await sleep(400);
+w.location.hash = "#/feed";
+await sleep(500);
+w.location.hash = "#/posts";
+await sleep(1200);
+check("المنشور الساكن ظهر في المعرض", $$("#ph-grid .grid3 a").length === 1, `صور=${$$("#ph-grid .grid3 a").length}`);
+$("#ph-grid .grid3 a")?.click();
+await sleep(1300);
+check("صفحة المنشور الساكن تعرض صورة بلا مشغل/زر صوت", !!$(".post-hero img") && !$(".post-hero video") && !$("#pv-snd"), w.location.hash);
+await navClick("feed");
+check("الفيد يقصي الصور (مقاطع فقط)", $$(".reel").length >= 1 && $$(".reel img").length === 0);
 
 // ——— v0.8.1: صفحة المنشور المستقلة ———
 const curId08 = $(".reel.active")?.dataset.id ?? "p1";
@@ -331,9 +361,13 @@ await sleep(300);
 
 // ——— v0.5: نبض الشبكة الحي ———
 await navClick("feed");
-await sleep(4600);
+let pbShown = false;
+for (let i = 0; i < 18 && !pbShown; i++) {
+  await sleep(400);
+  pbShown = !!$("#pulse-bar")?.classList.contains("show");
+}
 const pb = $("#pulse-bar");
-check("شريط النبض الحي يعمل بمحتوى عالمي", !!pb && pb.classList.contains("show") && (pb.textContent ?? "").length > 8, (pb?.textContent ?? "").slice(0, 60));
+check("شريط النبض الحي يعمل بمحتوى عالمي", pbShown && (pb.textContent ?? "").length > 8, (pb?.textContent ?? "").slice(0, 60));
 
 // ——— شارة المؤسِّس ———
 await navClick("profile");
@@ -413,6 +447,9 @@ const avGet = await fetch(`${BASE}/api/avatar/autotest1`);
 check("صورة البروفايل تُقدَّم صورةً حقيقية", avGet.status === 200 && (avGet.headers.get("content-type") ?? "").includes("image"));
 const homeH = await fetch(`${BASE}/`);
 check("رؤوس الحماية مفعّلة", homeH.headers.get("x-frame-options") === "DENY" && homeH.headers.get("x-content-type-options") === "nosniff");
+const jsH08 = await fetch(`${BASE}/js/app.js?v=0.9.0`);
+check("كاش الجافاسكربت محكوم (تحديثات تصل فوراً)", (jsH08.headers.get("cache-control") ?? "").includes("max-age=300"), jsH08.headers.get("cache-control"));
+check("الصفحة الرئيسية بلا كاش (لا تحديثات عالقة)", (homeH.headers.get("cache-control") ?? "") === "no-cache", homeH.headers.get("cache-control"));
 const badLogin = await (await w.fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "auto@test.io", password: "wrong1234" }) })).status;
 check("كلمة المرور الخطأ تُرفض", badLogin === 401);
 const goodLogin = await w.fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "auto@test.io", password: "passw0rd9" }) });

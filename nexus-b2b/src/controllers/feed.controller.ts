@@ -33,7 +33,7 @@ function score(p: FeedPost, viewerSector: string | null): number {
 export async function postDetail(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
   const row = await env.DB.prepare(
     `SELECT p.id, p.user_id, p.playback_url, p.thumbnail_url, p.title, p.description, p.category_tag,
-            p.artifact_type, p.artifact_url, p.views_count, p.likes_count, p.saves_count, p.is_boosted, p.created_at,
+            p.artifact_type, p.artifact_url, p.views_count, p.likes_count, p.saves_count, p.is_boosted, p.created_at, p.media_kind,
             u.username, u.full_name, u.sector, u.badge_tier, u.avatar_color, u.company_name
      FROM posts p JOIN users u ON u.id = p.user_id WHERE p.id=? AND p.quarantined=0`
   ).bind(p.id).first<Record<string, unknown>>();
@@ -44,6 +44,17 @@ export async function postDetail(req: Request, env: Env, s: Session, p: Record<s
     saved = (await env.DB.prepare("SELECT 1 AS x FROM post_saves WHERE post_id=? AND user_id=?").bind(p.id, s.userId).first()) ? 1 : 0;
   }
   return json({ ...row, liked, saved, is_self: s.userId === row.user_id });
+}
+
+export async function gallery(req: Request, env: Env, s: Session): Promise<Response> {
+  const q = await env.DB.prepare(
+    `SELECT p.id, p.playback_url, p.thumbnail_url, p.title, p.category_tag, p.views_count, p.likes_count, p.created_at,
+            u.username, u.full_name, u.avatar_color, u.badge_tier
+     FROM posts p JOIN users u ON u.id = p.user_id
+     WHERE p.quarantined=0 AND p.media_kind='IMAGE'
+     ORDER BY p.created_at DESC LIMIT 36`
+  ).all();
+  return json({ items: q.results ?? [] });
 }
 
 function reasonFor(p: FeedPost, viewerSector: string | null): string {
@@ -70,7 +81,7 @@ export async function feed(req: Request, env: Env, s: Session): Promise<Response
   const q = await env.DB.prepare(
     `SELECT p.*, u.username,u.full_name,u.sector,u.badge_tier,u.avatar_color,u.reputation_score,u.company_name
      FROM posts p JOIN users u ON u.id=p.user_id
-     WHERE p.quarantined=0 ${catClause}
+     WHERE p.quarantined=0 AND (p.media_kind IS NULL OR p.media_kind='VIDEO') ${catClause}
      ORDER BY p.created_at DESC LIMIT 80`
   ).bind(...(category && category !== "ALL" ? [category] : [])).all<FeedPost>();
 

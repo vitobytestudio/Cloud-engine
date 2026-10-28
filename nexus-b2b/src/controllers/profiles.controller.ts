@@ -14,19 +14,25 @@ export async function createPost(req: Request, env: Env, s: Session): Promise<Re
   if (title.length < 4 || title.length > 120) return json({ error: "invalid_title" }, 400);
   if (!["SHOWCASE", "REVENUE_WIN", "PRODUCT_DEMO", "WORKFLOW_HACK", "CASE_STUDY"].includes(cat))
     return json({ error: "invalid_category" }, 400);
-  if (!["GITHUB_REPO", "FIGMA_FILE", "STORE_LINK", "AUDIT_DOC", "CASE_METRIC"].includes(b.artifact_type ?? ""))
+  const art = b.artifact_type ?? "";
+  if (art && !["GITHUB_REPO", "FIGMA_FILE", "STORE_LINK", "AUDIT_DOC", "CASE_METRIC"].includes(art))
     return json({ error: "invalid_artifact" }, 400);
   const artifactUrl = (b.artifact_url ?? "").trim().slice(0, 300);
 
   // إثبات ملكية الوسيط: لا نشر إلا بوسيط رفعه هذا المستخدم نفسه
   let playback = "", thumb = "";
+  let upCt = "video/mp4";
   if (b.media_id) {
-    const up = await env.DB.prepare("SELECT user_id, ready FROM pending_uploads WHERE media_id=?")
-      .bind(b.media_id).first<{ user_id: string; ready: number }>();
+    const up = await env.DB.prepare("SELECT user_id, ready, content_type FROM pending_uploads WHERE media_id=?")
+      .bind(b.media_id).first<{ user_id: string; ready: number; content_type: string }>();
     if (!up || up.user_id !== s.userId || !up.ready) return json({ error: "media_not_owned" }, 403);
+    upCt = (up.content_type ?? upCt).toLowerCase();
     playback = `/media/${b.media_id}`;
   }
   if (!playback) return json({ error: "media_required" }, 400);
+  const mediaKind = b.media_kind === "IMAGE" ? "IMAGE" : "VIDEO";
+  if (mediaKind === "IMAGE" && !upCt.startsWith("image/")) return json({ error: "not_an_image" }, 400);
+  if (mediaKind === "IMAGE") thumb = playback;
   if (b.thumbnail_media_id) {
     const t = await env.DB.prepare("SELECT user_id, ready FROM pending_uploads WHERE media_id=?")
       .bind(b.thumbnail_media_id).first<{ user_id: string; ready: number }>();
@@ -35,10 +41,10 @@ export async function createPost(req: Request, env: Env, s: Session): Promise<Re
 
   const id = `p-${crypto.randomUUID().slice(0, 12)}`;
   await env.DB.prepare(
-    `INSERT INTO posts (id,user_id,media_id,playback_url,thumbnail_url,title,description,category_tag,artifact_type,artifact_url)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`
-  ).bind(id, s.userId, b.media_id ?? "", playback, thumb, title, (b.description ?? "").slice(0, 600),
-    cat, b.artifact_type, artifactUrl).run();
+    `INSERT INTO posts (id,user_id,media_id,playback_url,thumbnail_url,media_kind,title,description,category_tag,artifact_type,artifact_url)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
+  ).bind(id, s.userId, b.media_id ?? "", playback, thumb, mediaKind, title, (b.description ?? "").slice(0, 600),
+    cat, art || null, artifactUrl).run();
   return json({ ok: true, id }, 201);
 }
 
