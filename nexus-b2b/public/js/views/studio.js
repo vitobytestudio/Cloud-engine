@@ -6,6 +6,7 @@ import { t } from "../i18n.js";
 import { requireAuth } from "./authsheet.js";
 import { openBoost } from "./boost.js";
 import { invalidateStories } from "./feed.js";
+import { giftSheet } from "../lib/gift.js";
 
 const CATS = ["PRODUCT_DEMO", "REVENUE_WIN", "WORKFLOW_HACK", "CASE_STUDY", "SHOWCASE"];
 const ARTS = ["GITHUB_REPO", "FIGMA_FILE", "STORE_LINK", "AUDIT_DOC", "CASE_METRIC"];
@@ -358,6 +359,7 @@ function openPublish(view, file) {
       });
       if (r.ok) {
         toast(t("published"));
+        if (r.data.gift_granted) { giftSheet(); location.hash = "#/feed"; return; }
         openBoost({ id: r.data.id }, () => { location.hash = "#/feed"; });
         return;
       }

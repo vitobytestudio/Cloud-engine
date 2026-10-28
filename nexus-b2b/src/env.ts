@@ -10,6 +10,7 @@ export type Env = {
   RESEND_API_KEY?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  OWNER_CLAIM_CODE?: string;
 };
 
 export type Session = {

@@ -70,3 +70,104 @@ INSERT OR IGNORE INTO freelancer_services (id,user_id,service_title,starting_pri
 ('sv-klaus-1','u-klaus','B2B checkout audit & rebuild',9000,'PROJECT',10);
 UPDATE users SET vat_number='DE123456789' WHERE username='klaus' AND (vat_number IS NULL OR vat_number='');
 UPDATE posts SET title='Shopify migration case study — 3.2x checkout lift' WHERE id='p1';
+
+-- ——— v0.10-B: حساب المالك (الأول عالمياً) + تقارير خبراء الأمن + داعمو NEXUS ———
+INSERT OR IGNORE INTO users (id,email,password_hash,username,full_name,sector,badge_tier,country_code,avatar_color,bio,reputation_score,company_name,verified,created_at) VALUES
+('u-vitobyte','owner@nexus.demo','!disabled','vitobyte','VitoByte Studio','FOUNDER','FREE','DZ','#E5A93C','الشبكة الأم — حساب المنصة الأول. نبني قنوات فرص حقيقية بين الشركات الأوروبية.',200,'VitoByte Studio',1,datetime('now','-300 days')),
+('u-sec-nad','nad@nexus.demo','!disabled','sec_nad','نادر الصالح','FOUNDER','FREE','JO','#64748B','محقق حوادث أمن سيبراني — أنشر تقارير تدقيق مفتوحة للشركات الصغيرة.',160,'Sentinel Labs',1,datetime('now','-180 days')),
+('u-sec-mira','mira@nexus.demo','!disabled','sec_mira','ميرا هوفمان','FREELANCER','FREE','DE','#64748B','مدققة أمن تطبيقات — OWASP ASVS. كل تقرير قابل للتنفيذ.',150,'',1,datetime('now','-150 days')),
+('u-sec-tarek','tarek@nexus.demo','!disabled','sec_tarek','طارق بن يوسف','MERCHANT','FREE','TN','#64748B','استشاري حماية بيانات GDPR للتجارة الإلكترونية.',145,'DatShield Consulting',1,datetime('now','-120 days'));
+
+INSERT OR IGNORE INTO posts (id,user_id,playback_url,thumbnail_url,title,description,category_tag,artifact_type,artifact_url,views_count,likes_count,saves_count,downvotes_count,is_boosted,created_at) VALUES
+('p0','u-vitobyte','/media/reel1.mp4','/media/poster1.jpg','NEXUS — شبكة الفرص التجارية بالفيديو العمودي: ابدأ في دقيقة','هذا هو الحساب الأم للمنصة. ننشر هنا تحديثات النظام، أدلة الانطلاق، وشرح آلية الضمان. كل حساب حقيقي يظهر في الشبكة — لا تفاعل وهمي.','SHOWCASE','CASE_METRIC','https://nexus.example/start',520,94,41,0,0,datetime('now','-40 minutes')),
+('p-sec1','u-sec-nad','/media/reel3.mp4','/media/poster3.jpg','تدقيق أمني: 7 ثغرات شائعة في صفحات الدفع B2B وكيف تغلقها','تقرير من 12 تدقيق حقيقي: CSRF في النماذج، تسريب مفاتيح في السجلات، ثقة زائدة بالمتصفح، وحدود معدل غائبة. كل بند معه الإصلاح الفوري.','CASE_STUDY','AUDIT_DOC','https://sentinel.example/reports/checkout-audit',760,118,63,0,0,datetime('now','-2 days')),
+('p-sec2','u-sec-mira','/media/reel5.mp4','/media/poster5.jpg','بروتوكول الاستجابة للحوادث في 60 دقيقة — قالب جاهز للشركات الصغيرة','من أول دقيقة: من يتصل بمن، كيف تحفظ الأدلة، متى تعلن، وكيف تعيد الثقة. القالب مستخدم في 30 شركة أوروبية.','WORKFLOW_HACK','AUDIT_DOC','https://mira.example/incident-60min',540,86,52,0,0,datetime('now','-4 days'));
+
+INSERT OR IGNORE INTO stories (id,user_id,playback_url,thumbnail_url,media_type,caption,expires_at) VALUES
+('s0','u-vitobyte','/media/reel1.mp4','/media/poster1.jpg','VIDEO','مرحباً بكم في NEXUS — شبكة الفرص الحقيقية',datetime('now','+20 hours'));
+
+INSERT OR IGNORE INTO app_config (key,value) VALUES ('owner_user_id','u-vitobyte'),('supporters_epoch',date('now'));
+
+
+-- ——— داعمو NEXUS: 40 نشطاً + 40 احتياطياً (تنشئهم حكّامة يومية تدريجياً) ———
+INSERT OR IGNORE INTO supporter_pool (username,full_name,headline,sector,country_code,avatar_color,kind,active) VALUES
+('sup_01','Lars Bergmann','لوجستيات التجارة الإلكترونية','FOUNDER','DE','#8B5CF6','SUPPORTER',1),
+('sup_02','Sophie Martin','مدفوعات B2B','MERCHANT','FR','#7C3AED','SUPPORTER',1),
+('sup_03','Jonas Weber','تصنيع صناعي','FREELANCER','NL','#A78BFA','SUPPORTER',1),
+('sup_04','Elena Petrova','تسويق الأعمال','FOUNDER','ES','#6D28D9','SUPPORTER',1),
+('sup_05','Marco Ricci','أمن سيبراني','MERCHANT','SE','#8B5CF6','SUPPORTER',1),
+('sup_06','Anna Kowalski','سلاسل التوريد','FREELANCER','BE','#7C3AED','SUPPORTER',1),
+('sup_07','Pieter Van Dijk','استشارات نمو','FOUNDER','IT','#A78BFA','SUPPORTER',1),
+('sup_08','Claire Dubois','برمجيات SaaS','MERCHANT','PL','#6D28D9','SUPPORTER',1),
+('sup_09','Tomás Ruiz','استيراد وتصدير','FREELANCER','DZ','#8B5CF6','SUPPORTER',1),
+('sup_10','Ingrid Johansson','تصميم صناعي','FOUNDER','MA','#7C3AED','SUPPORTER',1),
+('sup_11','Karat Benali','ذكاء أعمال','MERCHANT','TN','#A78BFA','SUPPORTER',1),
+('sup_12','Yasmine Haddad','طاقة متجددة','FREELANCER','JO','#6D28D9','SUPPORTER',1),
+('sup_13','Omar Fathi','تغليف ذكي','FOUNDER','EG','#8B5CF6','SUPPORTER',1),
+('sup_14','Layla Mansour','مقاولات أوروبية','MERCHANT','AT','#7C3AED','SUPPORTER',1),
+('sup_15','Rami Khoury','تحليل بيانات','FREELANCER','PT','#A78BFA','SUPPORTER',1),
+('sup_16','Nadia Bensalem','تجارة الجملة','FOUNDER','FI','#6D28D9','SUPPORTER',1),
+('sup_17','Hugo Ferreira','لوجستيات التجارة الإلكترونية','MERCHANT','DE','#8B5CF6','SUPPORTER',1),
+('sup_18','Marta Novak','مدفوعات B2B','FREELANCER','FR','#7C3AED','SUPPORTER',1),
+('sup_19','Felix Braun','تصنيع صناعي','FOUNDER','NL','#A78BFA','SUPPORTER',1),
+('sup_20','Amina Cherif','تسويق الأعمال','MERCHANT','ES','#6D28D9','SUPPORTER',1),
+('sup_21','David Klein','أمن سيبراني','FREELANCER','SE','#8B5CF6','SUPPORTER',1),
+('sup_22','Julie Roux','سلاسل التوريد','FOUNDER','BE','#7C3AED','SUPPORTER',1),
+('sup_23','Sami Tawfik','استشارات نمو','MERCHANT','IT','#A78BFA','SUPPORTER',1),
+('sup_24','Farida Zerrouki','برمجيات SaaS','FREELANCER','PL','#6D28D9','SUPPORTER',1),
+('sup_25','Lucas Meyer','استيراد وتصدير','FOUNDER','DZ','#8B5CF6','SUPPORTER',1),
+('sup_26','Emma Lindqvist','تصميم صناعي','MERCHANT','MA','#7C3AED','SUPPORTER',1),
+('sup_27','Karim Dridi','ذكاء أعمال','FREELANCER','TN','#A78BFA','SUPPORTER',1),
+('sup_28','Salma Bouchard','طاقة متجددة','FOUNDER','JO','#6D28D9','SUPPORTER',1),
+('sup_29','Victor Sousa','تغليف ذكي','MERCHANT','EG','#8B5CF6','SUPPORTER',1),
+('sup_30','Hana Ould Ali','مقاولات أوروبية','FREELANCER','AT','#7C3AED','SUPPORTER',1),
+('sup_31','Pierre Lemoine','تحليل بيانات','FOUNDER','PT','#A78BFA','SUPPORTER',1),
+('sup_32','Dina Fahmy','تجارة الجملة','MERCHANT','FI','#6D28D9','SUPPORTER',1),
+('sup_33','Andrej Horvat','لوجستيات التجارة الإلكترونية','FREELANCER','DE','#8B5CF6','SUPPORTER',1),
+('sup_34','Camille Girard','مدفوعات B2B','FOUNDER','FR','#7C3AED','SUPPORTER',1),
+('sup_35','Bilal Amin','تصنيع صناعي','MERCHANT','NL','#A78BFA','SUPPORTER',1),
+('sup_36','Rania Kettani','تسويق الأعمال','FREELANCER','ES','#6D28D9','SUPPORTER',1),
+('sup_37','Stefan Richter','أمن سيبراني','FOUNDER','SE','#8B5CF6','SUPPORTER',1),
+('sup_38','Maya Barakat','سلاسل التوريد','MERCHANT','BE','#7C3AED','SUPPORTER',1),
+('sup_39','Nour Slimani','استشارات نمو','FREELANCER','IT','#A78BFA','SUPPORTER',1),
+('sup_40','Thomas Beaumont','برمجيات SaaS','FOUNDER','PL','#6D28D9','SUPPORTER',1),
+('rsup_01','Gabriel Fontaine','سلاسل التوريد','MERCHANT','ES','#A78BFA','SUPPORTER',0),
+('rsup_02','Lina Haddadi','استشارات نمو','FREELANCER','SE','#6D28D9','SUPPORTER',0),
+('rsup_03','Emil Weber','برمجيات SaaS','FOUNDER','BE','#8B5CF6','SUPPORTER',0),
+('rsup_04','Sara Mansouri','استيراد وتصدير','MERCHANT','IT','#7C3AED','SUPPORTER',0),
+('rsup_05','Diego Alvarez','تصميم صناعي','FREELANCER','PL','#A78BFA','SUPPORTER',0),
+('rsup_06','Katya Volkov','ذكاء أعمال','FOUNDER','DZ','#6D28D9','SUPPORTER',0),
+('rsup_07','Amir Ghalib','طاقة متجددة','MERCHANT','MA','#8B5CF6','SUPPORTER',0),
+('rsup_08','Freja Nielsen','تغليف ذكي','FREELANCER','TN','#7C3AED','SUPPORTER',0),
+('rsup_09','Mehdi Rahmani','مقاولات أوروبية','FOUNDER','JO','#A78BFA','SUPPORTER',0),
+('rsup_10','Celine Marchand','تحليل بيانات','MERCHANT','EG','#6D28D9','SUPPORTER',0),
+('rsup_11','Oussama Trabelsi','تجارة الجملة','FREELANCER','AT','#8B5CF6','SUPPORTER',0),
+('rsup_12','Greta Fischer','لوجستيات التجارة الإلكترونية','FOUNDER','PT','#7C3AED','SUPPORTER',0),
+('rsup_13','Walid Nasser','مدفوعات B2B','MERCHANT','FI','#A78BFA','SUPPORTER',0),
+('rsup_14','Isabelle Perrot','تصنيع صناعي','FREELANCER','DE','#6D28D9','SUPPORTER',0),
+('rsup_15','Youssef Amrani','تسويق الأعمال','FOUNDER','FR','#8B5CF6','SUPPORTER',0),
+('rsup_16','Paula Costa','أمن سيبراني','MERCHANT','NL','#7C3AED','SUPPORTER',0),
+('rsup_17','Dorra Mejri','سلاسل التوريد','FREELANCER','ES','#A78BFA','SUPPORTER',0),
+('rsup_18','Henrik Olsen','استشارات نمو','FOUNDER','SE','#6D28D9','SUPPORTER',0),
+('rsup_19','Leila Boumediene','برمجيات SaaS','MERCHANT','BE','#8B5CF6','SUPPORTER',0),
+('rsup_20','Marc Girard','استيراد وتصدير','FREELANCER','IT','#7C3AED','SUPPORTER',0),
+('rsup_21','Tarek Chaouch','تصميم صناعي','FOUNDER','PL','#A78BFA','SUPPORTER',0),
+('rsup_22','Sofie Andersen','ذكاء أعمال','MERCHANT','DZ','#6D28D9','SUPPORTER',0),
+('rsup_23','Rachid Bennis','طاقة متجددة','FREELANCER','MA','#8B5CF6','SUPPORTER',0),
+('rsup_24','Eva Horak','تغليف ذكي','FOUNDER','TN','#7C3AED','SUPPORTER',0),
+('rsup_25','Adel Kacem','مقاولات أوروبية','MERCHANT','JO','#A78BFA','SUPPORTER',0),
+('rsup_26','Manon Leroy','تحليل بيانات','FREELANCER','EG','#6D28D9','SUPPORTER',0),
+('rsup_27','Bilal Ozturk','تجارة الجملة','FOUNDER','AT','#8B5CF6','SUPPORTER',0),
+('rsup_28','Astrid Berg','لوجستيات التجارة الإلكترونية','MERCHANT','PT','#7C3AED','SUPPORTER',0),
+('rsup_29','Hichem Graya','مدفوعات B2B','FREELANCER','FI','#A78BFA','SUPPORTER',0),
+('rsup_30','Carmen Silva','تصنيع صناعي','FOUNDER','DE','#6D28D9','SUPPORTER',0),
+('rsup_31','Zineb Rahali','تسويق الأعمال','MERCHANT','FR','#8B5CF6','SUPPORTER',0),
+('rsup_32','Petter Lund','أمن سيبراني','FREELANCER','NL','#7C3AED','SUPPORTER',0),
+('rsup_33','Fouad Ziani','سلاسل التوريد','FOUNDER','ES','#A78BFA','SUPPORTER',0),
+('rsup_34','Elise Moreau','استشارات نمو','MERCHANT','SE','#6D28D9','SUPPORTER',0),
+('rsup_35','Oualid Saadi','برمجيات SaaS','FREELANCER','BE','#8B5CF6','SUPPORTER',0),
+('rsup_36','Ines Cardoso','استيراد وتصدير','FOUNDER','IT','#7C3AED','SUPPORTER',0),
+('rsup_37','Viktor Molnar','تصميم صناعي','MERCHANT','PL','#A78BFA','SUPPORTER',0),
+('rsup_38','Salwa Ben Amor','ذكاء أعمال','FREELANCER','DZ','#6D28D9','SUPPORTER',0),
+('rsup_39','Antoine Rey','طاقة متجددة','FOUNDER','MA','#8B5CF6','SUPPORTER',0),
+('rsup_40','Malak Hosny','تغليف ذكي','MERCHANT','TN','#7C3AED','SUPPORTER',0);

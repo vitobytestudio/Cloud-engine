@@ -1,5 +1,6 @@
 // ——— الملف الشخصي: شارات متوهجة + تبويبات القطاع + المحفظة ———
 import { api, state, fmtEur, fmtN, toast } from "../api.js";
+import { badgeFor } from "../lib/badges.js";
 import { t } from "../i18n.js";
 import { requireAuth } from "./authsheet.js";
 import { openProfileEditor } from "./settings.js";
@@ -24,15 +25,18 @@ export async function renderProfile(view, username) {
       ? [["reels", "pf_reels"], ["items", "pf_services"], ...(isSelf ? [["wallet", "pf_wallet"]] : [])]
       : [["reels", "pf_reels"], ...(isSelf ? [["wallet", "pf_wallet"]] : [])];
 
+  view.classList.toggle("royal", !!r.data.is_owner || u.badge_tier === "ENTERPRISE_GOLD");
+  view.classList.toggle("is-owner", !!r.data.is_owner);
   view.innerHTML = `
     <div class="pf-head">
       <div class="pf-top">
         <div class="pf-ava" style="background:url(/api/avatar/${u.username}) center/cover, ${u.avatar_color}">${(u.full_name ?? "?").trim()[0]}</div>
         <div class="pf-names">
-          <h2>${u.full_name} <span class="badge ${u.badge_tier}">${u.badge_tier.replace("_", " ")}</span>${r.data.founding ? `<span class="chip founding">${t("founding_badge")}</span>` : ""}</h2>
+          <h2>${u.full_name}${badgeFor(u)} <span class="badge ${u.badge_tier}">${u.badge_tier.replace("_", " ")}</span>${r.data.founding ? `<span class="chip founding">${t("founding_badge")}</span>` : ""}</h2>
           <div class="sub">@${u.username}${u.company_name ? " · " + u.company_name : ""}${u.country_code ? " · " + u.country_code : ""}</div>
         </div>
       </div>
+      ${u.badge_tier === "ENTERPRISE_GOLD" || r.data.is_owner ? `<div class="agent-chip">${t("agent_chip")}</div>` : ""}
       ${u.bio ? `<div class="pf-bio">${u.bio}</div>` : ""}
       <div class="rep">
         <div class="lbl"><span>${t("rep_score")}</span><b>${u.reputation_score}</b></div>

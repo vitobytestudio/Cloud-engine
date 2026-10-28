@@ -2,6 +2,7 @@
 import { api, state, fmtEur, toast } from "../api.js";
 import { t } from "../i18n.js";
 import { requireAuth } from "./authsheet.js";
+import { badgeFor } from "../lib/badges.js";
 
 export async function renderChat(view, convId) {
   if (!state.user) {
@@ -19,7 +20,7 @@ export async function renderChat(view, convId) {
           <a class="conv-row" href="#/chat/${c.id}">
             <span class="who-avatar" style="background:url(/api/avatar/${c.username ?? ""}) center/cover, ${c.avatar_color}">${(c.full_name ?? "?")[0]}</span>
             <span class="txt">
-              <b>${c.full_name}</b>
+              <b>${c.full_name}</b>${badgeFor(c)}
               <small>${(c.snippet ?? "").slice(0, 60) || (c.snippet_type === "PROPOSAL" ? t("send_proposal") : "")}</small>
             </span>
             ${c.badge_tier !== "FREE" ? `<span class="badge ${c.badge_tier}"></span>` : ""}
@@ -41,7 +42,7 @@ async function renderPane(view, convId) {
         <a class="chat-back ghost-btn" href="#/chat">←</a>
         ${other ? `
           <span class="who-avatar" style="background:${other.avatar_color};width:30px;height:30px;font-size:12px">${(other.full_name ?? "?")[0]}</span>
-          <a href="#/profile/${other.username}">${other.full_name}</a>` : `<span>${t("chat_title")}</span>`}
+          <a href="#/profile/${other.username}">${other.full_name}</a>${badgeFor(other)}` : `<span>${t("chat_title")}</span>`}
       </div>
       <div class="chat-msgs" id="msgs">
         ${items.map((m) => msgEl(m, me)).join("")}
@@ -60,6 +61,36 @@ async function renderPane(view, convId) {
 
   const msgs = view.querySelector("#msgs");
   msgs.scrollTop = msgs.scrollHeight;
+
+  // ——— v0.10-B: عروض الوكيل المنتظرة — اعتماد بضغطة ———
+  api.get("/api/bot/offers").then((ro) => {
+    const pend = (ro.data.items ?? []).filter((o) => o.conv_id === convId && o.status === "PENDING_OWNER");
+    if (!pend.length) return;
+    msgs.insertAdjacentHTML("beforebegin", `<div class="bot-offers" id="bot-offers">
+      <div class="bo-t">${t("bot_offers_title")}</div>
+      ${pend.map((o) => `
+      <div class="bot-offer">
+        <div class="minw0"><b>${o.title}</b><small>${o.visitor_name} · ${fmtEur(o.amount_cents)} · ${o.delivery_days} ${t("biz_days")} · ${o.revisions} ${t("rev_rounds")}</small></div>
+        <div class="bo-btns">
+          <button class="cta" data-ap="${o.id}">${t("bot_approve")}</button>
+          <button class="cta ghost" data-dx="${o.id}">${t("decline")}</button>
+        </div>
+      </div>`).join("")}</div>`);
+    view.querySelectorAll("[data-ap]").forEach((b) => b.addEventListener("click", async () => {
+      const rr = await api.post(`/api/bot/offers/${b.dataset.ap}/approve`, {});
+      if (rr.ok && rr.data.message) {
+        document.getElementById("bot-offers")?.remove();
+        msgs.insertAdjacentHTML("beforeend", msgEl(rr.data.message, me));
+        msgs.scrollTop = msgs.scrollHeight;
+        toast(t("bot_sent_ok"));
+      } else toast(t("err_generic"));
+    }));
+    view.querySelectorAll("[data-dx]").forEach((b) => b.addEventListener("click", async () => {
+      const rr = await api.post(`/api/bot/offers/${b.dataset.dx}/decline`, {});
+      if (rr.ok) { b.closest(".bot-offer")?.remove(); toast(t("bot_declined")); }
+      else toast(t("err_generic"));
+    }));
+  });
 
   // اتصال حي
   const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -119,7 +150,7 @@ async function renderPane(view, convId) {
 function msgEl(m, me) {
   const mine = m.sender_id === me;
   if (m.message_type === "TEXT") {
-    return `<div class="msg ${mine ? "me" : ""}">${esc(m.content)}<span class="t">${m.username ?? ""}</span></div>`;
+    return `<div class="msg ${mine ? "me" : ""}">${esc(m.content)}${m.via_bot ? `<span class="bot-lbl">${t("bot_agent_lbl")}</span>` : ""}<span class="t">${m.username ?? ""}</span></div>`;
   }
   const canAct = !mine && m.deal_status === "PENDING";
   const vatLbl = m.deal_vat === "incl" ? t("vat_incl") : m.deal_vat === "reverse" ? t("vat_reverse") : t("vat_excl");

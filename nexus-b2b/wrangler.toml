@@ -35,3 +35,7 @@ ENVIRONMENT = "development"
 # ملاحظة أمنية: لا تُكتب الأسرار هنا أبداً (JWT/Stream/Discord...).
 # الإنتاج: npx wrangler secret put <NAME>
 # التطوير المحلي: ملف .dev.vars (متجاهل في Git)
+
+# ——— الحكّامة اليومية: إستشفاء الستوريات والأرصدة والاشتراكات (v0.10-B) ———
+[triggers]
+crons = ["0 3 * * *"]

@@ -1,5 +1,6 @@
 // ——— الأفاق: 24 ساعة ثم يختفي ———
 import type { Env, Session } from "../env";
+import { tierRank, getOwnerId } from "../lib/tiers";
 import { rateLimit } from "../lib/rate";
 
 const json = (obj: unknown, status = 200) =>
@@ -38,7 +39,13 @@ export async function list(env: Env, s: Session): Promise<Response> {
     if (!seen) g.all_seen = false;
     groups.set(r.user_id, g);
   }
-  return json({ groups: Array.from(groups.values()) });
+  const ownerIdS = await getOwnerId(env);
+  const arr = Array.from(groups.values()).sort((a, b) => {
+    const ra = ownerIdS && a.user.id === ownerIdS ? 0 : tierRank((a.user as { badge_tier?: string }).badge_tier);
+    const rb = ownerIdS && b.user.id === ownerIdS ? 0 : tierRank((b.user as { badge_tier?: string }).badge_tier);
+    return ra - rb;
+  });
+  return json({ groups: arr });
 }
 
 export async function view(_req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {

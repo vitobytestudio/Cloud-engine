@@ -27,23 +27,40 @@ export async function checkout(req: Request, env: Env, s: Session): Promise<Resp
     ).bind(s.userId).first<{ c: number }>();
     if (!used?.c) { price = 0; freeGrant = true; }
   }
-  // الرصيد مشتق من الدفتر — لا رصيد مخزّن
+  // ——— v0.10-B: الرصيد = الدفتر + الهدية (تصرف أولاً — الأقرب انتهاءً) ———
   const bal = await env.DB.prepare("SELECT COALESCE(SUM(amount_cents),0) AS b FROM transactions WHERE user_id=?")
     .bind(s.userId).first<{ b: number }>();
-  if ((bal?.b ?? 0) < price) return json({ error: "insufficient_balance", balance_cents: bal?.b ?? 0 }, 402);
+  const grants = await env.DB.prepare(
+    "SELECT id, remaining_cents FROM credit_grants WHERE user_id=? AND status='ACTIVE' AND expires_at > datetime('now') ORDER BY expires_at ASC"
+  ).bind(s.userId).all<{ id: string; remaining_cents: number }>();
+  const giftTotal = (grants.results ?? []).reduce((a, g) => a + g.remaining_cents, 0);
+  const avail = (bal?.b ?? 0) + giftTotal;
+  if (avail < price) return json({ error: "insufficient_balance", balance_cents: avail }, 402);
 
   const boostId = `b-${crypto.randomUUID().slice(0, 10)}`;
   const eventId = `stub_boost_${boostId}`;
+  // الصرف: الهدية أولاً (بلا فواتير — رصيد داخلي ملك المستخدم)، والباقي من الدفتر
+  let need = price;
+  for (const g of grants.results ?? []) {
+    if (need <= 0) break;
+    const take = Math.min(g.remaining_cents, need);
+    if (take <= 0) continue;
+    const nrem = g.remaining_cents - take;
+    await env.DB.prepare("UPDATE credit_grants SET remaining_cents=?, status=? WHERE id=?")
+      .bind(nrem, nrem <= 0 ? "SPENT" : "ACTIVE", g.id).run();
+    need -= take;
+  }
+  const charged = need; // الجزء المخصوم من الدفتر فقط
   try {
     await env.DB.prepare(
       `INSERT INTO boosts (id,user_id,post_id,tier_name,target_sector,target_country,impressions_bought,amount_paid_cents,status)
        VALUES (?,?,?,?,?,?,?,?, 'ACTIVE')`
     ).bind(boostId, s.userId, post.id, tier.name, (b.target_sector ?? "").slice(0, 16), (b.target_country ?? "").slice(0, 12).toUpperCase(),
       tier.impressions, price).run();
-    if (price > 0) {
+    if (charged > 0) {
       await env.DB.prepare(
         `INSERT INTO transactions (id,user_id,kind,amount_cents,ref_type,ref_id,provider_event_id) VALUES (?,?,?,?,?,?,?)`
-      ).bind(`tx-${crypto.randomUUID().slice(0, 10)}`, s.userId, "BOOST_PURCHASE", -price, "BOOST", boostId, eventId).run();
+      ).bind(`tx-${crypto.randomUUID().slice(0, 10)}`, s.userId, "BOOST_PURCHASE", -charged, "BOOST", boostId, eventId).run();
     }
   } catch {
     return json({ error: "duplicate_event" }, 409); // idempotency عبر provider_event_id UNIQUE
@@ -51,7 +68,8 @@ export async function checkout(req: Request, env: Env, s: Session): Promise<Resp
   await env.DB.prepare(
     `UPDATE posts SET is_boosted=1, boost_expires_at=datetime('now', '+${tier.hours} hours') WHERE id=?`
   ).bind(post.id).run();
-  if (price > 0) {
+  // الفواتير للدفع الحقيقي فقط — الرصيد الداخلي (الهدية) يصرف بلا فواتير/قسائم
+  if (charged > 0) {
     const buyer = await env.DB.prepare("SELECT email, full_name, company_name, vat_number, country_code FROM users WHERE id=?").bind(s.userId)
       .first<{ email: string; full_name: string; company_name: string; vat_number: string; country_code: string }>();
     if (buyer) {
@@ -61,7 +79,8 @@ export async function checkout(req: Request, env: Env, s: Session): Promise<Resp
         mailShell(`فاتورة ${tier.name}`, "فوترتك الضريبية الرسمية جاهزة — قابلة للطباعة PDF من متصفح شركتك.", "عرض الفاتورة", link));
     }
   }
-  return json({ ok: true, boost_id: boostId, tier: tier.name, expires_in_hours: tier.hours, free_grant: freeGrant, invoice_id: boostId }, 201);
+  return json({ ok: true, boost_id: boostId, tier: tier.name, expires_in_hours: tier.hours, free_grant: freeGrant,
+    invoice_id: charged > 0 ? boostId : null, gift_used: price - charged }, 201);
 }
 
 // ——— الفاتورة الضريبية (مالك التعزيز فقط) — إعلان مبدئي حسب أوروبا ———
@@ -72,7 +91,13 @@ export async function invoice(req: Request, env: Env, s: Session, p: Record<stri
      FROM boosts b JOIN users u ON u.id=b.user_id WHERE b.id=? AND b.user_id=?`
   ).bind(p.id, s.userId).first<{ id: string; tier_name: string; amount_paid_cents: number; created_at: string; full_name: string; email: string; company_name: string; vat_number: string; country_code: string }>();
   if (!b) return json({ error: "not_found" }, 404);
-  const net = (b.amount_paid_cents / 100).toFixed(2);
+  // v0.10: فاتورة على المال الحقيقي فقط — الدفع من رصيد داخلي/منحة = بلا فاتورة
+  const paid = await env.DB.prepare(
+    "SELECT COALESCE(SUM(amount_cents),0) AS c FROM transactions WHERE ref_type='BOOST' AND ref_id=?"
+  ).bind(p.id).first<{ c: number }>();
+  const realPaid = -(paid?.c ?? 0);
+  if (realPaid <= 0) return json({ error: "no_invoice" }, 404);
+  const net = (realPaid / 100).toFixed(2);
   const vatNote = b.country_code && !["DE", "AT", "CH", "FR"].includes(b.country_code)
     ? "Reverse Charge — VAT to be accounted for by the recipient (Art. 196 EU VAT Directive)"
     : "VAT excluded — prices exclude VAT where applicable";
@@ -95,8 +120,12 @@ export async function wallet(env: Env, s: Session): Promise<Response> {
   if (!s.userId) return json({ error: "auth_required" }, 401);
   const bal = await env.DB.prepare("SELECT COALESCE(SUM(amount_cents),0) AS b FROM transactions WHERE user_id=?")
     .bind(s.userId).first<{ b: number }>();
+  const gift = await env.DB.prepare(
+    "SELECT COALESCE(SUM(remaining_cents),0) AS g, MIN(expires_at) AS exp FROM credit_grants WHERE user_id=? AND status='ACTIVE' AND expires_at > datetime('now')"
+  ).bind(s.userId).first<{ g: number; exp: string | null }>();
   const tx = await env.DB.prepare(
     "SELECT kind, amount_cents, ref_type, created_at FROM transactions WHERE user_id=? ORDER BY created_at DESC LIMIT 20"
   ).bind(s.userId).all();
-  return json({ balance_cents: bal?.b ?? 0, transactions: tx.results ?? [], catalog: Object.values(BOOST_CATALOG) });
+  return json({ balance_cents: (bal?.b ?? 0) + (gift?.g ?? 0), gift_cents: gift?.g ?? 0, gift_expires_at: gift?.exp ?? null,
+    transactions: tx.results ?? [], catalog: Object.values(BOOST_CATALOG) });
 }

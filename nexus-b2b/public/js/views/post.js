@@ -1,5 +1,6 @@
 // ——— صفحة المنشور المستقلة: مشغّد كامل بصوت، صاحب المنشور، إحصاءات وتفاعل حقيقي ———
 import { api, state, toast, fmtN, confirmSheet } from "../api.js";
+import { badgeFor } from "../lib/badges.js";
 import { t } from "../i18n.js";
 import { openBoost } from "./boost.js";
 import { requireAuth } from "./authsheet.js";
@@ -40,7 +41,7 @@ export async function renderPost(view, id) {
       <div class="pv-author">
         <a class="who-avatar" style="background:url(/api/avatar/${p.username}) center/cover, ${p.avatar_color}" href="#/profile/${p.username}">${(p.full_name ?? "?").trim()[0]}</a>
         <div class="minw0">
-          <div class="who-name"><a href="#/profile/${p.username}">${p.full_name}</a><span class="badge ${p.badge_tier}">${p.badge_tier === "FREE" ? (p.sector || "").slice(0, 3) : ""}</span></div>
+          <div class="who-name"><a href="#/profile/${p.username}">${p.full_name}</a>${badgeFor(p)}<span class="badge ${p.badge_tier}">${p.badge_tier === "FREE" ? (p.sector || "").slice(0, 3) : ""}</span></div>
           <div class="who-sub">${p.company_name || "@" + p.username}</div>
         </div>
         ${p.is_self ? `<span class="chip cat">${t("post_yours")}</span>` : `<button class="cta ghost" id="pv-follow">${t("follow")}</button>`}

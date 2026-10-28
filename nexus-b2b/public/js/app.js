@@ -11,6 +11,7 @@ import { renderPlans } from "./views/plans.js";
 import { renderSearch } from "./views/search.js";
 import { renderNotifications } from "./views/notifications.js";
 import { renderAnalytics } from "./views/analytics.js";
+import { renderSupporters } from "./views/supporters.js";
 
 const view = document.getElementById("view");
 
@@ -31,6 +32,7 @@ async function route() {
   else if (page === "search") { setActive(""); await renderSearch(view); }
   else if (page === "notifications") { setActive(""); await renderNotifications(view); }
   else if (page === "analytics") { setActive(""); await renderAnalytics(view); }
+  else if (page === "supporters") { setActive(""); await renderSupporters(view); }
   else if (page === "post") { setActive(""); await renderPost(view, param); }
   else if (page === "posts") { setActive("posts"); await renderPostsPage(view); }
   else { setActive("feed"); await renderFeed(view); }
@@ -86,6 +88,7 @@ window.addEventListener("hashchange", route);
   state.csrf = r.data.csrf ?? null;
   state.balance = r.data.balance_cents ?? 0;
   try { localStorage.setItem("nx_me", JSON.stringify({ user: state.user, csrf: state.csrf, balance: state.balance })); } catch {}
+  try { const sc = await api.get("/api/supporters"); state.ownerUsername = sc.data.owner_username ?? null; } catch {}
   drawMe();
   if (!localStorage.getItem("nx_seen")) {
     showOnboarding(() => route());

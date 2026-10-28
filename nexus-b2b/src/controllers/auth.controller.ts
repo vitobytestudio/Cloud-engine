@@ -2,6 +2,7 @@
 import type { Env, Session } from "../env";
 import { hashPassword, verifyPassword, createSession, sessionCookie, clearCookie, newId } from "../lib/auth";
 import { rateLimit, clientIp } from "../lib/rate";
+import { enforce, recordViolation, delay } from "../lib/security";
 import { mailReady, sendMail, mailShell, htmlPage } from "../lib/mail";
 
 const json = (obj: unknown, status = 200, headers: Record<string, string> = {}) =>
@@ -17,11 +18,13 @@ export async function me(env: Env, s: Session): Promise<Response> {
   if (!u) return json({ user: null });
   const bal = await env.DB.prepare("SELECT COALESCE(SUM(amount_cents),0) AS b FROM transactions WHERE user_id=?")
     .bind(s.userId).first<{ b: number }>();
-  return json({ user: u, csrf: s.csrf, balance_cents: bal?.b ?? 0 });
+  const { getOwnerId } = await import("../lib/tiers");
+  const ownerId = await getOwnerId(env);
+  return json({ user: u, csrf: s.csrf, balance_cents: bal?.b ?? 0, is_owner: ownerId === s.userId });
 }
 
 export async function register(req: Request, env: Env, s: Session): Promise<Response> {
-  if (!(await rateLimit(env, `reg:${clientIp(req)}`, 5, 3600))) return json({ error: "too_many" }, 429);
+  if (!(await rateLimit(env, `reg:${clientIp(req)}`, 12, 3600))) return json({ error: "too_many" }, 429); // v0.10-B: الجولة تفتح حسابات معزولة — الحد الأمني يبقى
   const b = (await req.json().catch(() => ({}))) as Record<string, string>;
   const email = (b.email ?? "").trim().toLowerCase();
   const username = (b.username ?? "").trim().toLowerCase();
@@ -170,9 +173,19 @@ export async function login(req: Request, env: Env, s: Session): Promise<Respons
   const b = (await req.json().catch(() => ({}))) as Record<string, string>;
   const email = (b.email ?? "").trim().toLowerCase();
   if (!(await rateLimit(env, `login:${clientIp(req)}:${email}`, 5, 900))) return json({ error: "locked" }, 429);
+  // ——— v0.10-B: عقوبات تصاعدية على القوى الغاشمة (مفتاح الهدف — لا عزل مُهاجم مشترك) ———
+  const lk = `le:${email}`;
+  const pen = await enforce(env, lk);
+  if (pen) return pen.status === 403 ? json({ error: "locked", retry: "1h" }, 429) : pen;
   const u = await env.DB.prepare("SELECT id,password_hash FROM users WHERE email=?").bind(email).first<{ id: string; password_hash: string }>();
-  if (!u || u.password_hash === "!disabled" || u.password_hash === "!oauth" || !(await verifyPassword(b.password ?? "", u.password_hash, env.AUTH_PEPPER ?? "")))
+  if (u) {
+    const lockState = await enforce(env, `u:${u.id}`);
+    if (lockState) return json({ error: "account_locked" }, 423);
+  }
+  if (!u || u.password_hash === "!disabled" || u.password_hash === "!oauth" || !(await verifyPassword(b.password ?? "", u.password_hash, env.AUTH_PEPPER ?? ""))) {
+    await recordViolation(env, lk, "login_fail", 1);
     return json({ error: "invalid_credentials" }, 401);
+  }
   if (mailReady(env)) {
     const verified = await env.DB.prepare("SELECT verified FROM users WHERE id=?").bind(u.id).first<{ verified: number }>();
     if (verified && !verified.verified) return json({ error: "verify_email" }, 403);

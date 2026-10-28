@@ -1,6 +1,7 @@
 // ——— محرك الفيد التنفيذي: نقاط النية + تضاؤل زمني + طبقة التعزيز المنفصلة ———
 import type { Env, Session } from "../env";
 import { notify } from "./features.controller";
+import { tierRank, getOwnerId } from "../lib/tiers";
 
 type FeedPost = {
   id: string; user_id: string; playback_url: string; thumbnail_url: string;
@@ -64,7 +65,7 @@ export async function gallery(req: Request, env: Env, s: Session): Promise<Respo
             u.username, u.full_name, u.avatar_color, u.badge_tier
      FROM posts p JOIN users u ON u.id = p.user_id
      WHERE p.quarantined=0 AND p.media_kind='IMAGE'
-     ORDER BY p.created_at DESC LIMIT 36`
+     ORDER BY CASE WHEN p.user_id=(SELECT value FROM app_config WHERE key='owner_user_id') THEN 0 ELSE 1 END, p.created_at DESC LIMIT 36`
   ).all();
   return json({ items: q.results ?? [] });
 }
@@ -104,11 +105,18 @@ export async function feed(req: Request, env: Env, s: Session): Promise<Response
     is_self: !!s.userId && s.userId === p.user_id,
   }));
 
-  const organic = all.filter((p) => !p.boost_active).sort((a, b) => score(b, viewerSector) - score(a, viewerSector));
-  const boosted = all.filter((p) => p.boost_active);
+  // ——— v0.10-B: الأولوية العالمية — المالك أول عالمياً دائماً ثم الباقات ———
+  const ownerId = await getOwnerId(env);
+  const rankOf = (p: FeedPost) => (ownerId && p.user_id === ownerId ? 0 : tierRank(p.badge_tier));
+  const organic = all
+    .filter((p) => !p.boost_active && !(ownerId && p.user_id === ownerId))
+    .sort((a, b) => rankOf(a) - rankOf(b) || score(b, viewerSector) - score(a, viewerSector));
+  const boosted = all.filter((p) => p.boost_active && !(ownerId && p.user_id === ownerId));
+  const ownerPost = ownerId ? all.find((p) => p.user_id === ownerId) : undefined;
 
   // طبقة التعزيز: أعلى الصفحة الأولى فقط (≤1 لكل 8 لمنع الإرهاق)
   let items: Array<FeedPost & { boost_active: boolean; reason: string }> = [];
+  if (offset === 0 && ownerPost) items.push({ ...ownerPost, reason: "owner" });
   if (offset === 0 && boosted.length) items.push({ ...boosted[0], reason: "boost" });
   const merged = [...items, ...organic.map((p) => ({ ...p, reason: reasonFor(p, viewerSector) }))];
   items = merged.slice(offset, offset + limit);

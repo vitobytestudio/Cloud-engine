@@ -236,8 +236,8 @@ check("تبديل اللغة يعمل فوراً", before !== after, `${before} 
 // ——— الباقات الاحترافية (صفحة مستقلة) ———
 w.location.hash = "#/plans";
 await sleep(1100);
-check("صفحة الباقات تفتح بثلاث بطاقات فاخرة", $$(".plan-card").length === 3, `عدد=${$$(".plan-card").length}`);
-check("مستخدم مجاني لا يحمل شارة باقة حالية", !$(".plan-card.cur"));
+check("صفحة الباقات تفتح بأربع بطاقات (مجانية + ثلاث فاخرة)", $$(".plan-card").length === 4, `عدد=${$$(".plan-card").length}`);
+check("المجانية تُعلَّم كباقة حالية للمجاني", !!$(".plan-card.f.cur"));
 check("ملاحظة VAT المعتمدة ظاهرة بالباقات", /VAT|TVA|الضريبة/.test($(".plans-page .pay-note")?.textContent ?? ""));
 $('.plan-card.g [data-act]')?.click();
 await sleep(1100);
@@ -348,48 +348,20 @@ $('.pf-tab[data-tab=samples]')?.click();
 await sleep(1100);
 check("تاجر بلا زمردية يرى قفل القيمة", !!$(".lock-card"));
 
-// ——— الذهبية: هيمنة مجانية شهرية (إثبات خادمي) ———
-const me0 = await (await w.fetch("/api/me")).json();
-const balBefore = (await (await w.fetch("/api/wallet")).json()).balance_cents;
-const gold = await (await w.fetch("/api/account/tier", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ tier: "ENTERPRISE_GOLD" }) })).json();
-check("الترقية للذهبية عبر الخادم", gold.badge_tier === "ENTERPRISE_GOLD");
-const g1 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: postId08, tier: "DOMINANCE_DROP", target_country: "DACH", target_sector: "FOUNDERS" }) })).json();
-check("هيمنة مجانية للذهبية (بلا خصم)", g1.free_grant === true, JSON.stringify(g1).slice(0, 60));
-const balAfter = (await (await w.fetch("/api/wallet")).json()).balance_cents;
-check("المحفظة لم تُخصم", balBefore === balAfter, `${balBefore}=${balAfter}`);
-const g2 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: postId08, tier: "DOMINANCE_DROP" }) })).json();
-check("المحاولة الثانية تُرفض (منحة مستهلَكة/حماية معدل)", g2.error === "insufficient_balance" || g2.error === "too_many", `err=${g2.error}`);
-check("فاتورة VAT فورية تُصدَر مع الدفع", typeof g1.invoice_id === "string" && g1.invoice_id.length > 3, String(g1.invoice_id));
-const inv08 = await w.fetch(`/invoice/${g1.invoice_id}`);
-const invTxt08 = await inv08.text();
-check("صفحة الفاتورة تعمل للمالك (HTML طباعة برقم INV-)", inv08.status === 200 && invTxt08.includes("INV-"), String(inv08.status));
-const invMiss = await w.fetch("/invoice/b-nonexistent00");
-check("الفاتورة محمية (404 لمالك آخر/غير موجود)", invMiss.status === 404, String(invMiss.status));
-
-// ——— v0.8: ورقة الترويج — استهداف جغرافي/مهني + مؤشرات ROI حية ———
-await navClick("feed");
-$$(".rail-btn[data-act=boost]")[0]?.click();
-await sleep(700);
-check("ورقة الترويج تعرض استهداف DACH/FR/UK وفئات B2B", !!$("#roi") && $$("#geo button").length >= 5 && $$("#aud button").length >= 3, `geo=${$$("#geo button").length} aud=${$$("#aud button").length}`);
-const roi1 = $("#roi")?.textContent ?? "";
-$$("#geo button")[1]?.click();
-$$("#aud button")[1]?.click();
-$('[data-tier=TARGET_BOOST]')?.click();
-await sleep(350);
-const roi2 = $("#roi")?.textContent ?? "";
-check("مؤشرات ROI المتوقعة تتحدث مع الطبقة والاستهداف", roi1.length > 10 && roi1 !== roi2, roi1.slice(0, 44));
-check("ملاحظة الفاتورة بالبريد ظاهرة بالورقة", /invoice|facture|فاتورة/.test($(".sheet")?.textContent ?? ""));
-$("#b-x")?.click();
-await sleep(300);
-
 // ——— v0.10-A: الحذف النهائي + is_self ———
-const fdA = await (await w.fetch("/api/feed?limit=20")).json();
-const mineA = (fdA.items ?? []).find((x) => x.id === postId08);
+const meA0 = await (await w.fetch("/api/me")).json();
+const upA0 = await (await w.fetch("/api/stream/direct-upload", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meA0.csrf }, body: JSON.stringify({ purpose: "POST", bytes: 20480, content_type: "video/mp4" }) })).json();
+await w.fetch(`/api/stream/upload/${upA0.media_id}`, { method: "PUT", headers: { "content-type": "video/mp4" }, body: new Uint8Array(20480).fill(2) });
+const npA0 = await (await w.fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meA0.csrf }, body: JSON.stringify({ title: "is_self harness probe", category_tag: "SHOWCASE", artifact_type: "CASE_METRIC", artifact_url: "https://metrics.example/probe", media_id: upA0.media_id }) })).json();
+const ownA = npA0.id;
+const pgA1 = (await (await w.fetch("/api/feed?limit=10&offset=0")).json()).items ?? [];
+const pgA2 = (await (await w.fetch("/api/feed?limit=10&offset=10")).json()).items ?? [];
+const mineA = [...pgA1, ...pgA2].find((x) => x.id === ownA);
 check("الفيد يعلّم منشوري is_self", !!mineA && mineA.is_self === true, String(mineA?.is_self));
 const csrfA = (await (await w.fetch("/api/me")).json()).csrf;
 const foeA = await w.fetch("/api/posts/p1", { method: "DELETE", headers: { "x-csrf": csrfA } });
 check("حذف منشور غيرك محجوب (404)", foeA.status === 404, String(foeA.status));
-w.location.hash = `#/post/${postId08}`;
+w.location.hash = `#/post/${ownA}`;
 await sleep(1300);
 check("مالك المنشور يرى زر الحذف", !!$("#pv-del"));
 $("#pv-del")?.click();
@@ -402,9 +374,9 @@ $("#pv-del")?.click();
 await sleep(400);
 $("#c-ok")?.click();
 await sleep(1100);
-const goneA = await w.fetch(`/api/posts/${postId08}`);
+const goneA = await w.fetch(`/api/posts/${ownA}`);
 check("الحذف النهائي: المنشور لم يعد موجوداً (404)", goneA.status === 404, String(goneA.status));
-const goneQA = await (await w.fetch(`/api/posts/${postId08}`)).json();
+const goneQA = await (await w.fetch(`/api/posts/${ownA}`)).json();
 check("المعرض/الفيد يفقدانه تلقائياً", goneQA.error === "not_found");
 
 // ——— v0.10-A: نشر ستوري عبر الاستوديو (ضغط→تقدم→رفع) ثم حذفه ———
@@ -432,6 +404,188 @@ $("#c-ok")?.click();
 await sleep(1100);
 const stGA = await (await w.fetch("/api/stories")).json();
 check("الستوري حُذف نهائياً من الخادم", !(stGA.groups ?? []).some((g) => g.user.username === "autofeader"), `مجموعات=${(stGA.groups ?? []).length}`);
+
+
+// ——— الذهبية: هيمنة مجانية شهرية (إثبات خادمي) ———
+const me0 = await (await w.fetch("/api/me")).json();
+const balBefore = (await (await w.fetch("/api/wallet")).json()).balance_cents;
+const gold = await (await w.fetch("/api/account/tier", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ tier: "ENTERPRISE_GOLD" }) })).json();
+check("الترقية للذهبية عبر الخادم", gold.badge_tier === "ENTERPRISE_GOLD");
+const g1 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: postId08, tier: "DOMINANCE_DROP", target_country: "DACH", target_sector: "FOUNDERS" }) })).json();
+check("هيمنة مجانية للذهبية (بلا خصم)", g1.free_grant === true, JSON.stringify(g1).slice(0, 60));
+const balAfter = (await (await w.fetch("/api/wallet")).json()).balance_cents;
+check("المحفظة لم تُخصم", balBefore === balAfter, `${balBefore}=${balAfter}`);
+const g2 = await (await w.fetch("/api/boost/checkout", { method: "POST", headers: { "content-type": "application/json", "x-csrf": me0.csrf }, body: JSON.stringify({ post_id: postId08, tier: "DOMINANCE_DROP" }) })).json();
+check("المحاولة الثانية يدفعها رصيد الهدية (بلا فاتورة — العقد)", g2.ok === true && g2.invoice_id === null, JSON.stringify(g2).slice(0, 70));
+check("لا فاتورة على المنحة المجانية (المال الحقيقي فقط)", g1.invoice_id === null, String(g1.invoice_id));
+const inv08 = await w.fetch(`/invoice/${g1.boost_id}`);
+const invJ08 = await inv08.json().catch(() => ({}));
+check("فاتورة منحة/رصيد داخلي مرفوضة (404 no_invoice)", inv08.status === 404 && invJ08.error === "no_invoice", String(inv08.status));
+const invMiss = await w.fetch("/invoice/b-nonexistent00");
+check("الفاتورة محمية (404 لمالك آخر/غير موجود)", invMiss.status === 404, String(invMiss.status));
+
+// ——— v0.10-B: النمو والسيادة (اشتراكات، هدية، بوتات، داعمون، أولوية، أمن) ———
+const mkUserB = async (email, uname, sector) => {
+  await globalThis.fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ full_name: uname, username: uname, email, password: "passw0rd9", sector }) });
+  const lg = await globalThis.fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password: "passw0rd9" }) });
+  const ck = (lg.headers.getSetCookie?.() ?? []).map((c) => c.split(";")[0]).join("; ");
+  const me = await (await globalThis.fetch(`${BASE}/api/me`, { headers: { cookie: ck } })).json();
+  return { ck, csrf: me.csrf };
+};
+const apiAsB = (ck, path, opts = {}) => globalThis.fetch(`${BASE}${path}`, { ...opts, headers: { "content-type": "application/json", cookie: ck, ...(opts.headers ?? {}) } });
+const jB = async (r) => r.clone().json().catch(() => ({}));
+const upMediaB = async (ck, csrf, purpose, ct) => {
+  const u = await jB(await apiAsB(ck, "/api/stream/direct-upload", { method: "POST", headers: { "x-csrf": csrf }, body: JSON.stringify({ purpose, bytes: 20480, content_type: ct }) }));
+  await apiAsB(ck, `/api/stream/upload/${u.media_id}`, { method: "PUT", headers: { "content-type": ct }, body: new Uint8Array(20480).fill(5) });
+  return u.media_id;
+};
+
+// 1) صفحة الباقات: أربع بطاقات بأسعار العقد
+w.location.hash = "#/plans";
+await sleep(1300);
+check("الباقات تعرض أربع بطاقات (مجانية + ثلاث)", $$(".plan-card").length === 4, `cards=${$$(".plan-card").length}`);
+const plansTxtB = () => ($(".plans-page")?.textContent ?? "");
+check("أسعار العقد 14/39/119 ظاهرة", plansTxtB().includes("14€") && plansTxtB().includes("39€") && plansTxtB().includes("119€"));
+$$(".billing-seg [data-b]")[1]?.click();
+await sleep(500);
+check("السنوي يخفض 20% (134€ للزرقاء)", plansTxtB().includes("134€"));
+$$(".billing-seg [data-b]")[0]?.click();
+await sleep(400);
+
+// 2) اشتراك معزول: أزرق شهري → زمردي سنوي (تبديل) → إلغاء
+const subB = await mkUserB("sub@test.io", "subone", "FREELANCER");
+const sb1 = await jB(await apiAsB(subB.ck, "/api/subscribe", { method: "POST", headers: { "x-csrf": subB.csrf }, body: JSON.stringify({ plan: "PRO_TALENT", cycle: "MONTHLY" }) }));
+check("اشتراك الأزرق الشهري يعمل (1400 سنت)", sb1.ok === true && sb1.amount_cents === 1400, JSON.stringify(sb1).slice(0, 70));
+const subMe1 = await jB(await apiAsB(subB.ck, "/api/me"));
+check("شارة الأزرق فعلة على الحساب", subMe1.user?.badge_tier === "PRO_TALENT", String(subMe1.user?.badge_tier));
+const sb2 = await jB(await apiAsB(subB.ck, "/api/subscribe", { method: "POST", headers: { "x-csrf": subB.csrf }, body: JSON.stringify({ plan: "MERCHANT_EMERALD", cycle: "YEARLY" }) }));
+check("التبديل للزمردي السنوي (37440 = −20%)", sb2.ok === true && sb2.amount_cents === 37440, JSON.stringify(sb2).slice(0, 70));
+const sbC = await jB(await apiAsB(subB.ck, "/api/subscription"));
+check("حالة الاشتراك نشطة بدورة سنوية", sbC.subscription?.cycle === "YEARLY" && sbC.subscription?.status === "ACTIVE", JSON.stringify(sbC).slice(0, 80));
+await apiAsB(subB.ck, "/api/subscribe/cancel", { method: "POST", headers: { "x-csrf": subB.csrf }, body: "{}" });
+const sbD = await jB(await apiAsB(subB.ck, "/api/subscription"));
+check("الإلغاء يوقف التجديد (CANCELED)", sbD.subscription?.status === "CANCELED", String(sbD.subscription?.status));
+
+// 3) الهدية: 150€ بعد المنشرين — تصرف أولاً وبلا فاتورة
+const gifB = await mkUserB("gifter@test.io", "gifterone", "MERCHANT");
+await apiAsB(gifB.ck, "/api/posts", { method: "POST", headers: { "x-csrf": gifB.csrf }, body: JSON.stringify({ title: "أول منشر — عرض المصنع", category_tag: "SHOWCASE", media_id: await upMediaB(gifB.ck, gifB.csrf, "POST", "video/mp4") }) });
+const gp1 = await jB(await apiAsB(gifB.ck, "/api/posts", { method: "POST", headers: { "x-csrf": gifB.csrf }, body: JSON.stringify({ title: "ثاني منشر — خط التغليف", category_tag: "PRODUCT_DEMO", media_id: await upMediaB(gifB.ck, gifB.csrf, "POST", "video/mp4") }) }));
+check("الهدية تُمنح بالمنشور الثاني بالضبط", gp1.gift_granted === true, JSON.stringify(gp1).slice(0, 60));
+const gw1 = await jB(await apiAsB(gifB.ck, "/api/wallet"));
+check("رصيد الهدية 150€ في المحفظة مع انتهاء", gw1.gift_cents === 15000 && !!gw1.gift_expires_at, `${gw1.gift_cents}`);
+const gb1 = await jB(await apiAsB(gifB.ck, "/api/boost/checkout", { method: "POST", headers: { "x-csrf": gifB.csrf }, body: JSON.stringify({ post_id: gp1.id, tier: "FLASH_DROP" }) }));
+check("الترويج يصرف من الهدية أولاً (1900 سنت)", gb1.ok === true && gb1.gift_used === 1900 && gb1.invoice_id === null, JSON.stringify(gb1).slice(0, 80));
+const ginvB = await apiAsB(gifB.ck, `/invoice/${gb1.boost_id}`);
+check("صرف الهدية بلا أي فاتورة (404)", ginvB.status === 404, String(ginvB.status));
+const gw2 = await jB(await apiAsB(gifB.ck, "/api/wallet"));
+check("باقي الهدية 131€ بعد الصرف", gw2.gift_cents === 13100, String(gw2.gift_cents));
+await apiAsB(gifB.ck, "/api/stories", { method: "POST", headers: { "x-csrf": gifB.csrf }, body: JSON.stringify({ media_id: await upMediaB(gifB.ck, gifB.csrf, "STORY", "video/mp4"), media_type: "VIDEO", caption: "ستوري الحكّامة" }) });
+
+// 4) البوت — الأزرق: وكيل استقبال بحصة 10 يومياً
+const botB = await mkUserB("blueown@test.io", "blueown", "FREELANCER");
+const visB = await mkUserB("vis1@test.io", "vis1one", "BUYER");
+await apiAsB(botB.ck, "/api/subscribe", { method: "POST", headers: { "x-csrf": botB.csrf }, body: JSON.stringify({ plan: "PRO_TALENT", cycle: "MONTHLY" }) });
+const convB = await jB(await apiAsB(visB.ck, "/api/chat/open/blueown", { method: "POST", headers: { "x-csrf": visB.csrf }, body: "{}" }));
+for (let i = 0; i < 12; i++) await apiAsB(visB.ck, `/api/chat/${convB.id}/messages`, { method: "POST", headers: { "x-csrf": visB.csrf }, body: JSON.stringify({ content: "مرحبا" }) });
+await sleep(400);
+const msgsB = await jB(await apiAsB(botB.ck, `/api/chat/${convB.id}/messages`));
+const botRepliesB = (msgsB.items ?? []).filter((m) => m.via_bot).length;
+check("وكيل الاستقبال يرد تلقائياً بحد 10/يوم للأزرق", botRepliesB === 10, `ردود=${botRepliesB}`);
+const visMeB = await jB(await apiAsB(visB.ck, "/api/me"));
+check("رسائل الوكيل موسومة بشفافية (تُرسل بحساب المالك)", (msgsB.items ?? []).some((m) => m.via_bot && m.sender_id !== visMeB.user.id));
+
+// 5) الزمردية: مساعد مبيعات يجهز عرضاً بانتظار موافقة المالك
+await apiAsB(botB.ck, "/api/subscribe", { method: "POST", headers: { "x-csrf": botB.csrf }, body: JSON.stringify({ plan: "MERCHANT_EMERALD", cycle: "MONTHLY" }) });
+await apiAsB(visB.ck, `/api/chat/${convB.id}/messages`, { method: "POST", headers: { "x-csrf": visB.csrf }, body: JSON.stringify({ content: "أرسل لي عرض سعر" }) });
+await sleep(400);
+const offB = await jB(await apiAsB(botB.ck, "/api/bot/offers"));
+const pendB = (offB.items ?? []).find((o) => o.status === "PENDING_OWNER");
+check("العرض يُجهز وينتظر موافقة المالك بضغطة", !!pendB && pendB.amount_cents === 4900, JSON.stringify(offB).slice(0, 90));
+const apB = await jB(await apiAsB(botB.ck, `/api/bot/offers/${pendB.id}/approve`, { method: "POST", headers: { "x-csrf": botB.csrf }, body: "{}" }));
+check("اعتماد المالك يرسل العرض بصفقة ضمان حقيقية", apB.ok === true && apB.message?.message_type === "PROPOSAL" && apB.message?.deal_status === "PENDING", JSON.stringify(apB).slice(0, 80));
+
+// 6) الذهبية: قيادة آلية داخل السقوف + تعليق فوق السقف
+await apiAsB(botB.ck, "/api/subscribe", { method: "POST", headers: { "x-csrf": botB.csrf }, body: JSON.stringify({ plan: "ENTERPRISE_GOLD", cycle: "MONTHLY" }) });
+await apiAsB(botB.ck, "/api/bot/settings", { method: "PUT", headers: { "x-csrf": botB.csrf }, body: JSON.stringify({ autopilot: true, max_price_cents: 20000, max_days: 30, max_revisions: 5 }) });
+await apiAsB(visB.ck, `/api/chat/${convB.id}/messages`, { method: "POST", headers: { "x-csrf": visB.csrf }, body: JSON.stringify({ content: "ما عرضكم للتعاون؟" }) });
+await sleep(400);
+const msgsB2 = await jB(await apiAsB(visB.ck, `/api/chat/${convB.id}/messages`));
+const autos = (msgsB2.items ?? []).filter((m) => m.message_type === "PROPOSAL");
+check("القيادة الآلية ترسل العرض تلقائياً ضمن السقف", autos.length >= 2, `عروض=${autos.length}`);
+await apiAsB(visB.ck, `/api/chat/${convB.id}/messages`, { method: "POST", headers: { "x-csrf": visB.csrf }, body: JSON.stringify({ content: "عندي مشروع ضخم بميزانية 900000 يورو" }) });
+await sleep(400);
+const offB2 = await jB(await apiAsB(botB.ck, "/api/bot/offers"));
+check("العند فوق السقف يُعلق لمراجعة المالك", (offB2.items ?? []).some((o) => o.status === "PENDING_OWNER"), `معلق=${(offB2.items ?? []).filter((o) => o.status === "PENDING_OWNER").length}`);
+
+// 7) الأولوية العالمية: المالك أولاً في الفيد والبحث والستوريات
+const fdB = await jB(await w.fetch("/api/feed?limit=10"));
+check("الفيد يفتتح بمنشور المالك (أول عالمياً)", fdB.items?.[0]?.username === "vitobyte" && fdB.items?.[0]?.reason === "owner", `${fdB.items?.[0]?.username}/${fdB.items?.[0]?.reason}`);
+const seB = await jB(await w.fetch("/api/search?q=vito"));
+check("البحث يضع المالك أولاً", seB.users?.[0]?.username === "vitobyte", String(seB.users?.[0]?.username));
+const stB = await jB(await w.fetch("/api/stories"));
+check("شريط الستوريات يفتتح بالمالك", stB.groups?.[0]?.user?.username === "vitobyte", String(stB.groups?.[0]?.user?.username));
+
+// 8) الداعمون + الملف الملكي + قيادة الوكيل (DOM)
+const supB = await jB(await w.fetch("/api/supporters"));
+check("داعمو NEXUS: 40+ معلنين مع اسم المالك", (supB.count ?? 0) >= 40 && supB.owner_username === "vitobyte", `count=${supB.count}`);
+w.location.hash = "#/supporters";
+await sleep(1300);
+check("صفحة الداعمين تعرض الشبكة كاملة بشفافية", $$(".sup-card").length >= 40 && ($(".sup-page")?.textContent ?? "").length > 200, `cards=${$$(".sup-card").length}`);
+w.location.hash = "#/profile/vitobyte";
+await sleep(1400);
+check("ملف المالك: تاج وحيد + تحول ملكي كامل", w.document.getElementById("view").classList.contains("royal") && w.document.getElementById("view").classList.contains("is-owner") && !!$(".b-ic.owner-crown"));
+w.location.hash = "#/profile/blueown";
+await sleep(1400);
+check("ملف الذهبية يتحول ملكياً (تاج + رقاقة الوكيل)", w.document.getElementById("view").classList.contains("royal") && !!$(".agent-chip") && !!$(".b-ic.crown"));
+w.location.hash = "#/settings";
+await sleep(1200);
+check("قيادة الوكيل الآلي ظاهرة للذهبية بسقوفها", !!$("#ap-card") && !!$("#ap-price"));
+
+// 9) الأمن الحقيقي: تباطؤ تصاعدي ثم حجب ثم فك
+const wrongB = JSON.stringify({ email: "flood@test.io", password: "wrongpass1" });
+const tryLoginB = () => globalThis.fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: wrongB });
+for (let i = 0; i < 4; i++) await tryLoginB();
+const t0B = Date.now();
+await tryLoginB();
+const dtBV = Date.now() - t0B;
+check("التباطؤ التصاعدي يعمل (≥250ms عند التكرار)", dtBV >= 250, `${dtBV}ms`);
+for (let i = 0; i < 3; i++) await tryLoginB();
+const floodB = await tryLoginB();
+check("الحجب يمنع القوى الغاشمة بعد 8 مخالفات (429)", floodB.status === 429, String(floodB.status));
+for (let i = 0; i < 8; i++) await apiAsB(subB.ck, "/api/notifications/read", { method: "POST", body: "{}" });
+const blkB = await apiAsB(subB.ck, "/api/me");
+check("حجب طويل للمخرب (403 على مساراته)", blkB.status === 403, String(blkB.status));
+const meMainB = await jB(await w.fetch("/api/me"));
+await w.fetch("/api/security/lock", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meMainB.csrf }, body: JSON.stringify({ username: "subone", locked: false }) });
+const unblkB = await apiAsB(subB.ck, "/api/me");
+check("فك الحجب يعيد الحساب فوراً", unblkB.status === 200, String(unblkB.status));
+
+// 10) الحكّامة اليومية: قص الستوريات + إطفاء الأرصدة + انتهاء الاشتراكات + الملخص الأسبوعي
+const crB = await jB(await w.fetch("/api/security/cron", { method: "POST", headers: { "content-type": "application/json", "x-csrf": meMainB.csrf }, body: JSON.stringify({ dev_backdate_story_hours: 25, dev_backdate_grants_days: 95, dev_backdate_subs_days: 400, force_weekly: true }) }));
+check("الحكّامة تعمل وتنتقل خلاصتها", crB.ok === true && (crB.summary?.stories_trimmed ?? 0) >= 3 && (crB.summary?.grants_expired ?? 0) >= 1, JSON.stringify(crB.summary ?? {}).slice(0, 110));
+check("الملخص الأسبوعي وصل لحاملي الذهبية", (crB.summary?.weekly_summaries ?? 0) >= 1, String(crB.summary?.weekly_summaries));
+const gstB = await jB(await apiAsB(gifB.ck, "/api/stories"));
+check("الستورية المنتهية قُطعت نهائياً", !(gstB.groups ?? []).some((g) => g.user.username === "gifterone"), `مجموعات=${(gstB.groups ?? []).length}`);
+const gw3 = await jB(await apiAsB(gifB.ck, "/api/wallet"));
+check("الرصيد المنتهي (90 يوماً) أُطفئ", gw3.gift_cents === 0, String(gw3.gift_cents));
+const subMe2 = await jB(await apiAsB(subB.ck, "/api/me"));
+check("الاشتراك المنتهي يخفض الحساب للمجانية", subMe2.user?.badge_tier === "FREE", String(subMe2.user?.badge_tier));
+
+// ——— v0.8: ورقة الترويج — استهداف جغرافي/مهني + مؤشرات ROI حية ———
+await navClick("feed");
+$$(".rail-btn[data-act=boost]")[0]?.click();
+await sleep(700);
+check("ورقة الترويج تعرض استهداف DACH/FR/UK وفئات B2B", !!$("#roi") && $$("#geo button").length >= 5 && $$("#aud button").length >= 3, `geo=${$$("#geo button").length} aud=${$$("#aud button").length}`);
+const roi1 = $("#roi")?.textContent ?? "";
+$$("#geo button")[1]?.click();
+$$("#aud button")[1]?.click();
+$('[data-tier=TARGET_BOOST]')?.click();
+await sleep(350);
+const roi2 = $("#roi")?.textContent ?? "";
+check("مؤشرات ROI المتوقعة تتحدث مع الطبقة والاستهداف", roi1.length > 10 && roi1 !== roi2, roi1.slice(0, 44));
+check("ملاحظة الفاتورة بالبريد ظاهرة بالورقة", /invoice|facture|فاتورة/.test($(".sheet")?.textContent ?? ""));
+$("#b-x")?.click();
+await sleep(300);
 
 // ——— v0.5: نبض الشبكة الحي ———
 await navClick("feed");

@@ -1,5 +1,6 @@
 // ——— البحث العالمي: المبدعون والمقاطع — المميزون أولاً ———
 import { api } from "../api.js";
+import { badgeFor } from "../lib/badges.js";
 import { t } from "../i18n.js";
 
 export async function renderSearch(view) {
@@ -65,7 +66,7 @@ export async function renderSearch(view) {
         ${us.map((u) => `
           <a class="user-row" href="#/profile/${u.username}">
             <span class="who-avatar" style="background:url(/api/avatar/${u.username}) center/cover, ${u.avatar_color}">${(u.full_name ?? "?").trim()[0]}</span>
-            <span class="minw0"><b>${u.full_name}</b><small>@${u.username}${u.company_name ? " · " + u.company_name : ""}</small></span>
+            <span class="minw0"><b>${u.full_name}</b>${badgeFor(u)}<small>@${u.username}${u.company_name ? " · " + u.company_name : ""}</small></span>
             <span class="badge ${u.badge_tier}">${u.badge_tier.replace("_", " ")}</span>
             ${u.country_code ? `<span class="fchip">${u.country_code}${Number(u.vat_ok) ? " · VAT" : ""}</span>` : ""}
           </a>`).join("")}

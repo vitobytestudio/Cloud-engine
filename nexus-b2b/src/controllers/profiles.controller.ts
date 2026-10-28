@@ -1,5 +1,6 @@
 // ——— الملفات الشخصية حسب القطاع + إنشاء المنشورات ———
 import type { Env, Session } from "../env";
+import { GIFT_CENTS, GIFT_DAYS, GIFT_MIN_POSTS, getOwnerId } from "../lib/tiers";
 import { rateLimit } from "../lib/rate";
 
 const json = (obj: unknown, status = 200) =>
@@ -7,7 +8,7 @@ const json = (obj: unknown, status = 200) =>
 
 export async function createPost(req: Request, env: Env, s: Session): Promise<Response> {
   if (!s.userId) return json({ error: "auth_required" }, 401);
-  if (!(await rateLimit(env, `post:${s.userId}`, 3, 3600))) return json({ error: "too_many" }, 429);
+  if (!(await rateLimit(env, `post:${s.userId}`, 6, 3600))) return json({ error: "too_many" }, 429);
   const b = (await req.json().catch(() => ({}))) as Record<string, string>;
   const title = (b.title ?? "").trim();
   const cat = b.category_tag ?? "";
@@ -45,7 +46,21 @@ export async function createPost(req: Request, env: Env, s: Session): Promise<Re
      VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(id, s.userId, b.media_id ?? "", playback, thumb, mediaKind, title, (b.description ?? "").slice(0, 600),
     cat, art || null, artifactUrl).run();
-  return json({ ok: true, id }, 201);
+
+  // ——— v0.10-B: هدية NEXUS — 150€ رصيد داخلي ملك المستخدم بعد أول منشرين (ينتهي بعد 90 يوماً) ———
+  let giftGranted = false;
+  const cnt = await env.DB.prepare("SELECT COUNT(*) AS c FROM posts WHERE user_id=?").bind(s.userId).first<{ c: number }>();
+  const hasGrant = await env.DB.prepare("SELECT 1 AS x FROM credit_grants WHERE user_id=? AND source='WELCOME_GIFT' LIMIT 1")
+    .bind(s.userId).first();
+  if ((cnt?.c ?? 0) >= 2 && !hasGrant) {
+    await env.DB.prepare(
+      "INSERT INTO credit_grants (id,user_id,amount_cents,remaining_cents,source,expires_at) VALUES (?,?,?,?, 'WELCOME_GIFT', datetime('now', ?))"
+    ).bind(`cg-${crypto.randomUUID().slice(0, 12)}`, s.userId, GIFT_CENTS, GIFT_CENTS, `+${GIFT_DAYS} days`).run();
+    await env.DB.prepare("INSERT INTO notifications (id,user_id,kind,ref_type,ref_id) VALUES (?,?,?,?,?)")
+      .bind(`n-gift-${crypto.randomUUID().slice(0, 10)}`, s.userId, "gift", "wallet", String(GIFT_CENTS)).run();
+    giftGranted = true;
+  }
+  return json({ ok: true, id, gift_granted: giftGranted }, 201);
 }
 
 export async function profile(env: Env, s: Session, p: Record<string, string>): Promise<Response> {
@@ -79,7 +94,9 @@ export async function profile(env: Env, s: Session, p: Record<string, string>): 
   const isFollowing = s.userId
     ? await env.DB.prepare("SELECT 1 AS x FROM follows WHERE follower_id=? AND followee_id=?").bind(s.userId, uid).first()
     : null;
+  const ownerId = await getOwnerId(env);
   return json({ user: u, posts: posts.results ?? [], products: products.results ?? [], services: services.results ?? [],
     conversation_id: conv?.id ?? null, is_self: isSelf,
-    followers_count: followers?.c ?? 0, following_count: following?.c ?? 0, is_following: !!isFollowing, founding });
+    followers_count: followers?.c ?? 0, following_count: following?.c ?? 0, is_following: !!isFollowing, founding,
+    is_owner: ownerId === uid });
 }
