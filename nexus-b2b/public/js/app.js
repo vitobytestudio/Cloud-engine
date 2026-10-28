@@ -31,6 +31,7 @@ async function route() {
   else if (page === "search") { setActive(""); await renderSearch(view); }
   else if (page === "notifications") { setActive(""); await renderNotifications(view); }
   else if (page === "analytics") { setActive(""); await renderAnalytics(view); }
+  else if (page === "post") { setActive(""); await renderPost(view, param); }
   else { setActive("feed"); await renderFeed(view); }
 }
 
@@ -95,3 +96,5 @@ window.addEventListener("hashchange", route);
     if (el) el.textContent = x.data.online ?? "—";
   }); }, 60000);
 })();
+
+import { renderPost } from "./views/post.js";

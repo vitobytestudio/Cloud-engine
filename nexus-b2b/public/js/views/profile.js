@@ -63,7 +63,7 @@ export async function renderProfile(view, username) {
     if (tab === "reels") {
       body.innerHTML = (r.data.posts ?? []).length
         ? `<div class="grid3">${(r.data.posts ?? []).map((p) => `
-            <a href="#/feed" data-post="${p.id}">
+            <a href="#/post/${p.id}">
               <img src="${p.thumbnail_url || "/media/poster1.jpg"}" loading="lazy" alt="" />
               <span class="pv">${fmtN(p.views_count)} · ${t("cat_" + p.category_tag)}</span>
             </a>`).join("")}</div>`

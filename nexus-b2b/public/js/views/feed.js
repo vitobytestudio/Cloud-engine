@@ -11,6 +11,19 @@ let observer = null;
 let viewedOnce = new Set();
 const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch {} };
 
+let activeVid = null;
+let soundOn = localStorage.getItem("nx_sound") === "1";
+function applySound() {
+  document.querySelectorAll(".reel video, .post-hero video").forEach((v) => { v.muted = !soundOn; });
+  document.querySelectorAll(".snd-btn").forEach((b) => b.classList.toggle("off", !soundOn));
+}
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem("nx_sound", soundOn ? "1" : "0");
+  applySound();
+  buzz(8);
+}
+
 export async function renderFeed(view) {
   viewedOnce = new Set();
   view.innerHTML = `
@@ -165,8 +178,9 @@ function reelEl(p) {
   el.dataset.id = p.id;
   const why = { boost: "why_boost", sector: "why_sector", fresh: "why_fresh", top: "why_top" }[p.reason] ?? "why_top";
   el.innerHTML = `
-    <video src="${p.playback_url}" poster="${p.thumbnail_url}" loop muted playsinline preload="${p.reason === "boost" ? "auto" : "metadata"}"></video>
+    <video src="${p.playback_url}" poster="${p.thumbnail_url}" loop muted playsinline preload="none" disablepictureinpicture decoding="async"></video>
     <div class="shade"></div>
+    <button class="snd-btn ${soundOn ? "" : "off"}" data-act="sound" aria-label="sound"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path class="snd-on" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="snd-on" d="M18.2 6a9 9 0 0 1 0 12"/><path class="snd-off" d="m16 9.5 5 5m0-5-5 5"/></svg></button>
     ${p.is_boosted ? `<span class="boost-ribbon">${t("why_boost")}</span>` : ""}
     <div class="reel-meta">
       <div class="who-row">
@@ -179,7 +193,7 @@ function reelEl(p) {
           <div class="who-sub">${p.company_name || p.username} · <span class="n-views">${fmtN(p.views_count)}</span> ${t("views")}</div>
         </div>
       </div>
-      <div class="reel-title">${p.title}</div>
+      <a class="reel-title" href="#/post/${p.id}">${p.title}</a>
       ${p.description ? `<div class="reel-desc">${p.description}</div>` : ""}
       <div class="reel-tags">
         <span class="chip cat">${t("cat_" + p.category_tag)}</span>
@@ -229,10 +243,10 @@ function reelEl(p) {
     lastTap = now;
     clearTimeout(singleT);
     singleT = setTimeout(() => {
-      vid.muted = !vid.muted;
+      toggleSound();
       const pill = document.createElement("div");
-      pill.className = "mute-pill";
-      pill.textContent = vid.muted ? "🔇" : "🔊";
+      pill.className = "mute-pill" + (soundOn ? "" : " off");
+      pill.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6.5 8.5H3v7h3.5L11 19V5Z"/><path class="snd-on" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="snd-off" d="m16 9.5 5 5m0-5-5 5"/></svg>`;
       el.appendChild(pill);
       setTimeout(() => pill.remove(), 950);
     }, 330);
@@ -270,6 +284,7 @@ function likeOn(el, p, force) {
 }
 
 async function act(el, p, act_) {
+  if (act_ === "sound") return toggleSound();
   if (act_ === "boost") return openBoost(p, () => loadReels(true));
   if (act_ === "share") {
     const { shareLink } = await import("./profile.js");
@@ -328,15 +343,27 @@ function setupObserver() {
         const v = en.target.querySelector("video");
         const id = en.target.dataset.id;
         if (en.intersectionRatio > 0.6) {
-          if ((localStorage.getItem("nx_autoplay") ?? "on") === "on") v?.play().catch(() => {});
+          // مشغّل واحد نشط فقط = سلاسة كاملة وبطارية أقل
+          wrap.querySelectorAll(".reel.active").forEach((x) => x.classList.remove("active"));
+          en.target.classList.add("active");
+          if (activeVid && activeVid !== v) activeVid.pause();
+          activeVid = v;
+          if (v) {
+            if (v.preload !== "auto") v.preload = "auto";
+            v.muted = !soundOn;
+            if ((localStorage.getItem("nx_autoplay") ?? "on") === "on") v.play().catch(() => {});
+          }
           if (!viewedOnce.has(id)) {
             viewedOnce.add(id);
             setTimeout(() => { if (document.contains(en.target)) api.post(`/api/posts/${id}/view`); }, 3000);
           }
-          // تحميل مسبق للمقطع التالي = صفر انتظار عند التمرير
+          // تحميل مسبق للمقطع التالي فقط = صفر انتظار بلا ثقل
           const nxt = en.target.nextElementSibling?.querySelector("video");
           if (nxt && nxt.preload !== "auto") nxt.preload = "auto";
-        } else v?.pause();
+        } else {
+          en.target.classList.remove("active");
+          v?.pause();
+        }
       }
     },
     { root: wrap, threshold: [0, 0.6] }
