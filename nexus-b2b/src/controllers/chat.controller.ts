@@ -2,6 +2,7 @@
 import type { Env, Session } from "../env";
 import { notify as pushNotify } from "./features.controller";
 import { rateLimit } from "../lib/rate";
+import { onVisitorMessage } from "./bot.controller";
 
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -52,7 +53,9 @@ export async function messages(env: Env, s: Session, p: Record<string, string>):
     .first<{ participant_one: string; participant_two: string }>();
   if (!c || (c.participant_one !== s.userId && c.participant_two !== s.userId)) return json({ error: "forbidden" }, 403);
   const rows = await env.DB.prepare(
-    `SELECT m.*, u.username, u.full_name, u.avatar_color FROM messages m JOIN users u ON u.id=m.sender_id
+    `SELECT m.*, u.username, u.full_name, u.avatar_color, (bm.message_id IS NOT NULL) AS via_bot
+     FROM messages m JOIN users u ON u.id=m.sender_id
+     LEFT JOIN bot_messages bm ON bm.message_id=m.id
      WHERE m.conversation_id=? ORDER BY m.created_at ASC LIMIT 200`
   ).bind(p.id).all();
   return json({ items: rows.results ?? [], me: s.userId });
@@ -86,7 +89,14 @@ export async function send(req: Request, env: Env, s: Session, p: Record<string,
     "SELECT m.*, u.username, u.full_name, u.avatar_color FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.id=?"
   ).bind(id).first();
   await notify(env, p.id, { t: "msg", message: full });
-  return json({ ok: true, message: full }, 201);
+  // ——— v0.10-B: بوت الطرف الآخر يرد فوراً على زوّار صفحته (جاهز عند المفتاح) ———
+  if (type === "TEXT" && partner !== s.userId) {
+    await onVisitorMessage(env, p.id, partner, s.userId, content);
+  }
+  const full2 = await env.DB.prepare(
+    "SELECT m.*, u.username, u.full_name, u.avatar_color FROM messages m JOIN users u ON u.id=m.sender_id WHERE m.id=?"
+  ).bind(id).first();
+  return json({ ok: true, message: full2 }, 201);
 }
 
 export async function dealAction(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {

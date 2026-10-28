@@ -1,5 +1,6 @@
 // ——— الفيد V2: تفاعل تفاؤلي فوري، ازدواج النقر = إعجاب، تحميل مسبق، نبض لمسي ———
 import { api, state, toast, fmtN, confirmSheet } from "../api.js";
+import { badgeFor } from "../lib/badges.js";
 import { t } from "../i18n.js";
 import { openBoost } from "./boost.js";
 import { requireAuth } from "./authsheet.js";
@@ -144,7 +145,7 @@ function storyViewer(groups, gi) {
         <div class="story-progress">${grp.items.map((_, j) => `<i class="${j < item ? "done" : ""}"><b></b></i>`).join("")}</div>
         <div class="story-head">
           <span class="who-avatar" style="background:url(/api/avatar/${grp.user.username}) center/cover, ${grp.user.avatar_color};width:34px;height:34px;font-size:13px">${(grp.user.full_name ?? "?")[0]}</span>
-          <b style="font-size:13px">${grp.user.full_name}</b>
+          <b style="font-size:13px">${grp.user.full_name}</b>${badgeFor(grp.user)}
           ${grp.mine ? `<button class="st-del" id="st-del" aria-label="${t("del_story")}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 .7 12.2A1.8 1.8 0 0 0 9.5 21h5a1.8 1.8 0 0 0 1.8-1.8L17 7"/></svg></button>` : ""}
         </div>
         <div class="story-caption">${st.caption ?? ""}</div>
@@ -207,7 +208,7 @@ function reelEl(p) {
   const el = document.createElement("section");
   el.className = "reel";
   el.dataset.id = p.id;
-  const why = { boost: "why_boost", sector: "why_sector", fresh: "why_fresh", top: "why_top" }[p.reason] ?? "why_top";
+  const why = { boost: "why_boost", sector: "why_sector", fresh: "why_fresh", top: "why_top", owner: "why_owner" }[p.reason] ?? "why_top";
   el.innerHTML = `
     <video src="${p.playback_url}" poster="${p.thumbnail_url}" loop muted playsinline preload="none" disablepictureinpicture decoding="async"></video>
     <div class="shade"></div>
@@ -218,7 +219,7 @@ function reelEl(p) {
         <a class="who-avatar" style="background:url(/api/avatar/${p.username}) center/cover, ${p.avatar_color}" href="#/profile/${p.username}">${(p.full_name ?? "?").trim()[0]}</a>
         <div>
           <div class="who-name">
-            <a href="#/profile/${p.username}">${p.full_name}</a>
+            <a href="#/profile/${p.username}">${p.full_name}</a>${badgeFor(p)}
             <span class="badge ${p.badge_tier}">${p.badge_tier === "FREE" ? (p.sector || "").slice(0, 3) : ""}</span>
           </div>
           <div class="who-sub">${p.company_name || p.username} · <span class="n-views">${fmtN(p.views_count)}</span> ${t("views")}</div>

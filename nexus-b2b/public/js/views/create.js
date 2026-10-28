@@ -1,6 +1,7 @@
 // ——— قائمة الإنشاء: ستوري أو ريلز أو منشور — مسارات سريعة بلا انتظار ———
 import { api, toast, xhrUpload } from "../api.js";
 import { compressVideo, progressSheet } from "../lib/media.js";
+import { giftSheet } from "../lib/gift.js";
 import { t } from "../i18n.js";
 import { requireAuth } from "./authsheet.js";
 
@@ -100,6 +101,7 @@ export async function openCreateSheet(preset = "") {
           const mid = await upload(f, "POST");
           if (!mid) { root.innerHTML = ""; return; }
           const r = await api.post("/api/posts", { title, category_tag: "SHOWCASE", media_id: mid, media_kind: "IMAGE" });
+          if (r.ok && r.data.gift_granted) setTimeout(giftSheet, 700);
           root.innerHTML = "";
           if (r.ok && r.data.id) { toast(t("post_posted")); location.hash = `#/post/${r.data.id}`; }
           else toast(t("err_generic"));

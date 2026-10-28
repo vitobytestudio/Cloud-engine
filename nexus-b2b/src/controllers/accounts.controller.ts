@@ -10,6 +10,7 @@ const COLORS = ["#E5A93C", "#10B981", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6"
 
 export async function updateTier(req: Request, env: Env, s: Session): Promise<Response> {
   if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
+  if (env.ENVIRONMENT === "production") return json({ error: "use_subscribe" }, 403); // v0.10: الاشتراك هو الطريق الوحيد
   const b = (await req.json().catch(() => ({}))) as { tier?: string };
   if (!b.tier || !TIERS.includes(b.tier)) return json({ error: "invalid_tier" }, 400);
   await env.DB.prepare("UPDATE users SET badge_tier=? WHERE id=?").bind(b.tier, s.userId).run();

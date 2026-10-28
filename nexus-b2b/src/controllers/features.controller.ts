@@ -71,7 +71,9 @@ export async function search(req: Request, env: Env): Promise<Response> {
   const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
   const ph = (n: number) => `?${n}`;
   const usersSql = `SELECT username,full_name,sector,badge_tier,avatar_color,company_name,reputation_score,country_code,(vat_number != '') AS vat_ok FROM users ${where}
-     ORDER BY CASE badge_tier WHEN 'ENTERPRISE_GOLD' THEN 0 WHEN 'MERCHANT_EMERALD' THEN 1 WHEN 'PRO_TALENT' THEN 2 ELSE 3 END, reputation_score DESC
+     ORDER BY CASE WHEN id=(SELECT value FROM app_config WHERE key='owner_user_id') THEN -1
+        WHEN badge_tier='ENTERPRISE_GOLD' THEN 0 WHEN badge_tier='MERCHANT_EMERALD' THEN 1 WHEN badge_tier='PRO_TALENT' THEN 2 ELSE 3 END,
+     reputation_score DESC
      LIMIT 12`;
   const users = await env.DB.prepare(usersSql).bind(...binds).all();
   const posts = await env.DB.prepare(

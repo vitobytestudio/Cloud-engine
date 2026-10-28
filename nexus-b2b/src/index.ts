@@ -11,6 +11,12 @@ import * as chat from "./controllers/chat.controller";
 import * as boost from "./controllers/boost.controller";
 import * as accounts from "./controllers/accounts.controller";
 import * as features from "./controllers/features.controller";
+import * as subscribe from "./controllers/subscribe.controller";
+import * as bot from "./controllers/bot.controller";
+import * as supporters from "./controllers/supporters.controller";
+import { enforce, recordViolation } from "./lib/security";
+import { getOwnerId, isDev } from "./lib/tiers";
+import { runDaily } from "./lib/cron";
 import { ChatRoom } from "./durable-objects/ChatRoom";
 
 export { ChatRoom };
@@ -20,8 +26,8 @@ type Handler = (req: Request, env: Env, s: Session, p: Params) => Promise<Respon
 
 const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?: boolean; limit?: [number, number] }> = [
   { m: "GET",    pat: "/api/me",                        h: (r, e, s) => auth.me(e, s) },
-  { m: "POST",   pat: "/api/auth/register",             h: auth.register,           limit: [5, 3600] },
-  { m: "POST",   pat: "/api/auth/login",                h: auth.login,              limit: [8, 900] },
+  { m: "POST",   pat: "/api/auth/register",             h: auth.register,           limit: [12, 3600] },
+  { m: "POST",   pat: "/api/auth/login",                h: auth.login,              limit: [30, 900] },
   { m: "POST",   pat: "/api/auth/demo-login",           h: auth.demoLogin,          limit: [20, 3600] },
   { m: "POST",   pat: "/api/auth/logout",               h: auth.logout,             csrf: true },
   { m: "POST",   pat: "/api/account/tier",              h: accounts.updateTier,     auth: true, csrf: true, limit: [15, 3600] },
@@ -50,7 +56,7 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "POST",   pat: "/api/samples/:id",               h: features.requestSample,  auth: true, csrf: true, limit: [20, 3600] },
   { m: "POST",   pat: "/api/samples/action/:id",        h: features.sampleAction,   auth: true, csrf: true, limit: [30, 3600] },
   { m: "GET",    pat: "/api/feed",                      h: feed.feed },
-  { m: "POST",   pat: "/api/posts",                     h: profiles.createPost,     auth: true, csrf: true, limit: [3, 3600] },
+  { m: "POST",   pat: "/api/posts",                     h: profiles.createPost,     auth: true, csrf: true, limit: [6, 3600] },
   { m: "GET",    pat: "/api/posts/:id",                 h: (r, e, s, p) => feed.postDetail(r, e, s, p) },
   { m: "DELETE", pat: "/api/posts/:id",                 h: (r, e, s, p) => feed.deletePost(r, e, s, p), auth: true, csrf: true, limit: [20, 3600] },
   { m: "GET",    pat: "/api/gallery",                   h: (r, e, s) => feed.gallery(r, e, s) },
@@ -75,6 +81,19 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "GET",    pat: "/api/wallet",                    h: (r, e, s) => boost.wallet(e, s), auth: true },
   { m: "POST",   pat: "/api/presence",                  h: presence,                limit: [120, 60] },
   { m: "GET",    pat: "/api/presence",                  h: presenceCount },
+  // ——— v0.10-B: النمو والسيادة ———
+  { m: "POST",   pat: "/api/subscribe",                 h: subscribe.subscribe,     auth: true, csrf: true, limit: [10, 3600] },
+  { m: "GET",    pat: "/api/subscription",              h: subscribe.subStatus,     auth: true },
+  { m: "POST",   pat: "/api/subscribe/cancel",          h: subscribe.cancel,        auth: true, csrf: true, limit: [5, 3600] },
+  { m: "GET",    pat: "/api/supporters",                h: (r, e) => supporters.list(r, e) },
+  { m: "GET",    pat: "/api/bot/offers",                h: (r, e, s) => bot.offers(r, e, s), auth: true },
+  { m: "POST",   pat: "/api/bot/offers/:id/approve",    h: (r, e, s, p) => bot.approve(r, e, s, p), auth: true, csrf: true, limit: [30, 3600] },
+  { m: "POST",   pat: "/api/bot/offers/:id/decline",    h: (r, e, s, p) => bot.decline(r, e, s, p), auth: true, csrf: true, limit: [30, 3600] },
+  { m: "GET",    pat: "/api/bot/settings",              h: (r, e, s) => bot.getSettings(r, e, s), auth: true },
+  { m: "PUT",    pat: "/api/bot/settings",              h: (r, e, s) => bot.putSettings(r, e, s), auth: true, csrf: true, limit: [10, 3600] },
+  { m: "POST",   pat: "/api/security/cron",             h: (r, e, s) => subscribe.cron(r, e, s), auth: true, csrf: true, limit: [6, 3600] },
+  { m: "POST",   pat: "/api/security/lock",             h: (r, e, s) => subscribe.lock(r, e, s), auth: true, csrf: true, limit: [10, 3600] },
+  { m: "GET",    pat: "/api/security/events",           h: (r, e, s) => subscribe.events(r, e, s), auth: true },
 ];
 
 function match(pat: string, path: string): Params | null {
@@ -100,6 +119,10 @@ async function presenceCount(_req: Request, env: Env): Promise<Response> {
 }
 
 export default {
+  // ——— v0.10-B: الحكّامة اليومية (إستشفاء حقيقي) ———
+  async scheduled(_event: unknown, env: Env, _ctx: unknown): Promise<void> {
+    await runDaily(env, {});
+  },
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
@@ -121,18 +144,30 @@ export default {
         const sd = await getSessionData(env, cookies["nx_s"] ?? null);
         const s: Session = { token: cookies["nx_s"] ?? null, csrf: sd?.csrf ?? null, userId: sd?.userId ?? null };
 
+        // ——— v0.10-B: بوابة محرك التهديد (قفل/حجب/تباطؤ) ———
+        const gk = s.userId ? `u:${s.userId}` : `ip:${clientIp(req)}`;
+        const blocked = await enforce(env, gk);
+        if (blocked) return blocked;
+
         if (r.auth && !s.userId) return json({ error: "auth_required" }, 401);
         if (r.csrf && s.token) {
           const hdr = req.headers.get("x-csrf") ?? "";
-          if (!s.csrf || hdr !== s.csrf) return json({ error: "csrf" }, 403);
+          if (!s.csrf || hdr !== s.csrf) {
+            await recordViolation(env, gk, "csrf", 1);
+            return json({ error: "csrf" }, 403);
+          }
         }
         if (r.limit) {
           const key = `${r.pat}:${s.userId ?? clientIp(req)}`;
-          if (!(await rateLimit(env, key, r.limit[0], r.limit[1]))) return json({ error: "too_many" }, 429);
+          if (!(await rateLimit(env, key, r.limit[0], r.limit[1]))) {
+            await recordViolation(env, gk, "rate", 1);
+            return json({ error: "too_many" }, 429);
+          }
         }
         try {
           return await r.h(req, env, s, params);
         } catch (e) {
+          console.error("API_ERR", r.pat, (e as Error)?.message ?? e);
           return json({ error: "server_error" }, 500);
         }
       }

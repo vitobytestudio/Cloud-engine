@@ -45,7 +45,7 @@ export function openBoost(post, onDone) {
             </button>`).join("")}
         </div>
         <div class="roi-line" id="roi"></div>
-        <div class="pay-note">${t("vat_excl_note")} ${t("invoice_note")}</div>
+        <div class="pay-note">${t("vat_excl_note")} ${t("invoice_note")}<br />${t("gift_no_invoice")}</div>
         ${state.user?.badge_tier === "ENTERPRISE_GOLD" ? `<div class="pay-note">${t("boost_gold_note")}</div>` : ""}
         <div style="display:flex;gap:9px;margin-top:14px">
           <button class="cta" id="b-go">${t("buy_boost")}</button>

@@ -90,6 +90,34 @@ export async function renderSettings(view) {
 
   view.querySelector("#edit-profile-row")?.addEventListener("click", () => openProfileEditor(() => renderSettings(view)));
 
+  // ——— v0.10-B: قيادة الوكيل الآلي بسقوف (الذهبية فقط) ———
+  if (state.user?.badge_tier === "ENTERPRISE_GOLD") {
+    const rs = await api.get("/api/bot/settings");
+    const stt = rs.data.settings ?? {};
+    view.insertAdjacentHTML("beforeend", `
+      <section class="set-card" id="ap-card">
+        <h3>${t("ap_title")}</h3>
+        <p class="sub">${t("ap_sub")} · ${t("ap_used")}: ${rs.data.used_today ?? 0}/150</p>
+        <div class="set-row"><span>${t("ap_toggle")}</span><button class="sw ${stt.autopilot ? "on" : ""}" id="ap-on"></button></div>
+        <div class="ap-fields">
+          <label>${t("ap_price")}<input id="ap-price" type="number" min="0" step="10" value="${Math.round((stt.max_price_cents ?? 0) / 100)}" /></label>
+          <label>${t("ap_days")}<input id="ap-days" type="number" min="0" max="180" value="${stt.max_days ?? 0}" /></label>
+          <label>${t("ap_revs")}<input id="ap-revs" type="number" min="0" max="10" value="${stt.max_revisions ?? 0}" /></label>
+        </div>
+        <button class="cta ghost" id="ap-save">${t("ap_save")}</button>
+      </section>`);
+    view.querySelector("#ap-on")?.addEventListener("click", (e) => e.currentTarget.classList.toggle("on"));
+    view.querySelector("#ap-save")?.addEventListener("click", async () => {
+      const rr = await api.put("/api/bot/settings", {
+        autopilot: view.querySelector("#ap-on").classList.contains("on"),
+        max_price_cents: Math.round((parseFloat(view.querySelector("#ap-price").value) || 0) * 100),
+        max_days: parseInt(view.querySelector("#ap-days").value) || 0,
+        max_revisions: parseInt(view.querySelector("#ap-revs").value) || 0,
+      });
+      if (rr.ok) toast(t("set_saved")); else toast(t("err_generic"));
+    });
+  }
+
   view.querySelector("#clear-btn")?.addEventListener("click", () => { localStorage.clear(); location.reload(); });
 
   view.querySelector("#logout-btn")?.addEventListener("click", async () => {
