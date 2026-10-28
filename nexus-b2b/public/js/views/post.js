@@ -33,8 +33,9 @@ export async function renderPost(view, id) {
         <div class="minw0"><h2 class="pv-h2">${p.title}</h2><div class="sub">${t("cat_" + p.category_tag)}${p.is_boosted ? " · " + t("why_boost") : ""}</div></div>
       </div>
       <div class="post-hero">
-        <video src="${p.playback_url}" poster="${p.thumbnail_url}" loop playsinline preload="auto" disablepictureinpicture decoding="async"></video>
-        <button class="snd-btn ${soundOn ? "" : "off"}" id="pv-snd" aria-label="sound">${sndSvg}</button>
+        ${p.media_kind === "IMAGE"
+          ? `<img src="${p.playback_url}" alt="${p.title}" decoding="async" />`
+          : `<video src="${p.playback_url}" poster="${p.thumbnail_url}" loop playsinline preload="auto" disablepictureinpicture decoding="async"></video><button class="snd-btn ${soundOn ? "" : "off"}" id="pv-snd" aria-label="sound">${sndSvg}</button>`}
       </div>
       <div class="pv-author">
         <a class="who-avatar" style="background:url(/api/avatar/${p.username}) center/cover, ${p.avatar_color}" href="#/profile/${p.username}">${(p.full_name ?? "?").trim()[0]}</a>
@@ -62,8 +63,10 @@ export async function renderPost(view, id) {
     </div>`;
 
   const vid = view.querySelector(".post-hero video");
-  vid.muted = !soundOn;
-  vid?.play().catch(() => {});
+  if (vid) {
+    vid.muted = !soundOn;
+    vid.play().catch(() => {});
+  }
   view.querySelector("#pv-snd")?.addEventListener("click", () => {
     soundOn = !soundOn;
     localStorage.setItem("nx_sound", soundOn ? "1" : "0");

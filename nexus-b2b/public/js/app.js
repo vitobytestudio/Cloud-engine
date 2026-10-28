@@ -32,6 +32,7 @@ async function route() {
   else if (page === "notifications") { setActive(""); await renderNotifications(view); }
   else if (page === "analytics") { setActive(""); await renderAnalytics(view); }
   else if (page === "post") { setActive(""); await renderPost(view, param); }
+  else if (page === "posts") { setActive("posts"); await renderPostsPage(view); }
   else { setActive("feed"); await renderFeed(view); }
 }
 
@@ -56,6 +57,7 @@ document.addEventListener("state-changed", drawMe);
 setInterval(refreshNotifDot, 60000);
 
 document.getElementById("search-btn")?.addEventListener("click", () => (location.hash = "#/search"));
+document.getElementById("create-btn")?.addEventListener("click", () => openCreateSheet());
 document.getElementById("notif-btn")?.addEventListener("click", () => (location.hash = "#/notifications"));
 
 async function refreshNotifDot() {
@@ -98,3 +100,6 @@ window.addEventListener("hashchange", route);
 })();
 
 import { renderPost } from "./views/post.js";
+
+import { renderPostsPage } from "./views/photos.js";
+import { openCreateSheet } from "./views/create.js";

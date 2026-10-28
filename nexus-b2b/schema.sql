@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS posts (
     media_id TEXT DEFAULT '',
     playback_url TEXT NOT NULL,
     thumbnail_url TEXT DEFAULT '',
+    media_kind TEXT DEFAULT 'VIDEO',
     title TEXT NOT NULL,
     description TEXT DEFAULT '',
     category_tag TEXT CHECK(category_tag IN ('SHOWCASE','REVENUE_WIN','PRODUCT_DEMO','WORKFLOW_HACK','CASE_STUDY')) NOT NULL,

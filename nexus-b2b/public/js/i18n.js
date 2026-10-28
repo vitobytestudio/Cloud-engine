@@ -354,3 +354,38 @@ Object.assign(DICTS.fr, {
   post_title: "Publication", post_not_found: "Publication indisponible ou supprimée", post_yours: "Votre publication",
   contact_pub: "Contacter & demander une offre",
 });
+
+// ——— v0.9.0: حركة إنستغرام — إلحاق آمن ———
+Object.assign(DICTS.ar, {
+  nav_posts: "المنشورات", stories_empty: "لا ستوريات بعد",
+  gallery_title: "المنشورات والصور", gallery_sub: "أعمال ساكنة موثقة من الشبكة",
+  gallery_empty: "لا منشورات ساكنة بعد — كن أول من ينشر",
+  create_title: "إنشاء", create_sub: "اختر ما تريد نشره",
+  create_story: "ستوري", create_story_s: "يختفي بعد 24 ساعة — لقطات فورية من عملك",
+  create_reel: "ريلز", create_reel_s: "مقطع عمودي بالاستوديو — قص ونص وموسيقى",
+  create_post: "منشور بصورة", create_post_s: "صورة منتج أو عمل بعنوان موثق",
+  uploading: "جارٍ الرفع…", story_posted: "ستوريتك منشورة الآن", post_posted: "منشورك حي الآن",
+  post_ph: "مثال: تشكيلة الربيع — عرض الجملة", publish_now: "نشر الآن",
+});
+Object.assign(DICTS.en, {
+  nav_posts: "Posts", stories_empty: "No stories yet",
+  gallery_title: "Posts & Photos", gallery_sub: "Verified static work from the network",
+  gallery_empty: "No static posts yet — be the first to publish",
+  create_title: "Create", create_sub: "Choose what to publish",
+  create_story: "Story", create_story_s: "Vanishes in 24 hours — instant shots from your work",
+  create_reel: "Reel", create_reel_s: "Vertical clip in the Studio — trim, text, music",
+  create_post: "Photo post", create_post_s: "Product or work image with a verified title",
+  uploading: "Uploading…", story_posted: "Your story is live", post_posted: "Your post is live",
+  post_ph: "e.g. Spring collection — wholesale drop", publish_now: "Publish now",
+});
+Object.assign(DICTS.fr, {
+  nav_posts: "Publications", stories_empty: "Pas encore de stories",
+  gallery_title: "Publications & Photos", gallery_sub: "Travaux statiques vérifiés du réseau",
+  gallery_empty: "Pas encore de publications — soyez le premier",
+  create_title: "Créer", create_sub: "Choisissez ce que vous publiez",
+  create_story: "Story", create_story_s: "Disparaît en 24 h — instantanés de votre travail",
+  create_reel: "Reel", create_reel_s: "Clip vertical au Studio — coupe, texte, musique",
+  create_post: "Publication photo", create_post_s: "Image produit avec titre vérifié",
+  uploading: "Envoi…", story_posted: "Votre story est en ligne", post_posted: "Votre publication est en ligne",
+  post_ph: "ex. Collection printemps — offre de gros", publish_now: "Publier",
+});

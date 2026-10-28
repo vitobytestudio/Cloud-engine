@@ -52,6 +52,7 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "GET",    pat: "/api/feed",                      h: feed.feed },
   { m: "POST",   pat: "/api/posts",                     h: profiles.createPost,     auth: true, csrf: true, limit: [3, 3600] },
   { m: "GET",    pat: "/api/posts/:id",                 h: (r, e, s, p) => feed.postDetail(r, e, s, p) },
+  { m: "GET",    pat: "/api/gallery",                   h: (r, e, s) => feed.gallery(r, e, s) },
   { m: "POST",   pat: "/api/posts/:id/vote",            h: feed.vote,               auth: true, csrf: true, limit: [30, 60] },
   { m: "POST",   pat: "/api/posts/:id/save",            h: feed.save,               auth: true, csrf: true, limit: [30, 60] },
   { m: "POST",   pat: "/api/posts/:id/view",            h: feed.view,               limit: [120, 60] },
@@ -185,6 +186,9 @@ export default {
     h.set("x-frame-options", "DENY");
     h.set("referrer-policy", "strict-origin-when-cross-origin");
     h.set("permissions-policy", "camera=(self), microphone=(), geolocation=()");
+    const pn = new URL(req.url).pathname;
+    if (pn === "/" || pn === "/index.html" || pn === "/version.json") h.set("cache-control", "no-cache");
+    else if (/\.(js|css)$/.test(pn)) h.set("cache-control", "public, max-age=300, must-revalidate");
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
   },
 };
