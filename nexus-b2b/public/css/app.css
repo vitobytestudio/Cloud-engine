@@ -711,3 +711,34 @@ a.reel-title:hover { text-decoration: underline; text-decoration-color: var(--te
 .photos-head h2 { font-size: 16px; }
 .mini-btn2 { width: 34px; height: 34px; border-radius: 11px; background: var(--grad-brand); color: #04110b; border: none; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(16,185,129,.3); }
 .post-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+
+/* ============================================================
+   v0.10-A — سرعة الأندرويد + شريط الرفع + الحذف + إصلاح التداخل
+   ============================================================ */
+@media (max-width: 820px) {
+  #topbar, .backdrop, .stories-bar, .cat-chips, .pulse-bar, .pf-tabs, #bottom-nav,
+  .snd-btn, .mute-pill, .boost-ribbon, .cat-chip, .chip, .who-avatar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .create-btn, .mini-btn2, .save-pill, .snd-btn, .mute-pill { box-shadow: none !important; }
+  .reel video { will-change: auto !important; }
+}
+.create-sheet { max-height: 82dvh; overflow-y: auto; }
+.create-sheet .create-row { align-items: center; }
+.create-sheet .create-row .minw0 { flex: 1; min-width: 0; padding-inline-end: 4px; }
+.create-sheet .create-row .minw0 b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.create-sheet .create-row .minw0 small { white-space: normal; word-break: break-word; display: block; }
+.create-sheet .create-row > svg:last-child { flex-shrink: 0; }
+.cta.danger { background: linear-gradient(135deg, #EF4444, #B91C1C); color: #fff; }
+.rail-btn.del:active { color: #F87171; border-color: rgba(239,68,68,.4); }
+.grid3 .tile { position: relative; }
+.tile-del { position: absolute; top: 6px; inset-inline-end: 6px; width: 27px; height: 27px; border-radius: 9px; background: rgba(10,10,14,.74); border: 1px solid var(--border-strong); color: #F87171; display: grid; place-items: center; z-index: 3; }
+.st-del { margin-inline-start: auto; width: 34px; height: 34px; border-radius: 50%; background: rgba(10,10,14,.66); border: 1px solid var(--border-strong); color: #F87171; display: grid; place-items: center; }
+.up-progress { position: fixed; inset: 0; background: rgba(4,6,5,.8); z-index: 95; display: grid; place-items: center; }
+.up-box { width: min(320px, 86vw); background: #0d1210; border: 1px solid var(--border-strong); border-radius: 16px; padding: 18px; text-align: center; }
+.up-box b { display: block; font-size: 13.5px; margin-bottom: 12px; }
+.up-box .up-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.09); overflow: hidden; }
+.up-box .up-bar i { display: block; height: 100%; width: 0%; background: var(--grad-brand); border-radius: 99px; transition: width .25s ease; }
+.up-box small { display: block; margin-top: 8px; color: var(--text-faint); font-size: 12px; }

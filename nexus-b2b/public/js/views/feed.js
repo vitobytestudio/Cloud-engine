@@ -1,5 +1,5 @@
 // ——— الفيد V2: تفاعل تفاؤلي فوري، ازدواج النقر = إعجاب، تحميل مسبق، نبض لمسي ———
-import { api, state, toast, fmtN } from "../api.js";
+import { api, state, toast, fmtN, confirmSheet } from "../api.js";
 import { t } from "../i18n.js";
 import { openBoost } from "./boost.js";
 import { requireAuth } from "./authsheet.js";
@@ -47,8 +47,8 @@ export async function renderFeed(view) {
   loadStories();
   await loadReels(true);
   setupObserver();
-  heartbeat();
-  loadPulse();
+  setTimeout(heartbeat, 1500);
+  setTimeout(loadPulse, 900);
 }
 
 // ——— نبض الشبكة: حركة عالمية حية أعلى الفيد ———
@@ -94,13 +94,28 @@ function heartbeat() {
   });
 }
 
-async function loadStories() {
+// كاش ستوريات 60 ثانية — التنقل لا يعيد الجلب (سرعة الأندرويد)
+const storiesCache = { groups: null, at: 0 };
+export async function storiesBarData(force = false) {
+  if (!force && storiesCache.groups && Date.now() - storiesCache.at < 60000) return storiesCache.groups;
   const r = await api.get("/api/stories");
+  storiesCache.groups = r.data.groups ?? [];
+  storiesCache.at = Date.now();
+  return storiesCache.groups;
+}
+export function invalidateStories() { storiesCache.groups = null; storiesCache.at = 0; }
+
+async function loadStories() {
   const bar = document.getElementById("stories-bar");
   if (!bar) return;
+  const groups = await storiesBarData();
+  drawStoriesBar(bar, groups);
+}
+
+function drawStoriesBar(bar, groups) {
   bar.classList.remove("skeleton");
-  const groups = r.data.groups ?? [];
   bar.style.height = "";
+  if (!groups.length) { bar.innerHTML = `<div class="empty" style="padding:6px 2px">${t("stories_empty")}</div>`; return; }
   bar.innerHTML = groups
     .map(
       (g, i) => `
@@ -124,17 +139,19 @@ function storyViewer(groups, gi) {
     const st = grp.items[item];
     root.innerHTML = `
       <div class="story-viewer">
+
         <video src="${st.playback_url}" autoplay playsinline></video>
         <div class="story-progress">${grp.items.map((_, j) => `<i class="${j < item ? "done" : ""}"><b></b></i>`).join("")}</div>
         <div class="story-head">
           <span class="who-avatar" style="background:url(/api/avatar/${grp.user.username}) center/cover, ${grp.user.avatar_color};width:34px;height:34px;font-size:13px">${(grp.user.full_name ?? "?")[0]}</span>
           <b style="font-size:13px">${grp.user.full_name}</b>
+          ${grp.mine ? `<button class="st-del" id="st-del" aria-label="${t("del_story")}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 .7 12.2A1.8 1.8 0 0 0 9.5 21h5a1.8 1.8 0 0 0 1.8-1.8L17 7"/></svg></button>` : ""}
         </div>
         <div class="story-caption">${st.caption ?? ""}</div>
         <button class="story-close ghost-btn">${t("lang_name") === "العربية" ? "إغلاق" : "Close"}</button>
       </div>`;
     const cur = root.querySelector(".story-progress i b");
-    cur?.animate([{ width: "0%" }, { width: "100%" }], { duration: 8000, fill: "forwards" });
+    cur?.animate?.([{ width: "0%" }, { width: "100%" }], { duration: 8000, fill: "forwards" });
     api.post(`/api/stories/${st.id}/view`);
     const timer = setTimeout(next, 8000);
     function next() {
@@ -152,6 +169,20 @@ function storyViewer(groups, gi) {
   render();
 }
 export function openStoryViewer(group) { storyViewer([group], 0); }
+
+// تفويض عام لزر حذف الستوري داخل العارض
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest?.("#st-del");
+  if (!b) return;
+  const { confirmSheet } = await import("../api.js");
+  if (!(await confirmSheet(t("confirm_del"), t("confirm_del_s"), t("del_story")))) return;
+  const vid = b.closest(".story-viewer")?.querySelector("video")?.getAttribute("src") ?? "";
+  const id = (storiesCache.groups ?? []).flatMap((g) => g.items).find((x) => x.playback_url === vid)?.id;
+  if (!id) return;
+  const r2 = await api.del(`/api/stories/${id}`);
+  if (r2.ok) { invalidateStories(); document.getElementById("overlay-root").innerHTML = ""; toast(t("deleted_ok")); }
+  else toast(t("err_generic"));
+});
 
 async function loadReels(reset) {
   const wrap = document.getElementById("reels");
@@ -222,6 +253,10 @@ function reelEl(p) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2Z" stroke-linejoin="round"/></svg>
         <small>Boost</small>
       </button>`}
+      ${p.is_self ? `<button class="rail-btn del" data-act="del" aria-label="${t("del_btn")}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 .7 12.2A1.8 1.8 0 0 0 9.5 21h5a1.8 1.8 0 0 0 1.8-1.8L17 7"/></svg>
+        <small>${t("del_btn")}</small>
+      </button>` : ""}
     </div>`;
 
   const vid = el.querySelector("video");
@@ -285,6 +320,13 @@ function likeOn(el, p, force) {
 
 async function act(el, p, act_) {
   if (act_ === "sound") return toggleSound();
+  if (act_ === "del") {
+    if (!(await confirmSheet(t("confirm_del"), t("confirm_del_s"), t("del_btn")))) return;
+    const r2 = await api.del(`/api/posts/${p.id}`);
+    if (r2.ok) { el.remove(); toast(t("deleted_ok")); buzz(14); }
+    else toast(t("err_generic"));
+    return;
+  }
   if (act_ === "boost") return openBoost(p, () => loadReels(true));
   if (act_ === "share") {
     const { shareLink } = await import("./profile.js");

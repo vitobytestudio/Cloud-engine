@@ -389,3 +389,20 @@ Object.assign(DICTS.fr, {
   uploading: "Envoi…", story_posted: "Votre story est en ligne", post_posted: "Votre publication est en ligne",
   post_ph: "ex. Collection printemps — offre de gros", publish_now: "Publier",
 });
+
+// ——— v0.10-A: الرفع والحذف — إلحاق آمن ———
+Object.assign(DICTS.ar, {
+  preparing: "تهيئة الوسيط…", compressing: "ضغط الفيديو…", err_too_big: "الوسيط أكبر من الحد — سيُضغط تلقائياً أو اختر ملفاً أصغر",
+  del_btn: "حذف", del_post: "حذف المنشور", del_story: "حذف الستوري",
+  confirm_del: "حذف نهائي؟", confirm_del_s: "لا يمكن التراجع — سيُحذف المحتوى وإحصاءاته نهائياً", deleted_ok: "تم الحذف",
+});
+Object.assign(DICTS.en, {
+  preparing: "Preparing media…", compressing: "Compressing video…", err_too_big: "Media too large — it will compress or pick a smaller file",
+  del_btn: "Delete", del_post: "Delete post", del_story: "Delete story",
+  confirm_del: "Delete permanently?", confirm_del_s: "This cannot be undone — content and stats are removed", deleted_ok: "Deleted",
+});
+Object.assign(DICTS.fr, {
+  preparing: "Préparation du média…", compressing: "Compression de la vidéo…", err_too_big: "Média trop volumineux — compression auto ou fichier plus petit",
+  del_btn: "Supprimer", del_post: "Supprimer la publication", del_story: "Supprimer la story",
+  confirm_del: "Supprimer définitivement ?", confirm_del_s: "Irréversible — contenu et statistiques supprimés", deleted_ok: "Supprimé",
+});

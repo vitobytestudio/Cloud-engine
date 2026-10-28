@@ -1,5 +1,6 @@
 // ——— قائمة الإنشاء: ستوري أو ريلز أو منشور — مسارات سريعة بلا انتظار ———
-import { api, toast } from "../api.js";
+import { api, toast, xhrUpload } from "../api.js";
+import { compressVideo, progressSheet } from "../lib/media.js";
 import { t } from "../i18n.js";
 import { requireAuth } from "./authsheet.js";
 
@@ -33,11 +34,18 @@ export async function openCreateSheet(preset = "") {
     return inp;
   };
   const upload = async (file, purpose) => {
-    toast(t("uploading"));
+    const prg = progressSheet(t("preparing"));
+    if (String(file.type || "").startsWith("video/")) {
+      prg.label(t("compressing"));
+      file = await compressVideo(file, (p) => prg.set(p));
+    }
+    prg.label(t("uploading"));
+    prg.set(0);
     const init = await api.post("/api/stream/direct-upload", { purpose, bytes: file.size, content_type: file.type || "application/octet-stream" });
-    if (!init.ok || !init.data.media_id) return toast(t("err_generic"));
-    const put = await fetch(`/api/stream/upload/${init.data.media_id}`, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
-    if (!put.ok) return toast(t("err_generic"));
+    if (!init.ok || !init.data.media_id) { prg.done(); toast(init.data?.error === "size_invalid" ? t("err_too_big") : t("err_generic")); return null; }
+    const put = await xhrUpload(init.data.upload_url, file, (p) => prg.set(p));
+    prg.done();
+    if (!put.ok) { toast(put.status === 413 ? t("err_too_big") : t("err_generic")); return null; }
     return init.data.media_id;
   };
 

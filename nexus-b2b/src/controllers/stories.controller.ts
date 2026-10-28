@@ -26,10 +26,11 @@ export async function list(env: Env, s: Session): Promise<Response> {
     ).bind(s.userId).all<{ story_id: string }>();
     viewed = new Set((v.results ?? []).map((r) => r.story_id));
   }
-  const groups = new Map<string, { user: Record<string, unknown>; items: Array<Record<string, unknown>>; all_seen: boolean }>();
+  const groups = new Map<string, { user: Record<string, unknown>; mine?: boolean; items: Array<Record<string, unknown>>; all_seen: boolean }>();
   for (const r of rows.results ?? []) {
     const g = groups.get(r.user_id) ?? {
       user: { id: r.user_id, username: r.username, full_name: r.full_name, badge_tier: r.badge_tier, avatar_color: r.avatar_color },
+      mine: r.user_id === s.userId,
       items: [], all_seen: true,
     };
     const seen = viewed.has(r.id);
@@ -44,6 +45,15 @@ export async function view(_req: Request, env: Env, s: Session, p: Record<string
   if (!s.userId) return json({ ok: false }, 200);
   await env.DB.prepare("INSERT OR IGNORE INTO story_views (story_id,viewer_id) VALUES (?,?)").bind(p.id, s.userId).run();
   return json({ ok: true });
+}
+
+export async function del(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
+  const own = await env.DB.prepare("SELECT id FROM stories WHERE id=? AND user_id=?").bind(p.id, s.userId).first();
+  if (!own) return json({ error: "not_found" }, 404);
+  await env.DB.prepare("DELETE FROM story_views WHERE story_id=?").bind(p.id).run();
+  await env.DB.prepare("DELETE FROM stories WHERE id=?").bind(p.id).run();
+  return json({ ok: true, deleted: true });
 }
 
 export async function create(req: Request, env: Env, s: Session): Promise<Response> {
