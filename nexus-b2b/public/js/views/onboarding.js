@@ -6,6 +6,7 @@ const SECTORS = [
   { id: "FOUNDER", cls: "#E5A93C", k: "who_founder", s: "who_founder_s" },
   { id: "MERCHANT", cls: "#10B981", k: "who_merchant", s: "who_merchant_s" },
   { id: "FREELANCER", cls: "#3B82F6", k: "who_freelancer", s: "who_freelancer_s" },
+  { id: "BUYER", cls: "#8B5CF6", k: "who_buyer", s: "who_buyer_s" },
 ];
 
 export function showOnboarding(onDone) {
@@ -25,13 +26,12 @@ export function showOnboarding(onDone) {
         <div class="onb-cards">
           ${SECTORS.map((s) => `
             <button class="onb-card" data-sector="${s.id}">
-              <span class="ic" style="background:${s.cls}">${{ FOUNDER: "N", MERCHANT: "M", FREELANCER: "F" }[s.id]}</span>
+              <span class="ic" style="background:${s.cls}">${{ FOUNDER: "N", MERCHANT: "M", FREELANCER: "F", BUYER: "B" }[s.id]}</span>
               <span><b>${t(s.k)}</b><small>${t(s.s)}</small></span>
             </button>`).join("")}
         </div>
         <div class="onb-actions">
           <button class="cta" id="onb-next" style="visibility:hidden">${t("next")}</button>
-          <button class="cta ghost" id="onb-demo">${t("try_demo")}</button>
           <button class="linklike" id="onb-guest">${t("enter_guest")}</button>
         </div>
         <div class="demo-note">${t("demo_disclosure")} · <a href="/legal.html" target="_blank" rel="noopener">${t("legal_link")}</a></div>`;
@@ -49,7 +49,6 @@ export function showOnboarding(onDone) {
         step = 1; render();
       });
       el.querySelector("#onb-guest").addEventListener("click", () => { localStorage.setItem("nx_seen", "1"); finish(); });
-      el.querySelector("#onb-demo").addEventListener("click", demoLogin);
     } else if (step === 1) {
       el.innerHTML = `
         <div class="kicker">${t("onb_kicker")}</div>
@@ -82,7 +81,6 @@ export function showOnboarding(onDone) {
         <div class="field"><label>${t("auth_pass")}</label><input id="r-pass" type="password" dir="ltr" /></div>
         <div class="onb-actions">
           <button class="cta" id="r-go">${t("register")}</button>
-          <button class="cta ghost" id="r-demo">${t("try_demo")}</button>
         </div>`;
       el.querySelector("#r-go").addEventListener("click", async () => {
         const body = {
@@ -98,7 +96,6 @@ export function showOnboarding(onDone) {
         await refreshMe();
         finish();
       });
-      el.querySelector("#r-demo").addEventListener("click", demoLogin);
     }
     root.appendChild(el);
     const dots = document.createElement("div");
@@ -108,14 +105,6 @@ export function showOnboarding(onDone) {
     el.appendChild(dots);
   }
 
-  async function demoLogin() {
-    const r = await api.post("/api/auth/demo-login");
-    if (!r.ok) return toast(t("err_generic"));
-    localStorage.setItem("nx_seen", "1");
-    await refreshMe();
-    toast(lang === "ar" ? "مرحباً أمين — أنت داخل الحساب التجريبي" : lang === "en" ? "Welcome Amin — demo account active" : "Bienvenue Amin — compte démo actif");
-    finish();
-  }
 
   async function refreshMe() {
     const r = await api.get("/api/me");

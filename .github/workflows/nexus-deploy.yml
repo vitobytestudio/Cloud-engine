@@ -75,10 +75,12 @@ jobs:
           npx wrangler d1 execute DB --remote -y --file seed.sql
           npx wrangler d1 execute DB --remote -y --file refresh.sql
           # ترحيلات متسامحة: أعمدة الجولات الأحدث على قاعدة قائمة
-          for M in "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1" "ALTER TABLE users ADD COLUMN avatar_data TEXT DEFAULT ''"; do
+          for M in "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1" "ALTER TABLE users ADD COLUMN avatar_data TEXT DEFAULT ''" "ALTER TABLE messages ADD COLUMN deal_delivery_days INTEGER" "ALTER TABLE messages ADD COLUMN deal_revisions INTEGER" "ALTER TABLE messages ADD COLUMN deal_vat TEXT DEFAULT ''" "ALTER TABLE boosts ADD COLUMN target_sector TEXT DEFAULT ''" "ALTER TABLE boosts ADD COLUMN target_country TEXT DEFAULT ''"; do
             npx wrangler d1 execute DB --remote -y --command "$M" >/dev/null 2>&1 || true
           done
-          echo "::notice::الترحيلات مكتملة"
+          # ترحيل بنية users (قطاع المشتري) — يحفظ كل البيانات
+          npx wrangler d1 execute DB --remote -y --file migrations.sql
+          echo "::notice::الترحيلات مكتملة — بيانات المستخدمين محفوظة"
 
       - name: رمز التمليح (سر المخزن إن وجد وإلا توليد لهذه الجولة — لا يُطبع)
         working-directory: nexus-b2b

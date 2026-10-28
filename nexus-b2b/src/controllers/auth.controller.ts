@@ -7,7 +7,7 @@ import { mailReady, sendMail, mailShell, htmlPage } from "../lib/mail";
 const json = (obj: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8", ...headers } });
 
-const SECTORS = new Set(["FOUNDER", "MERCHANT", "FREELANCER"]);
+const SECTORS = new Set(["FOUNDER", "MERCHANT", "FREELANCER", "BUYER"]);
 
 export async function me(env: Env, s: Session): Promise<Response> {
   if (!s.userId) return json({ user: null });
@@ -161,8 +161,6 @@ export async function googleCallback(req: Request, env: Env): Promise<Response> 
     await env.DB.prepare(
       "INSERT INTO users (id,email,password_hash,username,full_name,sector,country_code,avatar_color,bio,company_name,verified) VALUES (?,?,?,?,?,?,?,?,?,?,1)"
     ).bind(uid, email, "!oauth", uname, (gj.name ?? uname).slice(0, 80), "FOUNDER", "", colors[Math.floor(Math.random() * colors.length)], "", "").run();
-    await env.DB.prepare("INSERT OR IGNORE INTO transactions (id,user_id,kind,amount_cents,ref_type,ref_id,provider_event_id) VALUES (?,?,?,?,?,?,?)")
-      .bind(`tx-${crypto.randomUUID().slice(0, 10)}`, uid, "DEPOSIT", 2000, "WELCOME", uid, `welcome_${uid}`).run();
   }
   const { token } = await createSession(env, uid);
   return new Response(null, { status: 302, headers: { location: "/#/feed", "set-cookie": sessionCookie(token, env) } });

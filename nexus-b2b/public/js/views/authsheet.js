@@ -56,7 +56,6 @@ async function render(mode) {
           <button class="cta" id="sh-login">${t("login")}</button>
           <button class="linklike" id="sh-forgot">${t("forgot_pass")}</button>
         </div>
-        <button class="cta ghost" id="sh-demo">${t("try_demo")}</button>
       </div>`;
   } else if (mode === "register") {
     html = `
@@ -73,6 +72,7 @@ async function render(mode) {
             <option value="FOUNDER" ${sector === "FOUNDER" ? "selected" : ""}>${t("who_founder")}</option>
             <option value="MERCHANT" ${sector === "MERCHANT" ? "selected" : ""}>${t("who_merchant")}</option>
             <option value="FREELANCER" ${sector === "FREELANCER" ? "selected" : ""}>${t("who_freelancer")}</option>
+            <option value="BUYER" ${sector === "BUYER" ? "selected" : ""}>${t("who_buyer")}</option>
           </select>
           <button class="cta" id="sh-register">${t("register")}</button>
           <p class="hint">${t("terms_note")} <a href="/legal.html" target="_blank" rel="noopener">${t("legal_link")}</a></p>
@@ -105,7 +105,7 @@ async function render(mode) {
 
   root.querySelector("#bk")?.addEventListener("click", () => close(false));
   root.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => render("choice")));
-  root.querySelectorAll(".sh-tab").forEach((b) => b.addEventListener("click", () => render(b.dataset.m)));
+  root.querySelectorAll(".sh-tab").forEach((b) => b.addEventListener("click", () => render(b.dataset.m === "login" ? "choice" : b.dataset.m)));
 
   // مؤشر قوة كلمة المرور
   root.querySelector("#r-pass")?.addEventListener("input", (e) => {
@@ -120,11 +120,6 @@ async function render(mode) {
     bar.className = sc >= 3 ? "ok" : sc >= 2 ? "mid" : "weak";
   });
 
-  root.querySelector("#sh-demo")?.addEventListener("click", async () => {
-    const r = await api.post("/api/auth/demo-login");
-    if (!r.ok) return toast(t("err_generic"));
-    await afterAuth();
-  });
   root.querySelector("#sh-login")?.addEventListener("click", async () => {
     const r = await api.post("/api/auth/login", {
       email: root.querySelector("#l-email").value.trim(),

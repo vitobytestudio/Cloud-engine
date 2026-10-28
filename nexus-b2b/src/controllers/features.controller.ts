@@ -50,20 +50,36 @@ export async function analytics(req: Request, env: Env, s: Session): Promise<Res
 export async function search(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 40);
-  if (q.length < 2) return json({ users: [], posts: [] });
-  const like = `%${q.replace(/[%_]/g, "")}%`;
-  const users = await env.DB.prepare(
-    `SELECT username,full_name,sector,badge_tier,avatar_color,company_name,reputation_score FROM users
-     WHERE full_name LIKE ?1 OR username LIKE ?1 OR company_name LIKE ?1
+  const country = (url.searchParams.get("country") ?? "").toUpperCase().slice(0, 2).replace(/[^A-Z]/g, "");
+  const rateMin = Math.max(0, Math.round(parseFloat(url.searchParams.get("rate_min") ?? "0") * 100)) || 0;
+  const rateMax = Math.max(0, Math.round(parseFloat(url.searchParams.get("rate_max") ?? "0") * 100)) || 0;
+  const vatOnly = url.searchParams.get("vat") === "1";
+  const sectorF = url.searchParams.get("sector") ?? "";
+  const conds: string[] = [];
+  const binds: (string | number)[] = [];
+  if (q.length >= 2) {
+    conds.push("(full_name LIKE ?1 OR username LIKE ?1 OR company_name LIKE ?1 OR bio LIKE ?1)");
+    binds.push(`%${q.replace(/[%_]/g, "")}%`);
+  }
+  if (country) { conds.push(`country_code = ?${binds.length + 1}`); binds.push(country); }
+  if (rateMin) { conds.push(`EXISTS (SELECT 1 FROM freelancer_services fs WHERE fs.user_id = users.id AND fs.starting_price_cents >= ?${binds.length + 1})`); binds.push(rateMin); }
+  if (rateMax) { conds.push(`EXISTS (SELECT 1 FROM freelancer_services fs2 WHERE fs2.user_id = users.id AND fs2.starting_price_cents <= ?${binds.length + 1})`); binds.push(rateMax); }
+  if (vatOnly) { conds.push("vat_number != ''"); }
+  if (["FOUNDER", "MERCHANT", "FREELANCER", "BUYER"].includes(sectorF)) { conds.push(`sector = ?${binds.length + 1}`); binds.push(sectorF); }
+  const hasQ = q.length >= 2;
+  if (!hasQ && !conds.length) return json({ users: [], posts: [] });
+  const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+  const ph = (n: number) => `?${n}`;
+  const usersSql = `SELECT username,full_name,sector,badge_tier,avatar_color,company_name,reputation_score,country_code,(vat_number != '') AS vat_ok FROM users ${where}
      ORDER BY CASE badge_tier WHEN 'ENTERPRISE_GOLD' THEN 0 WHEN 'MERCHANT_EMERALD' THEN 1 WHEN 'PRO_TALENT' THEN 2 ELSE 3 END, reputation_score DESC
-     LIMIT 8`
-  ).bind(like).all();
+     LIMIT 12`;
+  const users = await env.DB.prepare(usersSql).bind(...binds).all();
   const posts = await env.DB.prepare(
     `SELECT p.id,p.title,p.thumbnail_url,p.views_count,p.likes_count,p.category_tag,u.username,u.full_name,u.badge_tier
      FROM posts p JOIN users u ON u.id=p.user_id
      WHERE (p.title LIKE ?1 OR p.description LIKE ?1) AND p.quarantined=0
      ORDER BY p.is_boosted DESC, p.views_count DESC LIMIT 10`
-  ).bind(like).all();
+  ).bind(`%${q.replace(/[%_]/g, "")}%`).all();
   return json({ users: users.results ?? [], posts: posts.results ?? [] });
 }
 

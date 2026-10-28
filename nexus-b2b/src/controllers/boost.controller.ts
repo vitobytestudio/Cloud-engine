@@ -2,6 +2,7 @@
 import type { Env, Session } from "../env";
 import { BOOST_CATALOG } from "../lib/pricing";
 import { rateLimit } from "../lib/rate";
+import { sendMail, mailShell } from "../lib/mail";
 
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -37,7 +38,7 @@ export async function checkout(req: Request, env: Env, s: Session): Promise<Resp
     await env.DB.prepare(
       `INSERT INTO boosts (id,user_id,post_id,tier_name,target_sector,target_country,impressions_bought,amount_paid_cents,status)
        VALUES (?,?,?,?,?,?,?,?, 'ACTIVE')`
-    ).bind(boostId, s.userId, post.id, tier.name, (b.target_sector ?? "").slice(0, 12), (b.target_country ?? "").slice(0, 2).toUpperCase(),
+    ).bind(boostId, s.userId, post.id, tier.name, (b.target_sector ?? "").slice(0, 16), (b.target_country ?? "").slice(0, 12).toUpperCase(),
       tier.impressions, price).run();
     if (price > 0) {
       await env.DB.prepare(
@@ -50,7 +51,44 @@ export async function checkout(req: Request, env: Env, s: Session): Promise<Resp
   await env.DB.prepare(
     `UPDATE posts SET is_boosted=1, boost_expires_at=datetime('now', '+${tier.hours} hours') WHERE id=?`
   ).bind(post.id).run();
-  return json({ ok: true, boost_id: boostId, tier: tier.name, expires_in_hours: tier.hours, free_grant: freeGrant }, 201);
+  if (price > 0) {
+    const buyer = await env.DB.prepare("SELECT email, full_name, company_name, vat_number, country_code FROM users WHERE id=?").bind(s.userId)
+      .first<{ email: string; full_name: string; company_name: string; vat_number: string; country_code: string }>();
+    if (buyer) {
+      const origin = new URL(req.url).origin;
+      const link = `${origin}/invoice/${boostId}`;
+      void sendMail(env, buyer.email, "فاتورتك الضريبية — NEXUS B2B",
+        mailShell(`فاتورة ${tier.name}`, "فوترتك الضريبية الرسمية جاهزة — قابلة للطباعة PDF من متصفح شركتك.", "عرض الفاتورة", link));
+    }
+  }
+  return json({ ok: true, boost_id: boostId, tier: tier.name, expires_in_hours: tier.hours, free_grant: freeGrant, invoice_id: boostId }, 201);
+}
+
+// ——— الفاتورة الضريبية (مالك التعزيز فقط) — إعلان مبدئي حسب أوروبا ———
+export async function invoice(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  if (!s.userId) return json({ error: "auth_required" }, 401);
+  const b = await env.DB.prepare(
+    `SELECT b.id, b.tier_name, b.amount_paid_cents, b.created_at, u.full_name, u.email, u.company_name, u.vat_number, u.country_code
+     FROM boosts b JOIN users u ON u.id=b.user_id WHERE b.id=? AND b.user_id=?`
+  ).bind(p.id, s.userId).first<{ id: string; tier_name: string; amount_paid_cents: number; created_at: string; full_name: string; email: string; company_name: string; vat_number: string; country_code: string }>();
+  if (!b) return json({ error: "not_found" }, 404);
+  const net = (b.amount_paid_cents / 100).toFixed(2);
+  const vatNote = b.country_code && !["DE", "AT", "CH", "FR"].includes(b.country_code)
+    ? "Reverse Charge — VAT to be accounted for by the recipient (Art. 196 EU VAT Directive)"
+    : "VAT excluded — prices exclude VAT where applicable";
+  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Invoice ${b.id}</title>
+<style>body{font-family:sans-serif;color:#111;max-width:720px;margin:40px auto;padding:0 20px}h1{font-size:20px}.box{border:1px solid #ddd;border-radius:10px;padding:18px;margin:14px 0}table{width:100%;border-collapse:collapse;margin-top:10px}td,th{padding:10px;border-bottom:1px solid #eee;text-align:left}button{background:#10b981;color:#03130c;border:0;padding:12px 26px;border-radius:10px;font-weight:800;cursor:pointer}@media print{button{display:none}}</style></head>
+<body>
+<h1>NEXUS B2B — VitoByte Studio</h1>
+<div class="box"><b>Tax Invoice</b><br/>Invoice №: INV-${esc(b.id.toUpperCase())}<br/>Date: ${esc(b.created_at.slice(0, 10))}<br/>
+Billed to: ${esc(b.company_name || b.full_name)} (${esc(b.email)})${b.vat_number ? `<br/>VAT ID: ${esc(b.vat_number)}` : ""}${b.country_code ? `<br/>Country: ${esc(b.country_code)}` : ""}</div>
+<table><tr><th>Service</th><th>Amount</th></tr>
+<tr><td>${esc(b.tier_name)} — Targeted Lead Reach (B2B advertising)</td><td>€${net}</td></tr>
+<tr><td colspan="2" style="color:#555;font-size:13px">${vatNote} · Provider VAT ID: to be assigned upon entity registration</td></tr></table>
+<button onclick="window.print()">🖨 Print / Save as PDF</button>
+</body></html>`;
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
 export async function wallet(env: Env, s: Session): Promise<Response> {
