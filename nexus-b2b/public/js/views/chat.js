@@ -122,18 +122,28 @@ function msgEl(m, me) {
     return `<div class="msg ${mine ? "me" : ""}">${esc(m.content)}<span class="t">${m.username ?? ""}</span></div>`;
   }
   const canAct = !mine && m.deal_status === "PENDING";
+  const vatLbl = m.deal_vat === "incl" ? t("vat_incl") : m.deal_vat === "reverse" ? t("vat_reverse") : t("vat_excl");
+  const details = `
+    <details class="deal-details">
+      <summary>${t("deal_terms")}</summary>
+      <div><span>${t("deal_delivery")}</span><b>${t("est_prefix")}: ${m.deal_delivery_days ?? 5} ${t("biz_days")}</b></div>
+      <div><span>${t("deal_revisions")}</span><b>${t("includes_prefix")}: ${m.deal_revisions ?? 2} ${t("rev_rounds")}</b></div>
+      <div><span>${t("deal_vat_lbl")}</span><b>${fmtEur(m.deal_amount_cents)} ${vatLbl}</b></div>
+    </details>`;
   return `
     <div class="msg ${mine ? "me" : ""}" id="deal-${m.id}" style="max-width:92%">
       <div class="deal-card" style="background:${mine ? "rgba(59,130,246,0.12)" : "var(--bg-elev)"}">
-        <div class="dt">${m.message_type === "PROPOSAL" ? t("send_proposal") : m.message_type === "SAMPLE_ORDER" ? t("send_invoice") : "PAYMENT"}</div>
+        <div class="dt">${m.message_type === "PROPOSAL" ? t("proposal_lbl") : m.message_type === "SAMPLE_ORDER" ? t("send_invoice") : "PAYMENT"}</div>
         <b>${esc(m.deal_title ?? "")}</b>
         <div class="amt">${fmtEur(m.deal_amount_cents)}</div>
-        <span class="deal-status ${m.deal_status}">${t("deal_" + m.deal_status)}</span>
+        ${mine && m.deal_status === "PENDING" ? `<span class="deal-status PENDING">${t("proposal_sent")}</span>` : `<span class="deal-status ${m.deal_status}">${t("deal_" + m.deal_status)}</span>`}
+        ${details}
         ${m.deal_status === "ESCROWED" ? `<div class="hint" style="margin-top:8px">${t("escrow_note")}</div>` : ""}
         ${canAct ? `
           <div class="deal-actions">
-            <button class="cta" data-deal="accept" data-id="${m.id}">${t("accept_escrow")}</button>
+            <button class="cta" data-deal="accept" data-id="${m.id}">${t("accept_pay")}</button>
             <button class="cta ghost" data-deal="decline" data-id="${m.id}">${t("decline")}</button>
+            <button class="linklike" data-deal="request_edit" data-id="${m.id}">${t("request_edit")}</button>
           </div>` : ""}
       </div>
     </div>`;
@@ -144,9 +154,20 @@ function dealModal(convId, me, msgs) {
   root.innerHTML = `
     <div class="backdrop" id="bk"></div>
     <div class="sheet">
-      <h3>${t("send_proposal")}</h3>
+      <h3>${t("proposal_lbl")}</h3>
+      <p class="sub">${t("proposal_legal_note")}</p>
       <div class="field"><label>${t("deal_title")}</label><input id="d-title" type="text" /></div>
       <div class="field"><label>${t("deal_amount")}</label><input id="d-amt" type="number" dir="ltr" min="1" /></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label>${t("deal_delivery")}</label><input id="d-days" type="number" min="1" max="180" value="5" /></div>
+        <div class="field" style="flex:1"><label>${t("deal_revisions")}</label><input id="d-rev" type="number" min="0" max="10" value="2" /></div>
+      </div>
+      <div class="field"><label>${t("deal_vat_lbl")}</label>
+        <select id="d-vat">
+          <option value="excl">${t("vat_excl")}</option>
+          <option value="incl">${t("vat_incl")}</option>
+          <option value="reverse">${t("vat_reverse")}</option>
+        </select></div>
       <div style="display:flex;gap:9px;margin-top:14px">
         <button class="cta" id="d-go">${t("send")}</button>
         <button class="cta ghost" id="d-x">${t("decline")}</button>
@@ -158,7 +179,12 @@ function dealModal(convId, me, msgs) {
     const title = root.querySelector("#d-title").value.trim();
     const amt = Math.round(parseFloat(root.querySelector("#d-amt").value || "0") * 100);
     if (!title || !amt) return;
-    const r = await api.post(`/api/chat/${convId}/messages`, { type: "PROPOSAL", deal_title: title, deal_amount_cents: amt });
+    const r = await api.post(`/api/chat/${convId}/messages`, {
+      type: "PROPOSAL", deal_title: title, deal_amount_cents: amt,
+      deal_delivery_days: parseInt(root.querySelector("#d-days").value || "5"),
+      deal_revisions: parseInt(root.querySelector("#d-rev").value || "2"),
+      deal_vat: root.querySelector("#d-vat").value,
+    });
     root.innerHTML = "";
     if (r.ok && r.data.message) {
       msgs.insertAdjacentHTML("beforeend", msgEl(r.data.message, me));

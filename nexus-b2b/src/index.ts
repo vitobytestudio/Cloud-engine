@@ -62,11 +62,12 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "PUT",    pat: "/api/stream/upload/:media_id",   h: stream.uploadPut,        auth: true, limit: [12, 3600] },
   { m: "GET",    pat: "/media/:id",                     h: (r, e, s, p) => stream.mediaGet(e, p.id) },
   { m: "GET",    pat: "/api/chat/conversations",        h: (r, e, s) => chat.conversations(e, s), auth: true },
-  { m: "POST",   pat: "/api/chat/open/:username",       h: chat.openWith,           auth: true, csrf: true, limit: [5, 86400] },
+  { m: "POST",   pat: "/api/chat/open/:username",       h: (r, e, s, p) => chat.openWith(r, e, s, p), auth: true, csrf: true, limit: [5, 86400] },
   { m: "GET",    pat: "/api/chat/:id/messages",         h: (r, e, s, p) => chat.messages(e, s, p), auth: true },
   { m: "POST",   pat: "/api/chat/:id/messages",         h: chat.send,               auth: true, csrf: true, limit: [30, 60] },
   { m: "POST",   pat: "/api/deal/:id/action",           h: chat.dealAction,         auth: true, csrf: true, limit: [20, 60] },
   { m: "POST",   pat: "/api/boost/checkout",            h: boost.checkout,          auth: true, csrf: true, limit: [5, 3600] },
+  { m: "GET",    pat: "/invoice/:id",                   h: (r, e, s, p) => boost.invoice(r, e, s, p), auth: true },
   { m: "GET",    pat: "/api/wallet",                    h: (r, e, s) => boost.wallet(e, s), auth: true },
   { m: "POST",   pat: "/api/presence",                  h: presence,                limit: [120, 60] },
   { m: "GET",    pat: "/api/presence",                  h: presenceCount },
@@ -136,6 +137,13 @@ export default {
 
 
     const surl = new URL(req.url);
+    const mInv = surl.pathname.match(/^\/invoice\/([a-zA-Z0-9-]+)$/);
+    if (mInv) {
+      const cookies = parseCookies(req);
+      const sd = await getSessionData(env, cookies["nx_s"] ?? null);
+      if (!sd?.userId) return json({ error: "auth_required" }, 401);
+      return boost.invoice(req, env, { token: cookies["nx_s"] ?? null, csrf: sd.csrf ?? null, userId: sd.userId }, { id: mInv[1] });
+    }
     const mUser = surl.pathname.match(/^\/p\/([a-zA-Z0-9_.-]+)$/);
     const mPost = surl.pathname.match(/^\/post\/([a-zA-Z0-9-]+)$/);
     if (mUser || mPost) {

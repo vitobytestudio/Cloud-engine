@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     username TEXT UNIQUE NOT NULL,
     full_name TEXT NOT NULL,
-    sector TEXT CHECK(sector IN ('FOUNDER','MERCHANT','FREELANCER')) NOT NULL,
+    sector TEXT CHECK(sector IN ('FOUNDER','MERCHANT','FREELANCER','BUYER')) NOT NULL,
     badge_tier TEXT CHECK(badge_tier IN ('FREE','PRO_TALENT','MERCHANT_EMERALD','ENTERPRISE_GOLD')) DEFAULT 'FREE',
     country_code TEXT DEFAULT '',
     locale TEXT DEFAULT 'ar',
@@ -101,6 +101,9 @@ CREATE TABLE IF NOT EXISTS messages (
     message_type TEXT CHECK(message_type IN ('TEXT','PROPOSAL','PAYMENT_REQUEST','SAMPLE_ORDER')) DEFAULT 'TEXT',
     deal_title TEXT DEFAULT '',
     deal_amount_cents INTEGER,
+    deal_delivery_days INTEGER,
+    deal_revisions INTEGER,
+    deal_vat TEXT DEFAULT '',
     deal_status TEXT CHECK(deal_status IN ('PENDING','ACCEPTED','ESCROWED','COMPLETED','DECLINED')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

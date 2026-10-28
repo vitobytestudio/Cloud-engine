@@ -72,7 +72,7 @@ document.getElementById("lang-btn").addEventListener("click", () => {
 window.addEventListener("hashchange", route);
 
 (async function init() {
-  setLang(localStorage.getItem("nx_lang") || "ar");
+  setLang(localStorage.getItem("nx_lang") || "en");
   // إقلاع فوري من الذاكرة المؤقتة — الشبكة تلحق في الخلفية
   try {
     const cached = JSON.parse(localStorage.getItem("nx_me") || "null");

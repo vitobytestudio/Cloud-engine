@@ -27,14 +27,15 @@ export async function conversations(env: Env, s: Session): Promise<Response> {
   return json({ items: rows.results ?? [] });
 }
 
-export async function openWith(req: Request, env: Env, s: Session): Promise<Response> {
+export async function openWith(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
   if (!s.userId) return json({ error: "auth_required" }, 401);
   // قيمة الباقة: المجاني 5 محادثات/يوم · الباقات المدفوعة 25/يوم
   const tierRow = await env.DB.prepare("SELECT badge_tier FROM users WHERE id=?").bind(s.userId).first<{ badge_tier: string }>();
   const convCap = tierRow && tierRow.badge_tier !== "FREE" ? 25 : 5;
   if (!(await rateLimit(env, `conv:${s.userId}`, convCap, 86400))) return json({ error: "daily_limit" }, 429);
   const b = (await req.json().catch(() => ({}))) as { username?: string };
-  const other = await env.DB.prepare("SELECT id FROM users WHERE username=?").bind(b.username ?? "").first<{ id: string }>();
+  const uname = (p.username ?? b.username ?? "").trim();
+  const other = await env.DB.prepare("SELECT id FROM users WHERE username=?").bind(uname).first<{ id: string }>();
   if (!other || other.id === s.userId) return json({ error: "not_found" }, 404);
   const a = s.userId < other.id ? s.userId : other.id;
   const z = s.userId < other.id ? other.id : s.userId;
@@ -63,17 +64,20 @@ export async function send(req: Request, env: Env, s: Session, p: Record<string,
   const c = await env.DB.prepare("SELECT participant_one, participant_two FROM conversations WHERE id=?").bind(p.id)
     .first<{ participant_one: string; participant_two: string }>();
   if (!c || (c.participant_one !== s.userId && c.participant_two !== s.userId)) return json({ error: "forbidden" }, 403);
-  const b = (await req.json().catch(() => ({}))) as { content?: string; type?: string; deal_title?: string; deal_amount_cents?: number };
+  const b = (await req.json().catch(() => ({}))) as { content?: string; type?: string; deal_title?: string; deal_amount_cents?: number; deal_delivery_days?: number; deal_revisions?: number; deal_vat?: string };
   const type = ["TEXT", "PROPOSAL", "PAYMENT_REQUEST", "SAMPLE_ORDER"].includes(b.type ?? "") ? b.type! : "TEXT";
   const content = (b.content ?? "").slice(0, 1000);
   if (type === "TEXT" && !content.trim()) return json({ error: "empty" }, 400);
   const id = `m-${crypto.randomUUID().slice(0, 12)}`;
   await env.DB.prepare(
-    `INSERT INTO messages (id,conversation_id,sender_id,content,message_type,deal_title,deal_amount_cents,deal_status)
-     VALUES (?,?,?,?,?,?,?,?)`
+    `INSERT INTO messages (id,conversation_id,sender_id,content,message_type,deal_title,deal_amount_cents,deal_delivery_days,deal_revisions,deal_vat,deal_status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`
   ).bind(id, p.id, s.userId, content, type,
     type === "TEXT" ? "" : (b.deal_title ?? "").slice(0, 160),
     type === "TEXT" ? null : Math.max(0, Math.round(b.deal_amount_cents ?? 0)),
+    type === "TEXT" ? null : Math.min(180, Math.max(1, Math.round(b.deal_delivery_days ?? 5))),
+    type === "TEXT" ? null : Math.min(10, Math.max(0, Math.round(b.deal_revisions ?? 2))),
+    type === "TEXT" ? null : (b.deal_vat === "incl" ? "incl" : b.deal_vat === "reverse" ? "reverse" : "excl"),
     type === "TEXT" ? null : "PENDING").run();
   await env.DB.prepare("UPDATE conversations SET last_message_at=datetime('now') WHERE id=?").bind(p.id).run();
   const partner = c.participant_one === s.userId ? c.participant_two : c.participant_one;
@@ -95,6 +99,12 @@ export async function dealAction(req: Request, env: Env, s: Session, p: Record<s
   const isRecipient = s.userId !== m.sender_id;
   if (!isRecipient) return json({ error: "only_recipient" }, 403);
   if (m.deal_status !== "PENDING") return json({ error: "not_pending" }, 409);
+  if (b.action === "request_edit") {
+    // طلب تعديل: لا يغيّر الحالة — إشعار للمرسل بطلب المراجعة
+    const sender = m.sender_id;
+    await pushNotify(env, sender, s.userId, "deal_edit", "conversation", m.conversation_id);
+    return json({ ok: true, edit_requested: true });
+  }
   if (b.action === "decline") {
     await env.DB.prepare("UPDATE messages SET deal_status='DECLINED' WHERE id=?").bind(p.id).run();
   } else if (b.action === "accept") {

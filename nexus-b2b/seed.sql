@@ -64,3 +64,9 @@ INSERT OR IGNORE INTO notifications (id,user_id,actor_id,kind,ref_type,ref_id,cr
 
 INSERT OR IGNORE INTO follows (follower_id,followee_id) VALUES
 ('u-klaus','u-demo-amin'),('u-salma','u-demo-amin'),('u-omar','u-demo-amin'),('u-demo-amin','u-klaus');
+
+-- ——— v0.8: بيانات فلاتر البحث الحقيقية ———
+INSERT OR IGNORE INTO freelancer_services (id,user_id,service_title,starting_price_cents,rate_unit,delivery_days) VALUES
+('sv-klaus-1','u-klaus','B2B checkout audit & rebuild',9000,'PROJECT',10);
+UPDATE users SET vat_number='DE123456789' WHERE username='klaus' AND (vat_number IS NULL OR vat_number='');
+UPDATE posts SET title='Shopify migration case study — 3.2x checkout lift' WHERE id='p1';

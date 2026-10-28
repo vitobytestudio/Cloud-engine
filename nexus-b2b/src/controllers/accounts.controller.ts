@@ -28,7 +28,7 @@ export async function updateSector(req: Request, env: Env, s: Session): Promise<
 export async function updateProfile(req: Request, env: Env, s: Session): Promise<Response> {
   if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
   const b = (await req.json().catch(() => ({}))) as {
-    full_name?: string; bio?: string; company_name?: string; country_code?: string; portfolio_website?: string; avatar_color?: string;
+    full_name?: string; bio?: string; company_name?: string; country_code?: string; portfolio_website?: string; avatar_color?: string; vat_number?: string;
   };
   const name = (b.full_name ?? "").trim().slice(0, 60);
   if (!name) return json({ error: "invalid_name" }, 400);
@@ -38,11 +38,12 @@ export async function updateProfile(req: Request, env: Env, s: Session): Promise
   let site = (b.portfolio_website ?? "").trim().slice(0, 200);
   if (site && !/^https?:\/\//i.test(site)) site = "https://" + site;
   const color = COLORS.includes(b.avatar_color ?? "") ? b.avatar_color! : "#3B82F6";
+  const vat = (b.vat_number ?? "").trim().toUpperCase().slice(0, 20).replace(/[^A-Z0-9]/g, "");
   await env.DB.prepare(
-    "UPDATE users SET full_name=?, bio=?, company_name=?, country_code=?, portfolio_website=?, avatar_color=? WHERE id=?"
-  ).bind(name, bio, company, country, site, color, s.userId).run();
+    "UPDATE users SET full_name=?, bio=?, company_name=?, country_code=?, portfolio_website=?, avatar_color=?, vat_number=? WHERE id=?"
+  ).bind(name, bio, company, country, site, color, vat, s.userId).run();
   const u = await env.DB.prepare(
-    "SELECT username, full_name, bio, company_name, country_code, portfolio_website, avatar_color, sector, badge_tier FROM users WHERE id=?"
+    "SELECT username, full_name, bio, company_name, country_code, portfolio_website, avatar_color, sector, badge_tier, vat_number FROM users WHERE id=?"
   ).bind(s.userId).first();
   return json({ ok: true, user: u });
 }
