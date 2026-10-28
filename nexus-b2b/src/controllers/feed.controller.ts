@@ -46,9 +46,21 @@ export async function postDetail(req: Request, env: Env, s: Session, p: Record<s
   return json({ ...row, liked, saved, is_self: s.userId === row.user_id });
 }
 
+export async function deletePost(req: Request, env: Env, s: Session, p: Record<string, string>): Promise<Response> {
+  if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
+  const own = await env.DB.prepare("SELECT id FROM posts WHERE id=? AND user_id=?").bind(p.id, s.userId).first();
+  if (!own) return json({ error: "not_found" }, 404);
+  await env.DB.prepare("DELETE FROM post_votes WHERE post_id=?").bind(p.id).run();
+  await env.DB.prepare("DELETE FROM post_saves WHERE post_id=?").bind(p.id).run();
+  await env.DB.prepare("DELETE FROM boosts WHERE post_id=?").bind(p.id).run();
+  await env.DB.prepare("DELETE FROM post_stats_daily WHERE post_id=?").bind(p.id).run();
+  await env.DB.prepare("DELETE FROM posts WHERE id=?").bind(p.id).run();
+  return json({ ok: true, deleted: true });
+}
+
 export async function gallery(req: Request, env: Env, s: Session): Promise<Response> {
   const q = await env.DB.prepare(
-    `SELECT p.id, p.playback_url, p.thumbnail_url, p.title, p.category_tag, p.views_count, p.likes_count, p.created_at,
+    `SELECT p.id, p.user_id, p.playback_url, p.thumbnail_url, p.title, p.category_tag, p.views_count, p.likes_count, p.created_at,
             u.username, u.full_name, u.avatar_color, u.badge_tier
      FROM posts p JOIN users u ON u.id = p.user_id
      WHERE p.quarantined=0 AND p.media_kind='IMAGE'
@@ -89,6 +101,7 @@ export async function feed(req: Request, env: Env, s: Session): Promise<Response
   const all = (q.results ?? []).map((p) => ({
     ...p,
     boost_active: !!p.is_boosted && !!p.boost_expires_at && p.boost_expires_at > nowIso,
+    is_self: !!s.userId && s.userId === p.user_id,
   }));
 
   const organic = all.filter((p) => !p.boost_active).sort((a, b) => score(b, viewerSector) - score(a, viewerSector));

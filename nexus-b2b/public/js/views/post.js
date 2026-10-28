@@ -1,5 +1,5 @@
 // ——— صفحة المنشور المستقلة: مشغّد كامل بصوت، صاحب المنشور، إحصاءات وتفاعل حقيقي ———
-import { api, state, toast, fmtN } from "../api.js";
+import { api, state, toast, fmtN, confirmSheet } from "../api.js";
 import { t } from "../i18n.js";
 import { openBoost } from "./boost.js";
 import { requireAuth } from "./authsheet.js";
@@ -57,7 +57,7 @@ export async function renderPost(view, id) {
         <button class="rail-btn ${p.saved ? "on" : ""}" id="pv-save">${saveSvg}<small class="ns">${fmtN(p.saves_count)}</small></button>
         <button class="rail-btn" id="pv-share">${shareSvg}<small>${t("share")}</small></button>
         ${p.is_self
-          ? `<button class="rail-btn boost" id="pv-boost">${boostSvg}<small>Boost</small></button>`
+          ? `<button class="rail-btn boost" id="pv-boost">${boostSvg}<small>Boost</small></button><button class="rail-btn" id="pv-del" aria-label="${t("del_post")}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M9 7V5h6v2m-8 0 .7 12.2A1.8 1.8 0 0 0 9.5 21h5a1.8 1.8 0 0 0 1.8-1.8L17 7"/></svg><small>${t("del_post")}</small></button>`
           : `<button class="cta" id="pv-contact">${t("contact_pub")}</button>`}
       </div>
     </div>`;
@@ -117,6 +117,13 @@ export async function renderPost(view, id) {
   });
 
   view.querySelector("#pv-boost")?.addEventListener("click", () => openBoost(p, () => renderPost(view, id)));
+
+  view.querySelector("#pv-del")?.addEventListener("click", async () => {
+    if (!(await confirmSheet(t("confirm_del"), t("confirm_del_s"), t("del_post")))) return;
+    const r2 = await api.del(`/api/posts/${id}`);
+    if (r2.ok) { toast(t("deleted_ok")); location.hash = "#/profile"; }
+    else toast(t("err_generic"));
+  });
 
   view.querySelector("#pv-contact")?.addEventListener("click", async () => {
     if (!(await requireAuth())) return;

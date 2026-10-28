@@ -41,6 +41,24 @@ w.WebSocket = class { constructor() { this.readyState = 1; setTimeout(() => this
 w.navigator.vibrate = () => true;
 w.localStorage.clear();
 w.scrollTo = () => {};
+if (!w.URL.createObjectURL) w.URL.createObjectURL = () => "blob:jsdom";
+w.URL.revokeObjectURL = w.URL.revokeObjectURL || (() => {});
+w.XMLHttpRequest = class {
+  open(m, u) { this._m = m; this._u = String(u); this._h = {}; this.upload = {}; }
+  setRequestHeader(k, v) { this._h[k] = v; }
+  send(body) {
+    (async () => {
+      try {
+        const buf = body && typeof body.arrayBuffer === "function" ? await body.arrayBuffer() : body;
+        const total = buf?.byteLength ?? buf?.size ?? 0;
+        this.upload?.onprogress?.({ lengthComputable: true, loaded: total, total: total || 1 });
+        const res = await w.fetch(this._u, { method: this._m, headers: this._h, body: buf });
+        this.status = res.status;
+        this.onload?.();
+      } catch { this.status = 0; this.onerror?.(); }
+    })();
+  }
+};
 
 const $ = (s) => d.querySelector(s);
 const $$ = (s) => [...d.querySelectorAll(s)];
@@ -59,6 +77,9 @@ check("الإدماج يظهر لأول زيارة", $(".onb"));
 check("الإفصاح المؤسسي ظاهر في الإدماج", !!$(".demo-note"));
 check("لا أخطاء JS عند الإقلاع", errors.length === 0, errors.join(" | ").slice(0, 200));
 check("بطاقة المشتري (BUYER) ظاهرة بالإدماج", !!$('[data-sector=BUYER]'));
+let storiesFetches = 0;
+const origFetchA = w.fetch;
+w.fetch = function (u, o) { if (String(u).includes("/api/stories")) storiesFetches++; return origFetchA.call(this, u, o); };
 check("الإنجليزية افتراضية عند أول فتح (Deal Room)", ($("#bottom-nav a[data-nav=chat] span")?.textContent ?? "") === "Deal Room", $("#bottom-nav a[data-nav=chat] span")?.textContent);
 check("زر + موجود بالأعلى والاستوديو خارج شريط التنقل", !!$("#create-btn") && !$('#bottom-nav a[data-nav=studio]') && !!$('#bottom-nav a[data-nav=posts]'));
 
@@ -83,6 +104,7 @@ check("زر الصوت يفكّ الكتم (الصوت الأصلي يعمل)", 
 $("#create-btn")?.click();
 await sleep(400);
 check("قائمة + تعرض خياراتها الثلاثة", $$(".create-row").length === 3, `خيارات=${$$(".create-row").length}`);
+check("صفوف الإنشاء سليمة البنية (عنوان+وصف+سهم)", [...$$(".create-row")].every((r) => r.querySelector(".minw0 b") && r.querySelector(".minw0 small") && r.querySelector("svg:last-child")));
 $$(".create-row")[1]?.click();
 await sleep(700);
 check("خيار الريلز يمر ببوابة المصادقة للضيف", !!$(".sheet") && !/#\/studio/.test(w.location.hash), w.location.hash);
@@ -162,6 +184,7 @@ check("ازدواج النقر يُعجب فوراً (قلب)", likesAfter === l
 w.location.hash = "#/posts";
 await sleep(1400);
 check("صفحة المنشورات تفتح بستوريات أعلاها", !!$(".photos-page") && $$("#ph-stories .story-orb").length >= 1, `ستوريات=${$$("#ph-stories .story-orb").length}`);
+check("كاش الستوريات: تنقلات كثيرة بطلبات قليلة", storiesFetches <= 2, `طلبات=${storiesFetches}`);
 check("المعرض يبدأ فارغاً برسالة أنيقة", !!$("#ph-empty-add"));
 const im08 = await (await w.fetch("/api/stream/direct-upload", { method: "POST", headers: { "content-type": "application/json", "x-csrf": (await (await w.fetch("/api/me")).json()).csrf }, body: JSON.stringify({ purpose: "POST", bytes: 20480, content_type: "video/mp4" }) })).json();
 await w.fetch(`/api/stream/upload/${im08.media_id}`, { method: "PUT", headers: { "content-type": "video/mp4" }, body: new Uint8Array(20480).fill(7) });
@@ -358,6 +381,57 @@ check("مؤشرات ROI المتوقعة تتحدث مع الطبقة والاس
 check("ملاحظة الفاتورة بالبريد ظاهرة بالورقة", /invoice|facture|فاتورة/.test($(".sheet")?.textContent ?? ""));
 $("#b-x")?.click();
 await sleep(300);
+
+// ——— v0.10-A: الحذف النهائي + is_self ———
+const fdA = await (await w.fetch("/api/feed?limit=20")).json();
+const mineA = (fdA.items ?? []).find((x) => x.id === postId08);
+check("الفيد يعلّم منشوري is_self", !!mineA && mineA.is_self === true, String(mineA?.is_self));
+const csrfA = (await (await w.fetch("/api/me")).json()).csrf;
+const foeA = await w.fetch("/api/posts/p1", { method: "DELETE", headers: { "x-csrf": csrfA } });
+check("حذف منشور غيرك محجوب (404)", foeA.status === 404, String(foeA.status));
+w.location.hash = `#/post/${postId08}`;
+await sleep(1300);
+check("مالك المنشور يرى زر الحذف", !!$("#pv-del"));
+$("#pv-del")?.click();
+await sleep(400);
+check("ورقة تأكيد الحذف تظهر بالتحذير", !!$("#c-ok") && ($(".sheet")?.textContent ?? "").length > 10);
+$("#c-x")?.click();
+await sleep(300);
+check("إلغاء الحذف يبقي المنشور", !!$(".post-view"));
+$("#pv-del")?.click();
+await sleep(400);
+$("#c-ok")?.click();
+await sleep(1100);
+const goneA = await w.fetch(`/api/posts/${postId08}`);
+check("الحذف النهائي: المنشور لم يعد موجوداً (404)", goneA.status === 404, String(goneA.status));
+const goneQA = await (await w.fetch(`/api/posts/${postId08}`)).json();
+check("المعرض/الفيد يفقدانه تلقائياً", goneQA.error === "not_found");
+
+// ——— v0.10-A: نشر ستوري عبر الاستوديو (ضغط→تقدم→رفع) ثم حذفه ———
+w.location.hash = "#/studio";
+await sleep(1300);
+const stFileA = new w.File([new Uint8Array(20480).fill(4)], "clip.mp4", { type: "video/mp4" });
+Object.defineProperty($("#vid-file"), "files", { value: [stFileA], configurable: true });
+$("#vid-file").dispatchEvent(new w.Event("change", { bubbles: true }));
+await sleep(700);
+check("لوحة النشر تظهر بعد اختيار الملف", !!$("#s-go") && !!$("#mode"));
+[...$$("#mode button")].find((b) => b.dataset.m === "story")?.click();
+$("#s-cap").value = "لقطة آلية";
+$("#s-go")?.click();
+await sleep(3000);
+const stGA0 = await (await w.fetch("/api/stories")).json();
+check("إنشاء ستوري حقيقي عبر الاستوديو يعمل", (stGA0.groups ?? []).some((g) => g.user.username === "autofeader"), `مجموعات=${(stGA0.groups ?? []).length}`);
+const mineOrbA = [...$$("#ph-stories .story-orb")].find((b) => b.innerHTML.includes("avatar/autofeader"));
+check("كرة الستوري ظهرت لصاحبها بعد النشر", !!mineOrbA);
+mineOrbA?.click();
+await sleep(900);
+check("العارض يعرض زر حذف لستوري المالك", !!$("#st-del"));
+$("#st-del")?.click();
+await sleep(500);
+$("#c-ok")?.click();
+await sleep(1100);
+const stGA = await (await w.fetch("/api/stories")).json();
+check("الستوري حُذف نهائياً من الخادم", !(stGA.groups ?? []).some((g) => g.user.username === "autofeader"), `مجموعات=${(stGA.groups ?? []).length}`);
 
 // ——— v0.5: نبض الشبكة الحي ———
 await navClick("feed");

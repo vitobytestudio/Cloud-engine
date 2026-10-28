@@ -1,9 +1,11 @@
 // ——— استوديو NEXUS: محرر فيديو داخل المنصة (قصّ + نص + ستيكرز + موسيقى) ثم نشر ———
 // كل المعالجة في متصفح المستخدم: صفر خوادم، صفر مكتبات موسيقى (العضو يستورد ملفه الخاص)
-import { api, state, toast } from "../api.js";
+import { api, state, toast, xhrUpload } from "../api.js";
+import { compressVideo, progressSheet } from "../lib/media.js";
 import { t } from "../i18n.js";
 import { requireAuth } from "./authsheet.js";
 import { openBoost } from "./boost.js";
+import { invalidateStories } from "./feed.js";
 
 const CATS = ["PRODUCT_DEMO", "REVENUE_WIN", "WORKFLOW_HACK", "CASE_STUDY", "SHOWCASE"];
 const ARTS = ["GITHUB_REPO", "FIGMA_FILE", "STORE_LINK", "AUDIT_DOC", "CASE_METRIC"];
@@ -328,21 +330,22 @@ function openPublish(view, file) {
   view.querySelector("#s-go").addEventListener("click", async () => {
     const go = view.querySelector("#s-go");
     go.disabled = true;
-    go.textContent = t("uploading");
+    const prg = progressSheet(t("preparing"));
     const purpose = mode === "story" ? "STORY" : "POST";
-    const up = await api.post("/api/stream/direct-upload", { purpose, bytes: file.size, content_type: file.type || "video/webm" });
-    if (!up.ok) { go.disabled = false; go.textContent = t("publish"); return toast(t("err_generic")); }
-    const put = await fetch(up.data.upload_url, {
-      method: "PUT",
-      body: file,
-      headers: { "content-type": file.type || "video/webm", "x-csrf": state.csrf ?? "" },
-    });
-    if (!put.ok) { go.disabled = false; go.textContent = t("publish"); return toast(t("err_generic")); }
+    prg.label(t("compressing"));
+    const f = await compressVideo(file, (p) => prg.set(p));
+    prg.label(t("uploading"));
+    prg.set(0);
+    const up = await api.post("/api/stream/direct-upload", { purpose, bytes: f.size, content_type: f.type || "video/webm" });
+    if (!up.ok) { prg.done(); go.disabled = false; return toast(up.data?.error === "size_invalid" ? t("err_too_big") : t("err_generic")); }
+    const put = await xhrUpload(up.data.upload_url, f, (p) => prg.set(p));
+    if (!put.ok) { prg.done(); go.disabled = false; return toast(put.status === 413 ? t("err_too_big") : t("err_generic")); }
+    prg.done();
     const mediaId = up.data.media_id;
 
     if (mode === "story") {
       const r = await api.post("/api/stories", { media_id: mediaId, caption: view.querySelector("#s-cap").value.trim() });
-      if (r.ok) { toast(t("published")); location.hash = "#/feed"; return; }
+      if (r.ok) { invalidateStories(); toast(t("published")); location.hash = "#/posts"; return; }
     } else {
       const r = await api.post("/api/posts", {
         media_id: mediaId,
@@ -355,7 +358,7 @@ function openPublish(view, file) {
       });
       if (r.ok) {
         toast(t("published"));
-        openBoost({ id: r.data.id }, () => { location.hash = "#/feed"; setTimeout(() => location.reload(), 300); });
+        openBoost({ id: r.data.id }, () => { location.hash = "#/feed"; });
         return;
       }
     }
