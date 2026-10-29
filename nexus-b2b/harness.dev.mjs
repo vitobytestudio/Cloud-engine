@@ -741,6 +741,16 @@ $("#logout-btn")?.click();
 await sleep(1400);
 check("تسجيل الخروج يعيد الإدماج", !!$(".onb"));
 
+// ——— v0.11.1: ثغرات الريلز المُصلحة — خدمة الوسائط الساكنة والمدى والصور الرمزية ———
+const reelRes = await w.fetch("/media/reel1.mp4");
+check("الوسائط الساكنة تُخدم (كانت 404 — علة الريلز)", reelRes.status === 200 && (reelRes.headers.get("content-type") ?? "").startsWith("video/"), String(reelRes.status));
+const rangeRes = await w.fetch("/media/reel1.mp4", { headers: { range: "bytes=0-1023" } });
+check("مدى البايتات 206 للتشغيل السلس على كروم", rangeRes.status === 206 && (rangeRes.headers.get("content-range") ?? "").startsWith("bytes 0-1023/"), String(rangeRes.status));
+const avaRes = await w.fetch("/api/avatar/sup_77");
+check("الصور الرمزية بديل فوري بلا 404", avaRes.status === 200 && (avaRes.headers.get("content-type") ?? "").includes("svg"), String(avaRes.status));
+const audioTxt = await (await w.fetch("/media/reel1.mp4")).text();
+check("ريلز البذور تحمل مسار صوت (mp4a)", audioTxt.includes("mp4a"), "");
+
 // ——— الخلاصة ———
 const fails = results.filter((r) => !r.ok).length;
 console.log(`\n═══ النتيجة: ${results.length - fails}/${results.length} نجح — أخطاء JS الملتقطة: ${errors.length} ═══`);

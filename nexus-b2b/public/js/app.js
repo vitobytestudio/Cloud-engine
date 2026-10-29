@@ -23,6 +23,7 @@ async function route() {
   const h = location.hash || "#/feed";
   const [_, page, param] = h.split("/");
   document.getElementById("overlay-root").innerHTML = "";
+  window.scrollTo(0, 0); // ——— v0.11.1: كل صفحة تبدأ من أعلاها — لا شبح تمرير من الصفحة السابقة ———
   if (page === "feed" || !page) { setActive("feed"); await renderFeed(view); }
   else if (page === "studio") { setActive("studio"); await renderStudio(view); }
   else if (page === "chat") { setActive("chat"); await renderChat(view, param); }
