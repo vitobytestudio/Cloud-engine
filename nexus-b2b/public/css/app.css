@@ -168,7 +168,8 @@ img, video { display: block; max-width: 100%; }
 /* ——— الإدماج الأول (Onboarding) ——— */
 .onb {
   position: fixed; inset: 0; z-index: 100; background: var(--bg); max-width: 560px; margin: 0 auto;
-  display: flex; flex-direction: column; justify-content: center; padding: 30px 26px 50px; gap: 18px;
+  display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: max(34px, env(safe-area-inset-top)) 26px max(50px, env(safe-area-inset-bottom)); gap: 18px;
 }
 .onb .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; color: var(--emerald); }
 .onb h1 { font-size: 30px; font-weight: 700; line-height: 1.3; }
@@ -654,7 +655,6 @@ a.notif-row:active { background: var(--surface-strong); }
 .explore-chips button:active { transform: scale(.94); border-color: var(--emerald); color: var(--text); }
 .fchip { flex-shrink: 0; padding: 7px 13px; border-radius: 99px; background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.35); color: var(--emerald); font-size: 11.5px; font-weight: 700; }
 .fchip.x { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.35); color: #f87171; }
-.mini-btn { position: absolute; inset-inline-end: 9px; top: 50%; transform: translateY(-50%); background: var(--surface-strong); border: 1px solid var(--border-strong); border-radius: 9px; width: 30px; height: 30px; color: var(--text-dim); font-size: 14px; }
 
 
 /* ============================================================

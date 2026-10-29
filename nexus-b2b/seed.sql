@@ -73,7 +73,7 @@ UPDATE posts SET title='Shopify migration case study — 3.2x checkout lift' WHE
 
 -- ——— v0.10-B: حساب المالك (الأول عالمياً) + تقارير خبراء الأمن + داعمو NEXUS ———
 INSERT OR IGNORE INTO users (id,email,password_hash,username,full_name,sector,badge_tier,country_code,avatar_color,bio,reputation_score,company_name,verified,created_at) VALUES
-('u-vitobyte','owner@nexus.demo','!disabled','vitobyte','VitoByte Studio','FOUNDER','FREE','DZ','#E5A93C','الشبكة الأم — حساب المنصة الأول. نبني قنوات فرص حقيقية بين الشركات الأوروبية.',200,'VitoByte Studio',1,datetime('now','-300 days')),
+('u-vitobyte','owner@nexus.demo','pbkdf2$210000$7086661cf92c1a91b486781e1e01cbe2$UuonNBpYZWxnu7mgjof6mMN65hxwKhgAuqq6uxPR8VA=','vitobyte','VitoByte Studio','FOUNDER','FREE','DZ','#E5A93C','الشبكة الأم — حساب المنصة الأول. نبني قنوات فرص حقيقية بين الشركات الأوروبية.',200,'VitoByte Studio',1,datetime('now','-300 days')),
 ('u-sec-nad','nad@nexus.demo','!disabled','sec_nad','نادر الصالح','FOUNDER','FREE','JO','#64748B','محقق حوادث أمن سيبراني — أنشر تقارير تدقيق مفتوحة للشركات الصغيرة.',160,'Sentinel Labs',1,datetime('now','-180 days')),
 ('u-sec-mira','mira@nexus.demo','!disabled','sec_mira','ميرا هوفمان','FREELANCER','FREE','DE','#64748B','مدققة أمن تطبيقات — OWASP ASVS. كل تقرير قابل للتنفيذ.',150,'',1,datetime('now','-150 days')),
 ('u-sec-tarek','tarek@nexus.demo','!disabled','sec_tarek','طارق بن يوسف','MERCHANT','FREE','TN','#64748B','استشاري حماية بيانات GDPR للتجارة الإلكترونية.',145,'DatShield Consulting',1,datetime('now','-120 days'));

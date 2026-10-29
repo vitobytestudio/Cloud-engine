@@ -47,15 +47,39 @@ export async function uploadPut(req: Request, env: Env, s: Session, p: Record<st
   const buf = await req.arrayBuffer();
   if (buf.byteLength > MAX_BYTES) return json({ error: "size_invalid" }, 413);
   const ct = req.headers.get("content-type") ?? "application/octet-stream";
-  await env.CACHE_KV.put(`media:${p.media_id}`, buf, { expirationTtl: 60 * 60 * 24 * 7 });
+  // ——— v0.11.1: وسائط المستخدم محتوى دائم — بلا TTL (كانت تُحذف بعد 7 أيام!) ———
+  await env.CACHE_KV.put(`media:${p.media_id}`, buf);
   await env.DB.prepare("UPDATE pending_uploads SET ready=1, content_type=?, bytes=? WHERE media_id=?")
     .bind(ct.slice(0, 60), buf.byteLength, p.media_id).run();
   return json({ ok: true, playback_url: `/media/${p.media_id}`, content_type: ct });
 }
 
-export async function mediaGet(env: Env, mediaId: string): Promise<Response> {
-  const val = await env.CACHE_KV.get(`media:${mediaId}`, { type: "arrayBuffer" });
-  if (!val) return new Response("not found", { status: 404 });
-  const meta = await env.DB.prepare("SELECT content_type FROM pending_uploads WHERE media_id=?").bind(mediaId).first<{ content_type: string }>();
-  return new Response(val, { headers: { "content-type": meta?.content_type ?? "video/mp4", "cache-control": "public, max-age=86400" } });
+function serveMedia(buf: ArrayBuffer, ct: string, rangeHdr: string | null): Response {
+  const base: Record<string, string> = { "content-type": ct, "cache-control": "public, max-age=86400", "accept-ranges": "bytes" };
+  const size = buf.byteLength;
+  // ——— v0.11.1: دعم Range/206 — التشغيل والتمرير السليم على كروم أندرويد ———
+  const m = rangeHdr ? /^bytes=(\d*)-(\d*)$/.exec(rangeHdr.trim()) : null;
+  if (m) {
+    const start = m[1] === "" ? (m[2] === "" ? 0 : Math.max(0, size - parseInt(m[2], 10))) : parseInt(m[1], 10);
+    let end = m[1] !== "" && m[2] !== "" ? parseInt(m[2], 10) : size - 1;
+    if (isNaN(start) || isNaN(end) || start > end || start >= size)
+      return new Response(null, { status: 416, headers: { "content-range": `bytes */${size}` } });
+    end = Math.min(end, size - 1);
+    return new Response(buf.slice(start, end + 1), { status: 206, headers: { ...base, "content-range": `bytes ${start}-${end}/${size}` } });
+  }
+  return new Response(buf, { headers: base });
+}
+
+export async function mediaGet(env: Env, req: Request, mediaId: string): Promise<Response> {
+  const range = req.headers.get("range");
+  const kv = await env.CACHE_KV.get(`media:${mediaId}`, { type: "arrayBuffer" });
+  if (kv) {
+    const meta = await env.DB.prepare("SELECT content_type FROM pending_uploads WHERE media_id=?").bind(mediaId).first<{ content_type: string }>();
+    return serveMedia(kv, meta?.content_type ?? "video/mp4", range);
+  }
+  // ——— v0.11.1: الوسائط الساكنة (ريلز/بوسترات البذور) تُخدم من الأصول — كانت ترجع 404 ولا تعمل أبداً ———
+  const origin = new URL(req.url).origin;
+  const asset = await env.ASSETS.fetch(new Request(`${origin}/media/${mediaId}`));
+  if (asset.status === 200) return serveMedia(await asset.arrayBuffer(), asset.headers.get("content-type") ?? "application/octet-stream", range);
+  return new Response("not found", { status: 404 });
 }

@@ -70,7 +70,7 @@ const routes: Array<{ m: string; pat: string; h: Handler; auth?: boolean; csrf?:
   { m: "GET",    pat: "/api/profile/:username",         h: (r, e, s, p) => profiles.profile(e, s, p) },
   { m: "POST",   pat: "/api/stream/direct-upload",      h: stream.directUpload,     auth: true, csrf: true, limit: [10, 3600] },
   { m: "PUT",    pat: "/api/stream/upload/:media_id",   h: stream.uploadPut,        auth: true, limit: [12, 3600] },
-  { m: "GET",    pat: "/media/:id",                     h: (r, e, s, p) => stream.mediaGet(e, p.id) },
+  { m: "GET",    pat: "/media/:id",                     h: (r, e, s, p) => stream.mediaGet(e, r, p.id) },
   { m: "GET",    pat: "/api/chat/conversations",        h: (r, e, s) => chat.conversations(e, s), auth: true },
   { m: "POST",   pat: "/api/chat/open/:username",       h: (r, e, s, p) => chat.openWith(r, e, s, p), auth: true, csrf: true, limit: [5, 86400] },
   { m: "GET",    pat: "/api/chat/:id/messages",         h: (r, e, s, p) => chat.messages(e, s, p), auth: true },

@@ -195,10 +195,20 @@ export async function pulse(req: Request, env: Env): Promise<Response> {
 
 // ——— تقديم صورة البروفايل (تُخزن data-url، تُقدَّم صورة حقيقية مع كاش) ———
 export async function getAvatar(_req: Request, env: Env, _s: Session, p: Record<string, string>): Promise<Response> {
-  const u = await env.DB.prepare("SELECT avatar_data FROM users WHERE username=?").bind(p.username).first<{ avatar_data: string }>();
-  if (!u || !u.avatar_data) return json({ error: "none" }, 404);
-  const m = u.avatar_data.match(/^data:(image\/(?:jpeg|png));base64,(.+)$/);
-  if (!m) return json({ error: "none" }, 404);
-  const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
-  return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=300" } });
+  const u = await env.DB.prepare("SELECT avatar_data, full_name, avatar_color FROM users WHERE username=?")
+    .bind(p.username).first<{ avatar_data: string; full_name: string; avatar_color: string }>();
+  if (u?.avatar_data) {
+    const m = u.avatar_data.match(/^data:(image\/(?:jpeg|png));base64,(.+)$/);
+    if (m) {
+      const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+      return new Response(bytes, { headers: { "content-type": m[1], "cache-control": "public, max-age=300" } });
+    }
+  }
+  // ——— v0.11.1: بديل فوري بأحرف أولى متدرجة — لا 404 ولا مربع فارغ ———
+  const name = (u?.full_name ?? p.username ?? "?").trim();
+  const ch = name ? name[0] : "?";
+  const color = /^#[0-9a-fA-F]{6}$/.test(u?.avatar_color ?? "") ? (u as { avatar_color: string }).avatar_color : "#1a1a22";
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#0c0c12"/></linearGradient></defs><rect width="96" height="96" fill="url(#g)"/><text x="48" y="63" font-family="system-ui,sans-serif" font-size="42" font-weight="700" fill="#ffffff" text-anchor="middle">${esc(ch)}</text></svg>`;
+  return new Response(svg, { headers: { "content-type": "image/svg+xml", "cache-control": "public, max-age=300" } });
 }

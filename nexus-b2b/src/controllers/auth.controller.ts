@@ -172,7 +172,8 @@ export async function googleCallback(req: Request, env: Env): Promise<Response> 
 export async function login(req: Request, env: Env, s: Session): Promise<Response> {
   const b = (await req.json().catch(() => ({}))) as Record<string, string>;
   const email = (b.email ?? "").trim().toLowerCase();
-  if (!(await rateLimit(env, `login:${clientIp(req)}:${email}`, 5, 900))) return json({ error: "locked" }, 429);
+  // ——— v0.11.1: أُزيل الحد الداخلي الذي كان يحصّي الدخول الناجح فيقفل المستخدم البريء —
+  // الحماية الباقية: سقف المسار للـIP + محرك المخالفات التصاعدي على فشل الدخول (تباطؤ→حجب→حجب طويل) ———
   // ——— v0.10-B: عقوبات تصاعدية على القوى الغاشمة (مفتاح الهدف — لا عزل مُهاجم مشترك) ———
   const lk = `le:${email}`;
   const pen = await enforce(env, lk);
