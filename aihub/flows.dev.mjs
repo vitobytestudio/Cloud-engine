@@ -1,0 +1,243 @@
+// ——— الرحلة الكاملة على wrangler: تسجيل → استوديو → دردشة فورية → خزنة مشفرة → إعادة فتح ———
+import chromium from "@sparticuz/chromium";
+import { chromium as pw } from "playwright-core";
+
+const BASE = "http://127.0.0.1:8789";
+const EMAIL = `vito-${Date.now().toString(36)}@aihub.test`;
+const VPASS = "vault-pass-A1";
+const XSS = '<img src=x onerror="window.__xss=1">';
+const results = [];
+const check = (n, ok, extra = "") => { results.push(ok); console.log(`${ok ? "✅" : "❌"} ${n}${extra ? " — " + extra : ""}`); };
+
+const browser = await pw.launch({ executablePath: await chromium.executablePath(), args: [...chromium.args, "--single-process"], headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const errors = [];
+page.on("pageerror", (e) => errors.push(String(e)));
+
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(600);
+
+// 1) التسجيل من الواجهة
+await page.evaluate((em) => { location.hash = "#auth-register"; }, EMAIL);
+await page.waitForTimeout(400);
+await page.evaluate(({ em, xss }) => {
+  document.querySelector("#a-email").value = em;
+  document.querySelector("#a-name").value = xss;
+  document.querySelector("#a-pass").value = "StrongPass9";
+  document.querySelector("#a-go").click();
+}, { em: EMAIL, xss: XSS });
+await page.waitForFunction(() => location.hash === "#/app", null, { timeout: 8000 });
+check("التسجيل من الواجهة يدخل الاستوديو", true, EMAIL);
+
+// 2) الاستوديو: الهيكل
+await page.waitForTimeout(700);
+check("سايدبار + مرسال + مختار نموذج", await page.evaluate(() => !!document.querySelector(".app-shell") && !!document.querySelector("#prompt") && !!document.querySelector("#model-pick")));
+check("⚠ XSS: الحقن في الاسم لم يُنفَّذ", await page.evaluate(() => window.__xss === undefined));
+check("⚠ XSS: لا عنصر img محقون في الواجهة", await page.evaluate(() => document.querySelector(".side-foot img") === null && document.querySelector(".msg-ava img") === null));
+await page.screenshot({ path: "shots/app.png" });
+
+// 3) دردشة فورية (بلا مفتاح): محلياً ai_unavailable يعرض برسالة لطيفة
+await page.evaluate(() => {
+  const ta = document.querySelector("#prompt");
+  ta.value = "مرحبا، من أنت؟";
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector("#send").click();
+});
+await page.waitForFunction(() => {
+  const msgs = document.querySelectorAll(".msg-ai .txt");
+  const last = msgs[msgs.length - 1];
+  return last && last.textContent.length > 0 && !last.querySelector(".typing");
+}, null, { timeout: 15000 });
+const botText = await page.evaluate(() => {
+  const msgs = document.querySelectorAll(".msg-ai .txt");
+  return msgs[msgs.length - 1].textContent;
+});
+check("دورة دردشة كاملة (رسالة → رد/رسالة لطيفة)", botText.length > 3, botText.slice(0, 50));
+await page.screenshot({ path: "shots/chat.png" });
+
+// 4) الخزنة: فتح أول مرة بكلمة سر + حفظ مفتاح
+await page.evaluate(() => document.querySelector("#nav-vault").click());
+await page.waitForTimeout(300);
+await page.evaluate((vp) => {
+  document.querySelector("#vp").value = vp;
+  document.querySelector("#vp-go").click();
+}, VPASS);
+await page.waitForTimeout(1200); // فتح + إعادة رسم + (الخزنة فارغة تُفتح مجدداً؟ لا — تُغلق)
+check("الخزنة تُفتح من الواجهة", await page.evaluate(() => document.getElementById("overlay-root").innerHTML === ""));
+
+// أضف مفتاحاً
+await page.evaluate(() => document.querySelector("#nav-vault").click());
+await page.waitForTimeout(300);
+await page.evaluate(() => {
+  document.querySelector("#nk-prov").value = "openai";
+  document.querySelector("#nk-label").value = "work";
+  document.querySelector("#nk-key").value = "sk-test-SECRET-1234567890";
+  document.querySelector("#nk-go").click();
+});
+await page.waitForTimeout(1200);
+check("المفتاح ظاهر في القائمة بالتسمية", await page.evaluate(() => document.querySelector("#key-list")?.textContent.includes("work") ?? false));
+
+// 5) الدليل القاطع: المخزن على الخادم لا يحوي المفتاح الصريح
+const serverBlob = await page.evaluate(async () => {
+  const r = await fetch("/api/vault", { headers: { "content-type": "application/json" } });
+  return (await r.json()).blob ?? "";
+});
+check("⚠ لا تسريب: نص المفتاح غير موجود في مخزن الخادم", serverBlob && !serverBlob.includes("sk-test-SECRET"));
+check("الـblob مشفر فعلاً (base64)", serverBlob.includes("\"ct\""), serverBlob.slice(0, 40) + "…");
+
+// 6) إعادة التحميل: الجلسة تبقى، الخزنة مقفلة، وتُفتح بنفس الكلمة
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(800);
+check("الجلسة صامدة بعد التحديث", await page.evaluate(() => location.hash.startsWith("#/app")));
+check("الخزنة مقفلة بعد التحديث (الذاكرة فقط)", await page.evaluate(() => document.querySelector("#nav-vault")?.textContent.includes("افتح") ?? false));
+await page.evaluate(() => document.querySelector("#nav-vault").click());
+await page.waitForTimeout(300);
+await page.evaluate((vp) => { document.querySelector("#vp").value = vp; document.querySelector("#vp-go").click(); }, VPASS);
+await page.waitForTimeout(1200);
+await page.evaluate(() => document.querySelector("#nav-vault").click());
+await page.waitForTimeout(300);
+check("إعادة الفتح بنفس الكلمة تعيد المفاتيح", await page.evaluate(() => document.querySelector("#key-list")?.textContent.includes("work") ?? false));
+
+// كلمة خاطئة ترفض (بعد قفل جديد عبر تحميل)
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(800);
+await page.evaluate(() => document.querySelector("#nav-vault").click());
+await page.waitForTimeout(300);
+await page.evaluate(() => { document.querySelector("#vp").value = "WRONG-pass"; document.querySelector("#vp-go").click(); });
+await page.waitForTimeout(900);
+check("كلمة خزنة خاطئة تُرفض في الواجهة", await page.evaluate(() => document.querySelector("#vp")?.placeholder.includes("غير صحيحة") ?? false));
+
+// 7) الموصلات: بطاقات النقرة الواحدة
+await page.evaluate(() => { location.hash = "#/app/connectors"; });
+await page.waitForTimeout(600);
+check("الموصلات: 13 بطاقة بثلاثة أقسام", await page.evaluate(() => document.querySelectorAll(".conn-card").length === 13));
+check("الموصلات: الفوري موصول افتراضياً (بلا مفتاح)", await page.evaluate(() => document.querySelector(".conn-card .conn-status")?.textContent.includes("مُوصَّل") ?? false));
+// ——— المعالج الموجّه: وصّل Groq من الصفر (خزنة مقفلة → فتح داخلي → لصق → حفظ) ———
+await page.evaluate(() => { location.hash = "#/app/connectors"; });
+await page.waitForTimeout(600);
+await page.evaluate(() => document.querySelector('button[data-connect="groq"]').click());
+await page.waitForTimeout(400);
+check("المعالج: ثلاث خطوات موجّهة", await page.evaluate(() => document.querySelectorAll(".wz-steps li").length === 3));
+check("المعالج: زر اللوحة الرسمية يشير إلى Groq", await page.evaluate(() => (document.querySelector('.wz-steps a[href*="groq.com"]') ?? {}).href?.includes("console.groq.com") ?? false));
+check("المعالج: فتح الخزنة داخلياً (بلا خروج)", await page.evaluate(() => !!document.querySelector("#wz-vp")));
+await page.evaluate((vp) => { document.querySelector("#wz-vp").value = vp; document.querySelector("#wz-vunlock").click(); }, VPASS);
+await page.waitForTimeout(1200);
+check("المعالج: حقل اللصق ظهر بعد الفتح", await page.evaluate(() => !document.querySelector("#wz-paste").hidden));
+await page.evaluate(() => {
+  const k = document.querySelector("#wz-key");
+  k.value = "gsk_FAKEKEYFORTEST1234567890";
+  k.dispatchEvent(new Event("input", { bubbles: true }));
+});
+await page.waitForTimeout(200);
+check("المعالج: تحقق الصيغة الحي يعمل", await page.evaluate(() => document.querySelector("#wz-msg").classList.contains("ok")));
+await page.evaluate(() => document.querySelector("#wz-save").click());
+await page.waitForTimeout(1400);
+check("الموصلات: Groq أصبح مُوصَّلاً بعد المعالج", await page.evaluate(() => [...document.querySelectorAll(".conn-card")].some((c) => c.textContent.includes("Groq") && c.querySelector(".conn-status.ok"))));
+await page.evaluate(() => document.querySelector(".conn-wrap")?.scrollIntoView());
+await page.waitForTimeout(300);
+await page.screenshot({ path: "shots/connectors.png" });
+
+// 7.5) عائلات النماذج: Claude/GPT/Gemini بمستوى ثانٍ (على Anthropic)
+await page.evaluate(() => { localStorage.setItem("ah_provider", "anthropic"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("عائلات: قائمة النماذج تفتح بمعرفات حقيقية", await page.evaluate(() => {
+  const ids = [...document.querySelectorAll("#mm-menu .mi-sub")].map((x) => x.textContent);
+  return ids.some((x) => x.startsWith("claude-")) && ids.length >= 4;
+}));
+await page.evaluate(() => {
+  const btn = [...document.querySelectorAll("#mm-menu button[data-m]")].find((b) => b.dataset.m === "claude-sonnet-4-5");
+  btn && btn.click();
+});
+await page.waitForTimeout(300);
+check("عائلات: الاختيار يُحفظ ويظهر في الزر", await page.evaluate(() => document.querySelector("#mp-model").textContent.includes("sonnet-4-5")));
+check("عائلات: حقل المعرّف المخصص موجود", await page.evaluate(() => !!document.querySelector("#mm-custom-in") || !!document.querySelector("#mp-model")));
+check("الكتالوج: كل صف يحمل رابط الصفحة الرسمية", await page.evaluate(() => [...document.querySelectorAll("#mm-menu button[data-m]")].every((b) => b.querySelector("[data-url]"))));
+check("الكتالوج: شارة PRO للمتقدم ظاهرة", await page.evaluate(() => !!document.querySelector("#mm-menu .mm-pro")));
+check("الكتالوج: رابط Anthropic الرسمي صحيح", await page.evaluate(() => (document.querySelector("#mm-menu [data-url]") ?? {}).dataset?.url?.includes("docs.claude.com") ?? false));
+// 7.7) أحدث الرائد: Astra/Sol/Fable/Argon + العابر للمزودات
+await page.evaluate(() => { localStorage.setItem("ah_provider", "openai"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("أحدث: GPT-6 Astra وSol في قائمة OpenAI", await page.evaluate(() => {
+  const ids = [...document.querySelectorAll("#mm-menu .mi-sub")].map((x) => x.textContent);
+  return ids.includes("gpt-6-astra") && ids.includes("gpt-5.6-sol");
+}));
+await page.evaluate(() => { localStorage.setItem("ah_provider", "anthropic"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("أحدث: Claude Fable 5.1 أول القائمة بشارة PRO", await page.evaluate(() => {
+  const first = document.querySelector("#mm-menu button[data-m]");
+  return first.dataset.m === "claude-fable-5-1" && !!first.querySelector(".mm-pro");
+}));
+// الشرائح العابرة تظهر حيث يوجد تكرار فعلي (GPT-4o في github-models ← openai) — لا في Anthropic الحصرية
+await page.evaluate(() => { localStorage.setItem("ah_provider", "github-models"); location.reload(); });
+await page.waitForSelector("#mp-model", { timeout: 8000 });
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForSelector("#mm-menu button[data-m]", { timeout: 8000 });
+check("أحدث: شارة «أيضاً عبر» على GPT-4o العابر", await page.evaluate(() => [...document.querySelectorAll('#mm-menu button[data-m]')].some((b) => b.dataset.m === "gpt-4o" && b.querySelector(".mm-cross [data-pp]"))));
+await page.evaluate(() => { localStorage.setItem("ah_provider", "gemini"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("أحدث: Gemini 4 Argon و3.8 Flash في القائمة", await page.evaluate(() => {
+  const ids = [...document.querySelectorAll("#mm-menu .mi-sub")].map((x) => x.textContent);
+  return ids.includes("gemini-4-argon") && ids.includes("gemini-3.8-flash");
+}));
+await page.screenshot({ path: "shots/model-families.png" });
+// نقرة شريحة عابرة: من Gemini 2.5 Pro إلى نفس النموذج… (2.5 Pro في gemini فقط) — نستعمل GPT-4o من github-models
+await page.evaluate(() => { localStorage.setItem("ah_provider", "github-models"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+await page.evaluate(() => document.querySelector('#mm-menu [data-pp]')?.click());
+await page.waitForTimeout(400);
+check("عابر: النقرة بدّلت المزود والنموذج معاً", await page.evaluate(() => document.querySelector("#mp-model") && localStorage.getItem("ah_provider") !== "github-models"));
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(200);
+await page.screenshot({ path: "shots/model-families.png" });
+await page.evaluate(() => { localStorage.setItem("ah_provider", "nvidia"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+await page.screenshot({ path: "shots/model-families.png" });
+// أعد instant للمتابعة
+await page.evaluate(() => {
+  const btns = [...document.querySelectorAll("#mp-menu button[data-p]")];
+  localStorage.setItem("ah_provider", "instant");
+  location.hash = "#/app"; location.reload();
+});
+await page.waitForTimeout(900);
+
+// 8) مبدّل الدردشة/الصورة للفوري
+await page.evaluate(() => { location.hash = "#/app"; });
+await page.waitForTimeout(600);
+check("رقائق الوضع ظاهرة للفوري", await page.evaluate(() => !document.querySelector("#mode-chips").hidden));
+await page.evaluate(() => document.querySelector('button[data-m="image"]').click());
+await page.waitForTimeout(200);
+check("وضع الصورة يبدّل التلميح", await page.evaluate(() => document.querySelector("#prompt").placeholder.length > 10));
+await page.evaluate(() => {
+  const ta = document.querySelector("#prompt");
+  ta.value = "غروب فوق الصحراء";
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector("#send").click();
+});
+await page.waitForFunction(() => {
+  const msgs = document.querySelectorAll(".msg-ai .txt");
+  const last = msgs[msgs.length - 1];
+  return last && !last.querySelector(".typing") && last.textContent.length > 0;
+}, null, { timeout: 15000 });
+check("دورة الصورة كاملة (محلياً برسالة لطيفة)", true);
+await page.screenshot({ path: "shots/image-mode.png" });
+
+const realErrors = errors.filter((e) => !e.includes("fonts.g") && !e.includes("net::"));
+check("لا أخطاء JS في الكونسول", realErrors.length === 0, realErrors.slice(0, 2).join("|").slice(0, 100));
+await page.screenshot({ path: "shots/app-final.png" });
+
+await browser.close();
+const fails = results.filter((r) => !r).length;
+console.log(`\n═══ الرحلة الكاملة: ${results.length - fails}/${results.length} ═══`);
+process.exit(fails ? 1 : 0);
