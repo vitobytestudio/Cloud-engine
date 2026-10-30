@@ -1,0 +1,22 @@
+{
+  "name": "aihub",
+  "version": "0.1.0-a",
+  "description": "AIHub — every AI model in one platform. BYOK, zero-knowledge vault, Cloudflare Workers.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --local --port 8789",
+    "check": "tsc --noEmit",
+    "db:init": "wrangler d1 execute DB --local -y --file schema.sql && wrangler d1 execute DB --local -y --file seed.sql",
+    "test:api": "node harness.dev.mjs",
+    "test:ui": "LD_LIBRARY_PATH=/tmp/lib:/tmp node browser.dev.mjs",
+    "test:e2e": "LD_LIBRARY_PATH=/tmp/lib:/tmp node flows.dev.mjs",
+    "test": "npm run check && npm run test:api && npm run test:ui && npm run test:e2e"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261029.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.154.0"
+  }
+}

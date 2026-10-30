@@ -1,0 +1,22 @@
+name = "aihub"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aihub_db"
+database_id = "local-aihub"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "local-aihub-kv"
+
+[vars]
+ENVIRONMENT = "development"
+
+[triggers]
+crons = ["0 3 * * *"]
