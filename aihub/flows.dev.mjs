@@ -153,8 +153,16 @@ await page.evaluate(() => {
 await page.waitForTimeout(300);
 check("عائلات: الاختيار يُحفظ ويظهر في الزر", await page.evaluate(() => document.querySelector("#mp-model").textContent.includes("sonnet-4-5")));
 check("عائلات: حقل المعرّف المخصص موجود", await page.evaluate(() => !!document.querySelector("#mm-custom-in") || !!document.querySelector("#mp-model")));
+check("الكتالوج: كل صف يحمل رابط الصفحة الرسمية", await page.evaluate(() => [...document.querySelectorAll("#mm-menu button[data-m]")].every((b) => b.querySelector("[data-url]"))));
+check("الكتالوج: شارة PRO للمتقدم ظاهرة", await page.evaluate(() => !!document.querySelector("#mm-menu .mm-pro")));
+check("الكتالوج: رابط Anthropic الرسمي صحيح", await page.evaluate(() => (document.querySelector("#mm-menu [data-url]") ?? {}).dataset?.url?.includes("docs.claude.com") ?? false));
 await page.evaluate(() => document.querySelector("#mp-model").click());
 await page.waitForTimeout(200);
+await page.screenshot({ path: "shots/model-families.png" });
+await page.evaluate(() => { localStorage.setItem("ah_provider", "nvidia"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
 await page.screenshot({ path: "shots/model-families.png" });
 // أعد instant للمتابعة
 await page.evaluate(() => {

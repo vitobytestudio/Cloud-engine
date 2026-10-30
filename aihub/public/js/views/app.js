@@ -31,46 +31,85 @@ try { modelSel = JSON.parse(localStorage.getItem("ah_models") || "{}"); } catch 
 const MODEL_CATALOG = {
   "instant": [],
   "openai": [
-    ["GPT-5", "gpt-5"], ["GPT-5 mini", "gpt-5-mini"], ["GPT-5 nano", "gpt-5-nano"],
-    ["GPT-4.1", "gpt-4.1"], ["GPT-4o", "gpt-4o"], ["o3", "o3"],
+    ["GPT-5", "gpt-5", 1], ["GPT-5 mini", "gpt-5-mini"], ["GPT-5 nano", "gpt-5-nano"],
+    ["GPT-4.1", "gpt-4.1"], ["GPT-4.1 mini", "gpt-4.1-mini"], ["GPT-4o", "gpt-4o"], ["GPT-4o mini", "gpt-4o-mini"],
+    ["o3 — استدلال", "o3"], ["o4-mini — استدلال", "o4-mini"],
   ],
   "anthropic": [
-    ["Claude Opus 5.5", "claude-opus-5-5"], ["Claude Sonnet 5", "claude-sonnet-5"],
-    ["Claude Sonnet 4.5", "claude-sonnet-4-5"], ["Claude Haiku 4.5", "claude-haiku-4-5"],
+    ["Claude Opus 5.5", "claude-opus-5-5", 1], ["Claude Opus 4.8", "claude-opus-4-8"],
+    ["Claude Opus 4.7", "claude-opus-4-7"], ["Claude Opus 4.5", "claude-opus-4-5"],
+    ["Claude Sonnet 5", "claude-sonnet-5"], ["Claude Sonnet 4.5", "claude-sonnet-4-5"], ["Claude Haiku 4.5", "claude-haiku-4-5"],
   ],
   "gemini": [
-    ["Gemini 2.5 Pro", "gemini-2.5-pro"], ["Gemini 2.5 Flash", "gemini-2.5-flash"],
-    ["Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite"], ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
+    ["Gemini 2.5 Pro", "gemini-2.5-pro", 1], ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
+    ["Gemini 2.5 Flash", "gemini-2.5-flash"], ["Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite"], ["Gemini 2.0 Flash", "gemini-2.0-flash"],
   ],
   "nvidia": [
-    ["DeepSeek-V4 Flash · 1M ctx", "deepseek-ai/deepseek-v4-flash"], ["DeepSeek-V4 Pro", "deepseek-ai/deepseek-v4-pro"],
-    ["Llama 4 Maverick", "meta/llama-4-maverick-17b-128e-instruct"],
+    ["DeepSeek-V4 Pro · 1M ctx", "deepseek-ai/deepseek-v4-pro", 1], ["DeepSeek-V4 Flash · 1M ctx", "deepseek-ai/deepseek-v4-flash"],
+    ["DeepSeek-R1", "deepseek-ai/deepseek-r1"], ["Llama 4 Maverick", "meta/llama-4-maverick-17b-128e-instruct"],
+    ["Llama 4 Scout", "meta/llama-4-scout-17b-16e-instruct"], ["Qwen3 Coder 480B", "qwen/qwen3-coder-480b-a35b-instruct"],
+    ["Kimi K2 Instruct", "moonshotai/kimi-k2-instruct"],
   ],
   "github-models": [
-    ["GPT-4o", "gpt-4o"], ["Llama 3.3 70B", "Meta-Llama-3.3-70B-Instruct"], ["Phi-4", "Phi-4"],
+    ["GPT-4o", "gpt-4o"], ["GPT-4.1", "gpt-4.1"], ["DeepSeek-R1", "DeepSeek-R1"],
+    ["Grok 3", "xai/grok-3"], ["Llama 3.3 70B", "Meta-Llama-3.3-70B-Instruct"], ["Phi-4", "Phi-4"],
   ],
   "groq": [
-    ["Llama 3.3 70B", "llama-3.3-70b-versatile"], ["Llama 3.1 8B Instant", "llama-3.1-8b-instant"], ["GPT-OSS 120B", "openai/gpt-oss-120b"],
+    ["Llama 3.3 70B", "llama-3.3-70b-versatile"], ["GPT-OSS 120B", "openai/gpt-oss-120b"],
+    ["GPT-OSS 20B", "openai/gpt-oss-20b"], ["Kimi K2", "moonshotai/kimi-k2-instruct"],
+    ["Qwen3 32B", "qwen/qwen3-32b"], ["DeepSeek-R1 Distill 70B", "deepseek-r1-distill-llama-70b"], ["Llama 3.1 8B Instant", "llama-3.1-8b-instant"],
   ],
   "openrouter": [
-    ["Llama 3.3 70B :free", "meta-llama/llama-3.3-70b-instruct:free"], ["DeepSeek V3 :free", "deepseek/deepseek-chat:free"],
+    ["Grok 4", "x-ai/grok-4", 1], ["DeepSeek V3 :free", "deepseek/deepseek-chat:free"],
+    ["DeepSeek R1 :free", "deepseek/deepseek-r1:free"], ["Llama 3.3 70B :free", "meta-llama/llama-3.3-70b-instruct:free"],
+    ["Kimi K2 :free", "moonshotai/kimi-k2:free"], ["Qwen3 Coder :free", "qwen/qwen3-coder:free"],
+    ["Gemini 2.0 Flash :free", "google/gemini-2.0-flash-exp:free"], ["GPT-OSS 20B :free", "openai/gpt-oss-20b:free"],
+    ["Mistral Small 3.2 :free", "mistralai/mistral-small-3.2-24b-instruct:free"],
   ],
   "hf": [
-    ["Llama 3.3 70B", "meta-llama/Llama-3.3-70B-Instruct"], ["Qwen 2.5 72B", "Qwen/Qwen2.5-72B-Instruct"],
+    ["Llama 3.3 70B", "meta-llama/Llama-3.3-70B-Instruct"], ["Qwen3 235B", "Qwen/Qwen3-235B-A22B"],
+    ["DeepSeek-R1", "deepseek-ai/DeepSeek-R1"], ["Kimi K2", "moonshotai/Kimi-K2-Instruct"],
+    ["Gemma 3 27B", "google/gemma-3-27b-it"], ["Mistral Small 3.2", "mistralai/Mistral-Small-3.2-24B-Instruct"],
+    ["Phi-4", "microsoft/phi-4"], ["Qwen 2.5 72B", "Qwen/Qwen2.5-72B-Instruct"],
   ],
   "cerebras": [
-    ["Llama 3.3 70B", "llama-3.3-70b"], ["GPT-OSS 120B", "openai/gpt-oss-120b"],
+    ["Llama 3.3 70B", "llama-3.3-70b"], ["GPT-OSS 120B", "gpt-oss-120b"],
+    ["Qwen3 235B", "qwen-3-235b-a22b-instruct-2507"], ["DeepSeek-R1 Distill 70B", "deepseek-r1-distill-llama-70b"],
   ],
   "mistral": [
-    ["Mistral Small", "mistral-small-latest"], ["Mistral Large", "mistral-large-latest"],
+    ["Mistral Large", "mistral-large-latest", 1], ["Magistral — استدلال", "magistral-medium-latest"],
+    ["Mistral Medium", "mistral-medium-latest"], ["Mistral Small", "mistral-small-latest"],
+    ["Codestral — كود", "codestral-latest"], ["Pixtral — رؤية", "pixtral-large-latest"],
   ],
   "sambanova": [
-    ["Llama 3.3 70B", "Meta-Llama-3.3-70B-Instruct"], ["DeepSeek-R1 Distill 70B", "DeepSeek-R1-Distill-Llama-70B"],
+    ["Llama 4 Maverick", "Llama-4-Maverick-17B-128E-Instruct"], ["Llama 4 Scout", "Llama-4-Scout-17B-16E-Instruct"],
+    ["DeepSeek-R1", "DeepSeek-R1"], ["DeepSeek-R1 Distill 70B", "DeepSeek-R1-Distill-Llama-70B"],
+    ["Llama 3.3 70B", "Meta-Llama-3.3-70B-Instruct"], ["Qwen3 235B", "Qwen3-235B-A22B"],
   ],
   "cohere": [
-    ["Command A", "command-a-03-2025"], ["Command R7B", "command-r7b-12-2024"],
+    ["Command A", "command-a-03-2025", 1], ["Command R+", "command-r-plus-08-2024"],
+    ["Command R7B", "command-r7b-12-2024"], ["Aya Expanse 32B — عالمي", "aya-expanse-32b"],
   ],
 };
+// رابط الصفحة الرسمية لكل نموذج — منقوش على بوابات المزودين
+const MODEL_LINKS = {
+  "openai": (id) => `https://platform.openai.com/docs/models/${id}`,
+  "anthropic": () => "https://docs.claude.com/en/docs/about-claude/models/overview",
+  "gemini": () => "https://ai.google.dev/gemini-api/docs/models",
+  "nvidia": (id) => `https://build.nvidia.com/${id}`,
+  "github-models": () => "https://github.com/marketplace/models",
+  "groq": () => "https://console.groq.com/docs/models",
+  "openrouter": (id) => `https://openrouter.ai/${id.replace(/:free$/, "")}`,
+  "hf": (id) => `https://huggingface.co/${id}`,
+  "cerebras": () => "https://inference-docs.cerebras.ai/models/overview",
+  "mistral": () => "https://docs.mistral.ai/getting-started/models",
+  "sambanova": () => "https://docs.sambanova.ai/cloud/docs/get-started/models",
+  "cohere": () => "https://docs.cohere.com/docs/models",
+};
+function modelLink(provider, id) {
+  const f = MODEL_LINKS[provider];
+  return f ? f(id) : "";
+}
 function currentModel() {
   return modelSel[currentProvider] || defaultModel(currentProvider);
 }
@@ -169,16 +208,19 @@ function renderModelPick(root) {
   // قائمة العائلات (المستوى الثاني)
   const mmenu = holder.querySelector("#mm-menu") ;
   if (mmenu) {
-    const items = (MODEL_CATALOG[currentProvider] || []).map(([label, id]) => `
+    const items = (MODEL_CATALOG[currentProvider] || []).map(([label, id, top]) => `
       <button data-m="${esc(id)}">
-        <span><div class="mi-name">${esc(label)}</div><div class="mi-sub" dir="ltr">${esc(id)}</div></span>
+        <span><div class="mi-name">${esc(label)}${top ? `<i class="mm-pro">PRO</i>` : ""}</div><div class="mi-sub" dir="ltr">${esc(id)}</div></span>
         ${id === mdl ? `<span class="mi-check">✓</span>` : ""}
+        ${modelLink(currentProvider, id) ? `<span class="mm-link" data-url="${esc(modelLink(currentProvider, id))}" title="${t("model_official")}">↗</span>` : ""}
       </button>`).join("");
     mmenu.innerHTML = items + `
       <div class="mm-custom">
         <input id="mm-custom-in" type="text" dir="ltr" placeholder="${t("custom_model")}" />
       </div>`;
-    mmenu.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", () => {
+    mmenu.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", (e) => {
+      const lnk = e.target.closest("[data-url]");
+      if (lnk) { window.open(lnk.dataset.url, "_blank", "noopener,noreferrer"); return; }
       modelSel[currentProvider] = b.dataset.m;
       localStorage.setItem("ah_models", JSON.stringify(modelSel));
       mmenu.hidden = true;
