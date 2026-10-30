@@ -289,3 +289,9 @@ input, textarea, select { font-family: inherit; color: var(--text); }
 .p-mistral { background: #fa500f; }
 .p-sambanova { background: #00c4b3; }
 .p-cohere { background: #a071ff; }
+
+/* ——— قائمة عائلات النماذج (المستوى الثاني) ——— */
+.model-btn2 { border-inline-start: 1px solid var(--border); }
+.mm-custom { padding: 8px 10px 10px; border-top: 1px solid var(--border); margin-top: 6px; }
+.mm-custom input { width: 100%; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 10px; padding: 8px 11px; font-size: 12.5px; outline: none; transition: border-color .2s var(--ease); }
+.mm-custom input:focus { border-color: rgba(124,108,255,.55); }

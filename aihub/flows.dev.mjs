@@ -137,6 +137,33 @@ await page.evaluate(() => document.querySelector(".conn-wrap")?.scrollIntoView()
 await page.waitForTimeout(300);
 await page.screenshot({ path: "shots/connectors.png" });
 
+// 7.5) عائلات النماذج: Claude/GPT/Gemini بمستوى ثانٍ (على Anthropic)
+await page.evaluate(() => { localStorage.setItem("ah_provider", "anthropic"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("عائلات: قائمة النماذج تفتح بمعرفات حقيقية", await page.evaluate(() => {
+  const ids = [...document.querySelectorAll("#mm-menu .mi-sub")].map((x) => x.textContent);
+  return ids.some((x) => x.startsWith("claude-")) && ids.length >= 4;
+}));
+await page.evaluate(() => {
+  const btn = [...document.querySelectorAll("#mm-menu button[data-m]")].find((b) => b.dataset.m === "claude-sonnet-4-5");
+  btn && btn.click();
+});
+await page.waitForTimeout(300);
+check("عائلات: الاختيار يُحفظ ويظهر في الزر", await page.evaluate(() => document.querySelector("#mp-model").textContent.includes("sonnet-4-5")));
+check("عائلات: حقل المعرّف المخصص موجود", await page.evaluate(() => !!document.querySelector("#mm-custom-in") || !!document.querySelector("#mp-model")));
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(200);
+await page.screenshot({ path: "shots/model-families.png" });
+// أعد instant للمتابعة
+await page.evaluate(() => {
+  const btns = [...document.querySelectorAll("#mp-menu button[data-p]")];
+  localStorage.setItem("ah_provider", "instant");
+  location.hash = "#/app"; location.reload();
+});
+await page.waitForTimeout(900);
+
 // 8) مبدّل الدردشة/الصورة للفوري
 await page.evaluate(() => { location.hash = "#/app"; });
 await page.waitForTimeout(600);

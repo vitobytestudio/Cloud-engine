@@ -26,6 +26,54 @@ const PROVIDERS = [
 ];
 
 let currentProvider = localStorage.getItem("ah_provider") || "instant";
+let modelSel = {}; // { provider: modelId } — اختيار المستخدم لكل مزود
+try { modelSel = JSON.parse(localStorage.getItem("ah_models") || "{}"); } catch { modelSel = {}; }
+const MODEL_CATALOG = {
+  "instant": [],
+  "openai": [
+    ["GPT-5", "gpt-5"], ["GPT-5 mini", "gpt-5-mini"], ["GPT-5 nano", "gpt-5-nano"],
+    ["GPT-4.1", "gpt-4.1"], ["GPT-4o", "gpt-4o"], ["o3", "o3"],
+  ],
+  "anthropic": [
+    ["Claude Opus 5.5", "claude-opus-5-5"], ["Claude Sonnet 5", "claude-sonnet-5"],
+    ["Claude Sonnet 4.5", "claude-sonnet-4-5"], ["Claude Haiku 4.5", "claude-haiku-4-5"],
+  ],
+  "gemini": [
+    ["Gemini 2.5 Pro", "gemini-2.5-pro"], ["Gemini 2.5 Flash", "gemini-2.5-flash"],
+    ["Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite"], ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
+  ],
+  "nvidia": [
+    ["DeepSeek-V4 Flash · 1M ctx", "deepseek-ai/deepseek-v4-flash"], ["DeepSeek-V4 Pro", "deepseek-ai/deepseek-v4-pro"],
+    ["Llama 4 Maverick", "meta/llama-4-maverick-17b-128e-instruct"],
+  ],
+  "github-models": [
+    ["GPT-4o", "gpt-4o"], ["Llama 3.3 70B", "Meta-Llama-3.3-70B-Instruct"], ["Phi-4", "Phi-4"],
+  ],
+  "groq": [
+    ["Llama 3.3 70B", "llama-3.3-70b-versatile"], ["Llama 3.1 8B Instant", "llama-3.1-8b-instant"], ["GPT-OSS 120B", "openai/gpt-oss-120b"],
+  ],
+  "openrouter": [
+    ["Llama 3.3 70B :free", "meta-llama/llama-3.3-70b-instruct:free"], ["DeepSeek V3 :free", "deepseek/deepseek-chat:free"],
+  ],
+  "hf": [
+    ["Llama 3.3 70B", "meta-llama/Llama-3.3-70B-Instruct"], ["Qwen 2.5 72B", "Qwen/Qwen2.5-72B-Instruct"],
+  ],
+  "cerebras": [
+    ["Llama 3.3 70B", "llama-3.3-70b"], ["GPT-OSS 120B", "openai/gpt-oss-120b"],
+  ],
+  "mistral": [
+    ["Mistral Small", "mistral-small-latest"], ["Mistral Large", "mistral-large-latest"],
+  ],
+  "sambanova": [
+    ["Llama 3.3 70B", "Meta-Llama-3.3-70B-Instruct"], ["DeepSeek-R1 Distill 70B", "DeepSeek-R1-Distill-Llama-70B"],
+  ],
+  "cohere": [
+    ["Command A", "command-a-03-2025"], ["Command R7B", "command-r7b-12-2024"],
+  ],
+};
+function currentModel() {
+  return modelSel[currentProvider] || defaultModel(currentProvider);
+}
 let mode = localStorage.getItem("ah_mode") || "chat"; // دردشة | صورة (للفوري فقط)
 let history = [];
 
@@ -93,9 +141,9 @@ export async function renderApp(root, sub) {
     localStorage.setItem("ah_lang", next); location.reload();
   });
 
+  renderModelPick(root);
   if (isConn) { await renderConnectors(root.querySelector("#usage-view")); return; }
   if (isUsage) { await renderUsage(root.querySelector("#usage-view") ); return; }
-  renderModelPick(root);
   updateModeChips(root);
   wireChat(root);
   refreshUsagePill(root);
@@ -103,13 +151,55 @@ export async function renderApp(root, sub) {
 }
 
 // ——— مختار النموذج ———
+function shortModel(id) {
+  if (!id) return "—";
+  return id.replace(/^.*\//, "").replace(/:free$/, " ·free");
+}
+
 function renderModelPick(root) {
   const holder = root.querySelector("#model-pick") ;
   const cur = PROVIDERS.find((p) => p.id === currentProvider) || PROVIDERS[0];
+  const mdl = currentModel();
   holder.innerHTML = `
     <button class="model-btn" id="mp-btn"><span class="dot ${cur.color}"></span>${cur.name} <span style="color:var(--faint)">▾</span></button>
+    ${currentProvider !== "instant" ? `<button class="model-btn model-btn2" id="mp-model" title="${t("pick_model")}"><span class="mi-name">${esc(shortModel(mdl))}</span> <span style="color:var(--faint)">▾</span></button>
+    <div class="model-menu glass" id="mm-menu" hidden></div>` : ""}
     <div class="model-menu glass" id="mp-menu" hidden></div>`;
-  const menu = holder.querySelector("#mp-menu") ;
+  const menu = holder.querySelector("#mp-menu");
+  // قائمة العائلات (المستوى الثاني)
+  const mmenu = holder.querySelector("#mm-menu") ;
+  if (mmenu) {
+    const items = (MODEL_CATALOG[currentProvider] || []).map(([label, id]) => `
+      <button data-m="${esc(id)}">
+        <span><div class="mi-name">${esc(label)}</div><div class="mi-sub" dir="ltr">${esc(id)}</div></span>
+        ${id === mdl ? `<span class="mi-check">✓</span>` : ""}
+      </button>`).join("");
+    mmenu.innerHTML = items + `
+      <div class="mm-custom">
+        <input id="mm-custom-in" type="text" dir="ltr" placeholder="${t("custom_model")}" />
+      </div>`;
+    mmenu.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", () => {
+      modelSel[currentProvider] = b.dataset.m;
+      localStorage.setItem("ah_models", JSON.stringify(modelSel));
+      mmenu.hidden = true;
+      renderModelPick(root);
+    }));
+    mmenu.querySelector("#mm-custom-in").addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const v = e.target.value.trim();
+      if (!v) return;
+      modelSel[currentProvider] = v;
+      localStorage.setItem("ah_models", JSON.stringify(modelSel));
+      mmenu.hidden = true;
+      renderModelPick(root);
+    });
+    (holder.querySelector("#mp-model") ).addEventListener("click", (e) => {
+      e.stopPropagation();
+      mmenu.hidden = !mmenu.hidden;
+      menu.hidden = true;
+    });
+    document.addEventListener("click", () => { mmenu.hidden = true; }, { once: true });
+  }
   menu.innerHTML = PROVIDERS.map((p) => `
     <button data-p="${p.id}">
       <span class="mi-dot ${p.color}"></span>
@@ -163,7 +253,8 @@ function addMsgEl(root, who) {
   const inner = root.querySelector("#chat-inner") ;
   const el = document.createElement("div");
   el.className = `msg msg-${who}`;
-  el.innerHTML = `<div class="msg-ava">${who === "user" ? esc((state.user?.full_name?.[0] ?? "U")) : "AI"}</div><div class="msg-body"><div class="who">${who === "user" ? esc((state.user?.full_name ?? "You").split(" ")[0]) : "AIHub"}</div><div class="txt"></div></div>`;
+  const whoLabel = who === "user" ? esc((state.user?.full_name ?? "You").split(" ")[0]) : `AIHub · <span dir="ltr">${esc(currentProvider === "instant" ? "llama-3.1-8b" : currentModel())}</span>`;
+  el.innerHTML = `<div class="msg-ava">${who === "user" ? esc((state.user?.full_name?.[0] ?? "U")) : "AI"}</div><div class="msg-body"><div class="who">${whoLabel}</div><div class="txt"></div></div>`;
   inner.appendChild(el);
   (root.querySelector("#chat-scroll") ).scrollTop = 1e9;
   return { el, txt: el.querySelector(".txt") };
@@ -247,7 +338,7 @@ function wireChat(root) {
 
     let acc = "";
     let first = true;
-    await api.stream(currentProvider, kd.key, { model: defaultModel(currentProvider), messages: history.slice(-12), stream: true },
+    await api.stream(currentProvider, kd.key, { model: currentModel(), messages: history.slice(-12), stream: true },
       (chunk) => {
         if (first) { a.txt.textContent = ""; first = false; }
         acc += chunk;
@@ -525,7 +616,7 @@ async function renderConnectors(view) {
     const kd = vaultState.keys.find((k) => k.provider === id);
     if (!kd) return;
     b.textContent = t("conn_testing"); b.disabled = true;
-    const r = await api.post(`/api/infer/${id}`, { model: defaultModel(id), messages: [{ role: "user", content: "ping" }], max_tokens: 4, stream: false }, { "x-upstream-key": kd.key });
+    const r = await api.post(`/api/infer/${id}`, { model: (modelSel[id] || defaultModel(id)), messages: [{ role: "user", content: "ping" }], max_tokens: 4, stream: false }, { "x-upstream-key": kd.key });
     b.textContent = t("conn_test"); b.disabled = false;
     msg.textContent = r.ok ? t("conn_test_ok") : t("conn_test_fail");
     msg.className = `conn-msg ${r.ok ? "ok" : "bad"}`;
