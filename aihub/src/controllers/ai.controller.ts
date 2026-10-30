@@ -16,6 +16,11 @@ const PROVIDERS: Record<string, ProviderDef> = {
   "github-models": { base: "https://models.inference.ai.azure.com", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
   "groq": { base: "https://api.groq.com/openai/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
   "openrouter": { base: "https://openrouter.ai/api/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
+  "hf": { base: "https://router.huggingface.co/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
+  "cerebras": { base: "https://api.cerebras.ai/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
+  "mistral": { base: "https://api.mistral.ai/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
+  "sambanova": { base: "https://api.sambanova.ai/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
+  "cohere": { base: "https://api.cohere.ai/compatibility/v1", path: "/chat/completions", headers: (k) => ({ authorization: `Bearer ${k}` }) },
 };
 
 export function isKnownProvider(p: string): boolean {
@@ -36,15 +41,28 @@ export async function instant(req: Request, env: Env, s: Session): Promise<Respo
   if (!msgs.length || msgs.some((m) => typeof m.content !== "string" || m.content.length > 8000))
     return json({ error: "invalid_input" }, 400);
   const used = await bumpUsage(env, s.userId, "instant");
-  if (!env.AI) return json({ error: "ai_unavailable", hint: "dev-local-no-network", used, cap: lim.instant_daily }, 503);
-  try {
-    const r = await (env.AI as { run: (m: string, i: unknown) => Promise<unknown> }).run(
-      "@cf/meta/llama-3.1-8b-instruct", { messages: msgs, max_tokens: 1024 }
-    ) as { response?: string };
-    return json({ ok: true, content: r.response ?? "", used, cap: lim.instant_daily, model: "llama-3.1-8b-instruct" });
-  } catch (e) {
-    return json({ error: "ai_unavailable", used, cap: lim.instant_daily }, 503);
+  // ——— الحلقة الذكية: Workers AI أولاً، فإن تعثّر جرت الحلقة المجتمعية (Pollinations) — الباب لا يُغلق ———
+  if (env.AI) {
+    try {
+      const r = await (env.AI as { run: (m: string, i: unknown) => Promise<unknown> }).run(
+        "@cf/meta/llama-3.1-8b-instruct", { messages: msgs, max_tokens: 1024 }
+      ) as { response?: string };
+      if (r && typeof r.response === "string")
+        return json({ ok: true, content: r.response, used, cap: lim.instant_daily, model: "llama-3.1-8b-instruct", via: "workers-ai" });
+    } catch { /* ننتقل تلقائياً */ }
   }
+  try {
+    const r = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: "openai", messages: msgs, private: true }),
+    });
+    if (r.ok) {
+      const d = await r.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const content = d.choices?.[0]?.message?.content ?? "";
+      if (content) return json({ ok: true, content, used, cap: lim.instant_daily, model: "pollinations/free", via: "pollinations" });
+    }
+  } catch { /* تعذّرت الحلقتان معاً */ }
+  return json({ error: "ai_unavailable", used, cap: lim.instant_daily }, 503);
 }
 
 // ——— تجربة الصور الفورية: Workers AI من حصتنا المجانية — بسقف عدل معلن ———
@@ -60,16 +78,28 @@ export async function instantImage(req: Request, env: Env, s: Session): Promise<
   const prompt = typeof b.prompt === "string" ? b.prompt.trim().slice(0, 900) : "";
   if (!prompt) return json({ error: "invalid_input" }, 400);
   const used = await bumpUsage(env, s.userId, "instant_img");
-  if (!env.AI) return json({ error: "ai_unavailable", hint: "dev-local-no-network", used, cap: lim.instant_img_daily }, 503);
-  try {
-    const r = await (env.AI as { run: (m: string, i: unknown) => Promise<unknown> }).run(
-      "@cf/black-forest-labs/flux-1-schnell", { prompt, steps: 4 }
-    ) as { image?: string };
-    if (!r?.image) return json({ error: "ai_unavailable", used, cap: lim.instant_img_daily }, 503);
-    return json({ ok: true, image: r.image, mime: "image/jpeg", used, cap: lim.instant_img_daily, model: "flux-1-schnell" });
-  } catch {
-    return json({ error: "ai_unavailable", used, cap: lim.instant_img_daily }, 503);
+  if (env.AI) {
+    try {
+      const r = await (env.AI as { run: (m: string, i: unknown) => Promise<unknown> }).run(
+        "@cf/black-forest-labs/flux-1-schnell", { prompt, steps: 4 }
+      ) as { image?: string };
+      if (r?.image) return json({ ok: true, image: r.image, mime: "image/jpeg", used, cap: lim.instant_img_daily, model: "flux-1-schnell", via: "workers-ai" });
+    } catch { /* ننتقل تلقائياً */ }
   }
+  // الحلقة المجتمعية: Pollinations — بلا مفتاح، فلُكس
+  try {
+    const seed = Math.floor(Math.random() * 1e6);
+    const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=768&model=flux&nologo=true&seed=${seed}`);
+    if (r.ok) {
+      const buf = await r.arrayBuffer();
+      if (buf.byteLength > 1000) {
+        let bin = ""; const u = new Uint8Array(buf);
+        for (let i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
+        return json({ ok: true, image: btoa(bin), mime: r.headers.get("content-type") ?? "image/jpeg", used, cap: lim.instant_img_daily, model: "pollinations-flux", via: "pollinations" });
+      }
+    }
+  } catch { /* تعذّرت الحلقتان */ }
+  return json({ error: "ai_unavailable", used, cap: lim.instant_img_daily }, 503);
 }
 
 // ——— الوكيل الشفاف: Authorization يمرّ من الطلب إلى المزود مباشرة، لا يُسجَّل ولا يُخزَّن ———

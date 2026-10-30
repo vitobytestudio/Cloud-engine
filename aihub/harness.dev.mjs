@@ -64,6 +64,10 @@ check("blob غير سليم مرفوض (400)", garbage.status === 400);
 // ——— 4) محرك الاستدلال ———
 const infNoKey = await fetch(`${BASE}/api/infer/openai`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ model: "gpt-4o-mini", messages: [] }) }).then((r) => r.status);
 check("الوكيل بلا مفتاح upstream → 401", infNoKey === 401);
+const infHf = await fetch(`${BASE}/api/infer/hf`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: "{}" }).then((r) => r.status);
+check("الموصل الجديد HF بلا مفتاح → 401", infHf === 401);
+const infCerebras = await fetch(`${BASE}/api/infer/cerebras`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: "{}" }).then((r) => r.status);
+check("الموصل الجديد Cerebras بلا مفتاح → 401", infCerebras === 401);
 const infUnknown = await fetch(`${BASE}/api/infer/nope`, { method: "POST", headers: { "content-type": "application/json", cookie, "x-upstream-key": "sk-x" }, body: "{}" }).then((r) => r.status);
 check("مزود مجهول → 404", infUnknown === 404);
 // في البيت المحلي: بلا شبكة → 502 منظم (البنية تُختبر لا المزود)

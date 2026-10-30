@@ -15,6 +15,11 @@ const PROVIDERS = [
   { id: "github-models", name: "GitHub Models", sub: "GPT-4o · Llama · Phi — free for devs", color: "p-github", free: true },
   { id: "groq", name: "Groq", sub: "Fastest inference — free tier", color: "p-groq", free: true },
   { id: "openrouter", name: "OpenRouter", sub: ":free models + everything", color: "p-openrouter", free: true },
+  { id: "hf", name: "Hugging Face", sub: "Llama · Qwen · hundreds — free official key", color: "p-hf", free: true },
+  { id: "cerebras", name: "Cerebras", sub: "Fastest open-model inference — free key", color: "p-cerebras", free: true },
+  { id: "mistral", name: "Mistral", sub: "La Plateforme free tier", color: "p-mistral", free: true },
+  { id: "sambanova", name: "SambaNova", sub: "Fast open-model cloud — free key", color: "p-sambanova", free: true },
+  { id: "cohere", name: "Cohere", sub: "Command family — trial key", color: "p-cohere", free: true },
   { id: "openai", name: "OpenAI", sub: "GPT-4o · o-series — your key", color: "p-openai", free: false },
   { id: "anthropic", name: "Anthropic", sub: "Claude 4 family — your key", color: "p-anthropic", free: false },
   { id: "gemini", name: "Google Gemini", sub: "2.5 Pro/Flash — your key (free tier)", color: "p-gemini", free: true },
@@ -222,7 +227,16 @@ function wireChat(root) {
 
     if (currentProvider === "instant") {
       const r = await api.post("/api/infer/instant", { messages: history.slice(-12) });
-      if (r.ok) { history.push({ role: "assistant", content: r.data.content }); a.txt.textContent = r.data.content; }
+      if (r.ok) {
+        history.push({ role: "assistant", content: r.data.content });
+        a.txt.textContent = r.data.content;
+        if (r.data.via === "pollinations") {
+          const via = document.createElement("div");
+          via.className = "via-note";
+          via.textContent = "✦ " + t("comm_via");
+          a.txt.appendChild(via);
+        }
+      }
       else { a.txt.textContent = errMsg(r.data?.error); if (r.status === 401 && r.data?.error === "auth_required") location.hash = "#auth-login"; }
       finish(); return;
     }
@@ -257,6 +271,11 @@ function defaultModel(p) {
     case "github-models": return "gpt-4o";
     case "groq": return "llama-3.3-70b-versatile";
     case "openrouter": return "meta-llama/llama-3.3-70b-instruct:free";
+    case "hf": return "meta-llama/Llama-3.3-70B-Instruct";
+    case "cerebras": return "llama-3.3-70b";
+    case "mistral": return "mistral-small-latest";
+    case "sambanova": return "Meta-Llama-3.3-70B-Instruct";
+    case "cohere": return "command-r7b-12-2024";
     case "openai": return "gpt-4o-mini";
     case "gemini": return "gemini-2.5-flash";
     default: return "";
@@ -362,6 +381,82 @@ async function persistVault() {
   return true;
 }
 
+// ——— معالج جلب المفتاح الموجّه: خطوات ثلاث، يومض حقل اللصق عند العودة ———
+function openWizard(c, onDone) {
+  const overlay = document.getElementById("overlay-root");
+  const name = c.name ?? t(c.nameKey);
+  overlay.innerHTML = `<div class="backdrop"></div><div class="sheet">
+    <div class="sh-head"><h3>${esc(name)}</h3><button class="sh-x" id="wz-x">✕</button></div>
+    <ol class="wz-steps">
+      <li><div><b>${t("wz_s1")}</b>${c.url ? `<a class="btn btn-grad btn-sm" href="${c.url}" target="_blank" rel="noopener noreferrer">${t("wz_open")} ↗</a>` : ""}</div></li>
+      <li><b>${t("wz_s2")}</b></li>
+      <li><b>${t("wz_s3")}</b></li>
+    </ol>
+    <div class="wz-return">${t("wz_return")}</div>
+    <div id="wz-lock"></div>
+    <div id="wz-paste" ${vaultState.unlocked ? "" : "hidden"}>
+      <div class="conn-form-in">
+        <input id="wz-key" type="password" autocomplete="off" placeholder="${t("conn_paste")}" dir="ltr" />
+        <button class="btn btn-grad btn-sm" id="wz-save">${t("conn_save")}</button>
+      </div>
+      <div class="conn-msg" id="wz-msg"></div>
+    </div>
+  </div>`;
+  const close = () => { overlay.innerHTML = ""; document.removeEventListener("visibilitychange", onVis); };
+  overlay.querySelector(".backdrop").addEventListener("click", close);
+  overlay.querySelector("#wz-x").addEventListener("click", close);
+  function onVis() {
+    if (document.hidden) return;
+    const k = overlay.querySelector("#wz-key");
+    if (k && !overlay.querySelector("#wz-paste").hidden) {
+      k.classList.add("flash");
+      setTimeout(() => k.classList.remove("flash"), 1400);
+      try { k.focus(); } catch {}
+    }
+  }
+  document.addEventListener("visibilitychange", onVis);
+
+  // الخزنة مقفلة؟ افتحها داخل المعالج نفسه — بلا خروج
+  const lockEl = overlay.querySelector("#wz-lock");
+  if (!vaultState.unlocked) {
+    lockEl.innerHTML = `<div class="field"><label>${t("vault_pass")}</label><div class="conn-form-in"><input id="wz-vp" type="password" autocomplete="off" /><button class="btn btn-ghost btn-sm" id="wz-vunlock">${t("wz_vunlock")}</button></div></div><div class="hint" style="margin:6px 0 10px">${t("wz_vault_needed")}</div>`;
+    lockEl.querySelector("#wz-vunlock").addEventListener("click", async () => {
+      const pass = lockEl.querySelector("#wz-vp").value;
+      if (!pass) return;
+      const r = await api.get("/api/vault");
+      if (!r.ok) { location.hash = "#auth-login"; return; }
+      if (r.data.blob) {
+        try { const data = await decryptBlob(pass, r.data.blob); vaultState.keys = data.keys ?? []; }
+        catch { lockEl.querySelector("#wz-vp").value = ""; lockEl.querySelector("#wz-vp").placeholder = t("wrong_pass"); return; }
+      }
+      vaultState._pass = pass;
+      vaultState.unlocked = true;
+      lockEl.innerHTML = "";
+      overlay.querySelector("#wz-paste").hidden = false;
+      overlay.querySelector("#wz-key").focus();
+    });
+  }
+
+  const inp = overlay.querySelector("#wz-key");
+  const msg = overlay.querySelector("#wz-msg");
+  const prefixes = Array.isArray(c.prefix) ? c.prefix : c.prefix ? [c.prefix] : [];
+  inp?.addEventListener("input", () => {
+    const v = inp.value.trim();
+    const good = prefixes.length && prefixes.some((pf) => v.startsWith(pf));
+    if (!prefixes.length || v.length < 5) { msg.textContent = ""; return; }
+    msg.textContent = good ? t("wz_fmt_ok") : t("conn_format_warn");
+    msg.className = "conn-msg " + (good ? "ok" : "bad");
+  });
+  overlay.querySelector("#wz-save")?.addEventListener("click", async () => {
+    const key = inp.value.trim();
+    if (!key || key.length < 8) return;
+    vaultState.keys.push({ id: `k-${Date.now().toString(36)}`, provider: c.id, label: name, key });
+    const ok = await persistVault();
+    if (ok) { close(); onDone && onDone(); }
+  });
+  try { inp && vaultState.unlocked && inp.focus(); } catch {}
+}
+
 // ——— الموصلات: كل نموذج بنقرة — حصتنا أولاً، ثم المفاتيح الرسمية المجانية، ثم المدفوعة ———
 const CONN_META = [
   { sec: "keyless", id: "instant", nameKey: "instant_card", subKey: "instant_card_sub", color: "p-instant", url: "", prefix: null },
@@ -370,6 +465,11 @@ const CONN_META = [
   { sec: "free", id: "gemini", name: "Google AI Studio", subKey: "google_sub2", color: "p-gemini", url: "https://aistudio.google.com/apikey", prefix: "AIza" },
   { sec: "free", id: "groq", name: "Groq", subKey: "groq_sub2", color: "p-groq", url: "https://console.groq.com/keys", prefix: "gsk_" },
   { sec: "free", id: "openrouter", name: "OpenRouter", subKey: "or_sub2", color: "p-openrouter", url: "https://openrouter.ai/settings/keys", prefix: "sk-or-" },
+  { sec: "free", id: "hf", name: "Hugging Face", subKey: "hf_sub", color: "p-hf", url: "https://huggingface.co/settings/tokens", prefix: "hf_" },
+  { sec: "free", id: "cerebras", name: "Cerebras", subKey: "cerebras_sub", color: "p-cerebras", url: "https://cloud.cerebras.ai", prefix: "csk-" },
+  { sec: "free", id: "mistral", name: "Mistral", subKey: "mistral_sub", color: "p-mistral", url: "https://console.mistral.ai/api-keys", prefix: null },
+  { sec: "free", id: "sambanova", name: "SambaNova", subKey: "sambanova_sub", color: "p-sambanova", url: "https://cloud.sambanova.ai/apikeys", prefix: null },
+  { sec: "free", id: "cohere", name: "Cohere", subKey: "cohere_sub", color: "p-cohere", url: "https://dashboard.cohere.com/api-keys", prefix: null },
   { sec: "paid", id: "openai", name: "OpenAI", sub: "GPT-4o · o-series", color: "p-openai", url: "https://platform.openai.com/api-keys", prefix: "sk-" },
   { sec: "paid", id: "anthropic", name: "Anthropic", sub: "Claude 4 family", color: "p-anthropic", url: "https://console.anthropic.com/settings/keys", prefix: "sk-ant-" },
 ];
@@ -412,36 +512,10 @@ async function renderConnectors(view) {
     }
   }
 
-  // وصّل: نموذج لصق داخل البطاقة
+  // وصّل: معالج موجّه — افتح اللوحة، انسخ، ألصق
   list.querySelectorAll("button[data-connect]").forEach((b) => b.addEventListener("click", () => {
-    const id = b.dataset.connect;
-    const form = list.querySelector(`#cf-${CSS.escape(id)}`);
-    if (!form.hidden) { form.hidden = true; return; }
-    form.hidden = false;
-    form.innerHTML = `
-      <div class="conn-form-in">
-        <input type="password" autocomplete="off" placeholder="${t("conn_paste")}" dir="ltr" data-keyinput />
-        <button class="btn btn-grad btn-sm" data-save="${id}">${t("conn_save")}</button>
-      </div>`;
-    form.querySelector("[data-keyinput]").focus();
-    form.querySelector(`button[data-save]`).addEventListener("click", async () => {
-      const inp = form.querySelector("[data-keyinput]");
-      const key = inp.value.trim();
-      const msg = list.querySelector(`#cm-${CSS.escape(id)}`);
-      if (!key) return;
-      const meta = CONN_META.find((x) => x.id === id);
-      const prefixes = Array.isArray(meta.prefix) ? meta.prefix : meta.prefix ? [meta.prefix] : [];
-      if (prefixes.length && !prefixes.some((pf) => key.startsWith(pf)))
-        msg.textContent = t("conn_format_warn");
-      if (!vaultState.unlocked) {
-        // اطلب فتح الخزنة أولاً ثم عد للموصلات
-        openVaultSheet(document.getElementById("app"));
-        return;
-      }
-      vaultState.keys.push({ id: `k-${Date.now().toString(36)}`, provider: id, label: CONN_META.find((x) => x.id === id).name, key });
-      const okSave = await persistVault();
-      if (okSave) { await renderConnectors(view); }
-    });
+    const meta = CONN_META.find((x) => x.id === b.dataset.connect);
+    if (meta) openWizard(meta, () => renderConnectors(view));
   }));
 
   // اختبر: نداء حقيقي صغير عبر الوكيل الشفاف

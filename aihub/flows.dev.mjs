@@ -110,31 +110,29 @@ check("كلمة خزنة خاطئة تُرفض في الواجهة", await page.
 // 7) الموصلات: بطاقات النقرة الواحدة
 await page.evaluate(() => { location.hash = "#/app/connectors"; });
 await page.waitForTimeout(600);
-check("الموصلات: 8 بطاقات بثلاثة أقسام", await page.evaluate(() => document.querySelectorAll(".conn-card").length === 8));
+check("الموصلات: 13 بطاقة بثلاثة أقسام", await page.evaluate(() => document.querySelectorAll(".conn-card").length === 13));
 check("الموصلات: الفوري موصول افتراضياً (بلا مفتاح)", await page.evaluate(() => document.querySelector(".conn-card .conn-status")?.textContent.includes("مُوصَّل") ?? false));
-// وصّل Groq — افتح الخزنة أولاً إن كانت مقفلة (سلوك آمن: اللصق يتطلب خزنة حية)
-await page.evaluate(() => document.querySelector("#nav-vault").click());
-await page.waitForTimeout(300);
-const vaultLocked = await page.evaluate(() => !!document.querySelector("#vp"));
-if (vaultLocked) {
-  await page.evaluate((vp) => { document.querySelector("#vp").value = vp; document.querySelector("#vp-go").click(); }, VPASS);
-  await page.waitForTimeout(1200);
-} else {
-  await page.evaluate(() => document.querySelector("#sh-close").click());
-}
+// ——— المعالج الموجّه: وصّل Groq من الصفر (خزنة مقفلة → فتح داخلي → لصق → حفظ) ———
 await page.evaluate(() => { location.hash = "#/app/connectors"; });
-await page.waitForTimeout(500);
-await page.evaluate(() => document.querySelector('button[data-connect="groq"]')?.click());
-await page.waitForTimeout(300);
-await page.evaluate(() => {
-  const form = document.querySelector("#cf-groq");
-  if (form && !form.hidden) {
-    form.querySelector("[data-keyinput]").value = "gsk_FAKEKEYFORTEST1234567890";
-    form.querySelector("button[data-save]").click();
-  }
-});
+await page.waitForTimeout(600);
+await page.evaluate(() => document.querySelector('button[data-connect="groq"]').click());
+await page.waitForTimeout(400);
+check("المعالج: ثلاث خطوات موجّهة", await page.evaluate(() => document.querySelectorAll(".wz-steps li").length === 3));
+check("المعالج: زر اللوحة الرسمية يشير إلى Groq", await page.evaluate(() => (document.querySelector('.wz-steps a[href*="groq.com"]') ?? {}).href?.includes("console.groq.com") ?? false));
+check("المعالج: فتح الخزنة داخلياً (بلا خروج)", await page.evaluate(() => !!document.querySelector("#wz-vp")));
+await page.evaluate((vp) => { document.querySelector("#wz-vp").value = vp; document.querySelector("#wz-vunlock").click(); }, VPASS);
 await page.waitForTimeout(1200);
-check("الموصلات: Groq أصبح مُوصَّلاً بعد اللصق", await page.evaluate(() => [...document.querySelectorAll(".conn-card")].some((c) => c.textContent.includes("Groq") && c.querySelector(".conn-status.ok"))));
+check("المعالج: حقل اللصق ظهر بعد الفتح", await page.evaluate(() => !document.querySelector("#wz-paste").hidden));
+await page.evaluate(() => {
+  const k = document.querySelector("#wz-key");
+  k.value = "gsk_FAKEKEYFORTEST1234567890";
+  k.dispatchEvent(new Event("input", { bubbles: true }));
+});
+await page.waitForTimeout(200);
+check("المعالج: تحقق الصيغة الحي يعمل", await page.evaluate(() => document.querySelector("#wz-msg").classList.contains("ok")));
+await page.evaluate(() => document.querySelector("#wz-save").click());
+await page.waitForTimeout(1400);
+check("الموصلات: Groq أصبح مُوصَّلاً بعد المعالج", await page.evaluate(() => [...document.querySelectorAll(".conn-card")].some((c) => c.textContent.includes("Groq") && c.querySelector(".conn-status.ok"))));
 await page.evaluate(() => document.querySelector(".conn-wrap")?.scrollIntoView());
 await page.waitForTimeout(300);
 await page.screenshot({ path: "shots/connectors.png" });
