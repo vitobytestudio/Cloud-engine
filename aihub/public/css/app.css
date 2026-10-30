@@ -300,3 +300,8 @@ input, textarea, select { font-family: inherit; color: var(--text); }
 .mm-pro { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .06em; background: var(--grad); color: #fff; border-radius: 5px; padding: 1.5px 5px; margin-inline-start: 7px; vertical-align: 1px; }
 .mm-link { margin-inline-start: auto; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; color: var(--faint); border: 1px solid var(--border); font-size: 13px; transition: all .15s var(--ease); flex-shrink: 0; }
 .mm-link:hover { color: var(--brand-2); border-color: var(--brand-2); background: rgba(0,212,255,.08); }
+
+/* ——— شرائح التوفر العابر بين المزودين ——— */
+.mm-cross { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.mm-cross [data-pp] { font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border-2); color: var(--dim); transition: all .15s var(--ease); }
+.mm-cross button:hover { color: var(--brand-2); border-color: var(--brand-2); background: rgba(0,212,255,.08); }

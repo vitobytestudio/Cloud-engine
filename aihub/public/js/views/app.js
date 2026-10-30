@@ -31,17 +31,21 @@ try { modelSel = JSON.parse(localStorage.getItem("ah_models") || "{}"); } catch 
 const MODEL_CATALOG = {
   "instant": [],
   "openai": [
-    ["GPT-5", "gpt-5", 1], ["GPT-5 mini", "gpt-5-mini"], ["GPT-5 nano", "gpt-5-nano"],
+    ["GPT-6 Astra", "gpt-6-astra", 1], ["GPT-5.6 Sol", "gpt-5.6-sol"],
+    ["GPT-5.6 Terra", "gpt-5.6-terra"], ["GPT-5.6 Luna — الأسرع", "gpt-5.6-luna"],
+    ["GPT-5", "gpt-5"], ["GPT-5 mini", "gpt-5-mini"], ["GPT-5 nano", "gpt-5-nano"],
     ["GPT-4.1", "gpt-4.1"], ["GPT-4.1 mini", "gpt-4.1-mini"], ["GPT-4o", "gpt-4o"], ["GPT-4o mini", "gpt-4o-mini"],
     ["o3 — استدلال", "o3"], ["o4-mini — استدلال", "o4-mini"],
   ],
   "anthropic": [
-    ["Claude Opus 5.5", "claude-opus-5-5", 1], ["Claude Opus 4.8", "claude-opus-4-8"],
-    ["Claude Opus 4.7", "claude-opus-4-7"], ["Claude Opus 4.5", "claude-opus-4-5"],
+    ["Claude Fable 5.1", "claude-fable-5-1", 1], ["Claude Fable 5", "claude-fable-5"],
+    ["Claude Opus 5.5", "claude-opus-5-5"], ["Claude Opus 4.8", "claude-opus-4-8"],
     ["Claude Sonnet 5", "claude-sonnet-5"], ["Claude Sonnet 4.5", "claude-sonnet-4-5"], ["Claude Haiku 4.5", "claude-haiku-4-5"],
   ],
   "gemini": [
-    ["Gemini 2.5 Pro", "gemini-2.5-pro", 1], ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
+    ["Gemini 4 Argon", "gemini-4-argon", 1], ["Gemini 3.8 Flash", "gemini-3.8-flash"],
+    ["Gemini 3.5 Flash-Lite", "gemini-3.5-flash-lite"], ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
+    ["Gemini 2.5 Pro", "gemini-2.5-pro"],
     ["Gemini 2.5 Flash", "gemini-2.5-flash"], ["Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite"], ["Gemini 2.0 Flash", "gemini-2.0-flash"],
   ],
   "nvidia": [
@@ -190,6 +194,23 @@ export async function renderApp(root, sub) {
 }
 
 // ——— مختار النموذج ———
+// — التوفر العابر: نفس النموذج قد يُخدم من عدة بوابات — نطبعها ونفتحها بنقرة —
+function normModel(id) {
+  return String(id || "").toLowerCase().split("/").pop()
+    .replace(/:free$/, "").replace(/^meta-/, "").replace(/-instruct|-versatile|-latest$/g, "");
+}
+function otherProviders(provider, modelId) {
+  const nid = normModel(modelId);
+  const out = [];
+  for (const p of PROVIDERS) {
+    if (p.id === provider || p.id === "instant") continue;
+    for (const entry of MODEL_CATALOG[p.id] || []) {
+      if (normModel(entry[1]) === nid) { out.push([p, entry[1]]); break; }
+    }
+  }
+  return out;
+}
+
 function shortModel(id) {
   if (!id) return "—";
   return id.replace(/^.*\//, "").replace(/:free$/, " ·free");
@@ -210,7 +231,7 @@ function renderModelPick(root) {
   if (mmenu) {
     const items = (MODEL_CATALOG[currentProvider] || []).map(([label, id, top]) => `
       <button data-m="${esc(id)}">
-        <span><div class="mi-name">${esc(label)}${top ? `<i class="mm-pro">PRO</i>` : ""}</div><div class="mi-sub" dir="ltr">${esc(id)}</div></span>
+        <span><div class="mi-name">${esc(label)}${top ? `<i class="mm-pro">PRO</i>` : ""}</div><div class="mi-sub" dir="ltr">${esc(id)}</div>${(() => { const o = otherProviders(currentProvider, id); return o.length ? `<div class="mm-cross">${o.map(([pp, pid]) => `<span role="button" tabindex="0" data-pp="${pp.id}" data-pid="${esc(pid)}" title="${t("also_on")}">${t("also_on_short")} ${pp.name}</span>`).join("")}</div>` : ""; })()}</span>
         ${id === mdl ? `<span class="mi-check">✓</span>` : ""}
         ${modelLink(currentProvider, id) ? `<span class="mm-link" data-url="${esc(modelLink(currentProvider, id))}" title="${t("model_official")}">↗</span>` : ""}
       </button>`).join("");
@@ -221,6 +242,16 @@ function renderModelPick(root) {
     mmenu.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", (e) => {
       const lnk = e.target.closest("[data-url]");
       if (lnk) { window.open(lnk.dataset.url, "_blank", "noopener,noreferrer"); return; }
+      const cross = e.target.closest("[data-pp]");
+      if (cross) {
+        currentProvider = cross.dataset.pp;
+        modelSel[currentProvider] = cross.dataset.pid;
+        localStorage.setItem("ah_provider", currentProvider);
+        localStorage.setItem("ah_models", JSON.stringify(modelSel));
+        mmenu.hidden = true;
+        renderModelPick(root);
+        return;
+      }
       modelSel[currentProvider] = b.dataset.m;
       localStorage.setItem("ah_models", JSON.stringify(modelSel));
       mmenu.hidden = true;

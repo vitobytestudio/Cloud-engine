@@ -156,6 +156,46 @@ check("عائلات: حقل المعرّف المخصص موجود", await page.
 check("الكتالوج: كل صف يحمل رابط الصفحة الرسمية", await page.evaluate(() => [...document.querySelectorAll("#mm-menu button[data-m]")].every((b) => b.querySelector("[data-url]"))));
 check("الكتالوج: شارة PRO للمتقدم ظاهرة", await page.evaluate(() => !!document.querySelector("#mm-menu .mm-pro")));
 check("الكتالوج: رابط Anthropic الرسمي صحيح", await page.evaluate(() => (document.querySelector("#mm-menu [data-url]") ?? {}).dataset?.url?.includes("docs.claude.com") ?? false));
+// 7.7) أحدث الرائد: Astra/Sol/Fable/Argon + العابر للمزودات
+await page.evaluate(() => { localStorage.setItem("ah_provider", "openai"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("أحدث: GPT-6 Astra وSol في قائمة OpenAI", await page.evaluate(() => {
+  const ids = [...document.querySelectorAll("#mm-menu .mi-sub")].map((x) => x.textContent);
+  return ids.includes("gpt-6-astra") && ids.includes("gpt-5.6-sol");
+}));
+await page.evaluate(() => { localStorage.setItem("ah_provider", "anthropic"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("أحدث: Claude Fable 5.1 أول القائمة بشارة PRO", await page.evaluate(() => {
+  const first = document.querySelector("#mm-menu button[data-m]");
+  return first.dataset.m === "claude-fable-5-1" && !!first.querySelector(".mm-pro");
+}));
+// الشرائح العابرة تظهر حيث يوجد تكرار فعلي (GPT-4o في github-models ← openai) — لا في Anthropic الحصرية
+await page.evaluate(() => { localStorage.setItem("ah_provider", "github-models"); location.reload(); });
+await page.waitForSelector("#mp-model", { timeout: 8000 });
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForSelector("#mm-menu button[data-m]", { timeout: 8000 });
+check("أحدث: شارة «أيضاً عبر» على GPT-4o العابر", await page.evaluate(() => [...document.querySelectorAll('#mm-menu button[data-m]')].some((b) => b.dataset.m === "gpt-4o" && b.querySelector(".mm-cross [data-pp]"))));
+await page.evaluate(() => { localStorage.setItem("ah_provider", "gemini"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+check("أحدث: Gemini 4 Argon و3.8 Flash في القائمة", await page.evaluate(() => {
+  const ids = [...document.querySelectorAll("#mm-menu .mi-sub")].map((x) => x.textContent);
+  return ids.includes("gemini-4-argon") && ids.includes("gemini-3.8-flash");
+}));
+await page.screenshot({ path: "shots/model-families.png" });
+// نقرة شريحة عابرة: من Gemini 2.5 Pro إلى نفس النموذج… (2.5 Pro في gemini فقط) — نستعمل GPT-4o من github-models
+await page.evaluate(() => { localStorage.setItem("ah_provider", "github-models"); location.reload(); });
+await page.waitForTimeout(900);
+await page.evaluate(() => document.querySelector("#mp-model").click());
+await page.waitForTimeout(300);
+await page.evaluate(() => document.querySelector('#mm-menu [data-pp]')?.click());
+await page.waitForTimeout(400);
+check("عابر: النقرة بدّلت المزود والنموذج معاً", await page.evaluate(() => document.querySelector("#mp-model") && localStorage.getItem("ah_provider") !== "github-models"));
 await page.evaluate(() => document.querySelector("#mp-model").click());
 await page.waitForTimeout(200);
 await page.screenshot({ path: "shots/model-families.png" });
