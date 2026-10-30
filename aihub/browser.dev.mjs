@@ -34,9 +34,17 @@ page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error" && !m.text().includes("favicon") && !m.text().includes("Failed to load resource")) errors.push(m.text()); });
 
 await page.goto("http://127.0.0.1:8791/", { waitUntil: "networkidle" });
+await page.waitForTimeout(700);
+// الافتتاحية السينمائية: شعارات + رائدات + تخطّي
+check("الافتتاحية: تُعرض أول زيارة", await page.evaluate(() => !!document.querySelector(".nx-intro")));
+check("الافتتاحية: 24 شعاراً في صفّي الماركي", await page.evaluate(() => document.querySelectorAll(".nx-logo").length === 24));
+check("الافتتاحية: 6 بطاقات رائدات (Astra/Fable/Argon…)", await page.evaluate(() => [...document.querySelectorAll(".nx-card-name")].some((x) => x.textContent.includes("GPT-6 Astra")) && [...document.querySelectorAll(".nx-card-name")].some((x) => x.textContent.includes("Fable"))));
+await page.evaluate(() => document.querySelector(".nx-skip").click());
+await page.waitForTimeout(900);
+check("الافتتاحية: التخطّي يكشف الهبوط", await page.evaluate(() => !document.querySelector(".nx-intro")));
 await page.waitForTimeout(900);
 
-check("العنوان الصحيح", (await page.title()).includes("AIHub"));
+check("العنوان الصحيح", (await page.title()).includes("Nexus"));
 check("RTL عربي افتراضي", await page.evaluate(() => document.documentElement.dir) === "rtl");
 check("البطل مرئي", await page.isVisible(".hero h1"));
 const heroText = await page.textContent(".hero h1");

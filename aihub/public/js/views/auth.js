@@ -2,11 +2,11 @@
 import { api, state } from "../api.js";
 import { t } from "../i18n.js";
 
-const LOGO = `<svg viewBox="0 0 32 32" fill="none" style="width:44px;height:44px"><defs><linearGradient id="lg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="#0a0d14" stroke="url(#lg3)" stroke-opacity=".4"/><path d="M9 22 16 9l7 13M12.2 17h7.6" stroke="url(#lg3)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const LOGO = `<svg viewBox="0 0 32 32" fill="none" style="width:44px;height:44px"><defs><linearGradient id="lg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="#0a0d14" stroke="url(#lg3)" stroke-opacity=".4"/><path d="M9.5 22.5v-13l13 13v-13" stroke="url(#lg3)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 export function renderAuth(root, mode) {
   const isLogin = mode === "login";
-  document.title = `AIHub — ${isLogin ? t("login") : t("register")}`;
+  document.title = `Nexus — ${isLogin ? t("login") : t("register")}`;
   root.innerHTML = `
   <div style="position:relative;min-height:100dvh;display:grid;place-items:center;padding:24px;overflow:hidden">
     <div class="blob blob-1"></div><div class="blob blob-2"></div>

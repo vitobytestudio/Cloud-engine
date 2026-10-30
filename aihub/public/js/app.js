@@ -4,6 +4,7 @@ import { onLang, getLang } from "./i18n.js";
 import { renderLanding } from "./views/landing.js";
 import { renderAuth } from "./views/auth.js";
 import { renderApp } from "./views/app.js";
+import { maybePlayIntro } from "./intro.js";
 
 const root = document.getElementById("app");
 
@@ -15,7 +16,7 @@ function applyDir() {
 async function route() {
   const h = location.hash || "#/";
   applyDir();
-  if (h === "#/" || h === "") { document.title = "AIHub — " + (getLang() === "ar" ? "كل نماذج الذكاء الاصطناعي في منصة واحدة" : getLang() === "fr" ? "Tous les modèles d'IA en une plateforme" : "Every AI model, one platform"); renderLanding(root); return; }
+  if (h === "#/" || h === "") { document.title = "Nexus — " + (getLang() === "ar" ? "كل نماذج الذكاء في منصة واحدة" : getLang() === "fr" ? "Tous les modèles d'IA en une plateforme" : "Every AI model, one platform"); renderLanding(root); maybePlayIntro(() => {}); return; }
   if (h === "#auth-login") { renderAuth(root, "login"); return; }
   if (h === "#auth-register") { renderAuth(root, "register"); return; }
   if (h.startsWith("#/app")) {

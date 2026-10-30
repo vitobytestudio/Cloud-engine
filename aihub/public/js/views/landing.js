@@ -2,7 +2,7 @@
 import { t } from "../i18n.js";
 import { state } from "../api.js";
 
-const LOGO = `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0a0d14" stroke="url(#lg1)" stroke-opacity=".4"/><path d="M9 22 16 9l7 13M12.2 17h7.6" stroke="url(#lg1)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const LOGO = `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0a0d14" stroke="url(#lg1)" stroke-opacity=".4"/><path d="M9.5 22.5v-13l13 13v-13" stroke="url(#lg1)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></svg>`;
 
 const MODELS = [
@@ -21,7 +21,7 @@ export function renderLanding(root) {
   root.innerHTML = `
   <div class="nav glass">
     <div class="nav-in">
-      <a class="nav-logo" href="#/">${LOGO} AIHub</a>
+      <a class="nav-logo" href="#/">${LOGO} Nexus</a>
       <nav class="nav-links">
         <a href="#features">${t("sec_title")}</a>
         <a href="#rings">${t("rings_title").split("—")[0]}</a>
@@ -51,7 +51,7 @@ export function renderLanding(root) {
     <div class="marquee fade-up d5"><div class="marquee-track" id="marq"></div></div>
   </header>
 
-  <section class="section" id="features">
+  <section class="section reveal" id="features">
     <div class="sec-head fade-up"><h2>${t("sec_title")}</h2><p>${t("sec_p")}</p></div>
     <div class="bento">
       ${bentoCard("span4", ic_lock(), t("b1_t"), t("b1_p"), "rgba(124,108,255,.25)")}
@@ -63,7 +63,7 @@ export function renderLanding(root) {
     </div>
   </section>
 
-  <section class="section" id="rings">
+  <section class="section reveal" id="rings">
     <div class="sec-head fade-up"><h2>${t("rings_title")}</h2></div>
     <div class="rings">
       <div class="ring-card fade-up d1"><div class="ring-num">1</div><h3>${t("ring1_t")}</h3><p>${t("ring1_p")}</p><span class="ring-tag">${t("free_forever")}</span></div>
@@ -72,7 +72,7 @@ export function renderLanding(root) {
     </div>
   </section>
 
-  <section class="section" id="pricing">
+  <section class="section reveal" id="pricing">
     <div class="sec-head fade-up"><h2>${t("tagline")}</h2></div>
     <div class="plans">
       <div class="plan-card fade-up d1">
@@ -107,7 +107,7 @@ export function renderLanding(root) {
 
   <footer class="footer">
     <div>${LOGO.replace('width="30"','width="22"')} </div>
-    <div style="margin-top:8px">${t("footer_rights")} · © 2026 AIHub</div>
+    <div style="margin-top:8px">${t("footer_rights")} · © 2026 Nexus</div>
     <div class="fl"><a href="#/">${t("terms")}</a><a href="#/">${t("privacy")}</a><a href="#/">${t("docs")}</a></div>
   </footer>`;
 
@@ -115,6 +115,14 @@ export function renderLanding(root) {
   const marq = root.querySelector("#marq");
   const chips = MODELS.map(([n, c]) => `<span class="model-chip"><span class="dot" style="background:${c}"></span>${n}</span>`).join("");
   marq.innerHTML = chips + chips;
+
+  // كشف الأقسام عند التمرير — حركة بريميوم هادئة
+  if (typeof IntersectionObserver !== "undefined") {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
+    root.querySelectorAll(".reveal").forEach((r) => io.observe(r));
+  } else {
+    root.querySelectorAll(".reveal").forEach((r) => r.classList.add("in"));
+  }
 }
 
 function ic_lock() { return `<svg viewBox="0 0 24 24" fill="none" stroke="url(#lg1)" stroke-width="1.8"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 1 1 8 0v2.7" stroke-linecap="round"/></svg>`; }

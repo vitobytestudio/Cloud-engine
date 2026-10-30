@@ -1,4 +1,4 @@
-name = "aihub"
+name = "nexus-hub"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
@@ -8,15 +8,18 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "aihub_db"
-database_id = "local-aihub"
+database_name = "nexus_hub_db"
+database_id = "00000000-0000-0000-0000-000000000000"
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
-id = "local-aihub-kv"
+id = "00000000000000000000000000000000"
+
+[ai]
+binding = "AI"
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 
 [triggers]
 crons = ["0 3 * * *"]

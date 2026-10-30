@@ -1,0 +1,112 @@
+name: "Nexus Hub — نشر على workers.dev"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "aihub/**"
+      - ".github/workflows/aihub-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aihub-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: تثبيت الحزم
+        working-directory: aihub
+        run: npm install --no-audit --no-fund
+
+      - name: تجهيز قاعدة D1 ومساحة KV (إنشاء إن لم يوجدا — برمجياً فقط)
+        working-directory: aihub
+        run: |
+          ACC="$CLOUDFLARE_ACCOUNT_ID"
+          RESP=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database?per_page=100")
+          OKF=$(echo "$RESP" | jq -r '.success')
+          [ "$OKF" = "True" ] || [ "$OKF" = "true" ] || echo "::warning::D1-list: $(echo "$RESP" | jq -c '.errors')"
+          D1_ID=$(echo "$RESP" | jq -r '.result[] | select(.name=="nexus_hub_db") | .uuid' | head -1)
+          if [ -z "$D1_ID" ]; then
+            CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
+              -d '{"name":"nexus_hub_db"}')
+            D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
+            echo "::notice::أُنشئت قاعدة nexus_hub_db لأول مرة"
+          else
+            echo "::notice::nexus_hub_db القائمة قيد الاستخدام — حسابات المستخدمين محفوظة"
+          fi
+          [ -n "$D1_ID" ] || { echo "::error::تعذر تأمين قاعدة nexus_hub_db"; exit 1; }
+          KR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
+          KV_ID=$(echo "$KR" | jq -r '.result[] | select(.title=="nexus-hub-cache") | .id' | head -1)
+          if [ -z "$KV_ID" ]; then
+            CK=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces" \
+              -d '{"title":"nexus-hub-cache"}')
+            KV_ID=$(echo "$CK" | jq -r '.result.id // empty')
+            [ -n "$KV_ID" ] || echo "::warning::KV-create: $(echo "$CK" | jq -c '.errors')"
+          fi
+          [ -n "$KV_ID" ] || { echo "::error::تعذر تجهيز مساحة KV"; exit 1; }
+          sed -i "s/00000000-0000-0000-0000-000000000000/$D1_ID/" wrangler.toml
+          sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
+          echo "::notice::D1 وKV جاهزان"
+
+      - name: المخطط + سقوف الباقات
+        working-directory: aihub
+        run: |
+          npx wrangler d1 execute DB --remote -y --file schema.sql
+          npx wrangler d1 execute DB --remote -y --file seed.sql
+          echo "::notice::قاعدة nexus_hub_db جاهزة"
+
+      - name: رمز التمليح (سر المخزن إن وجد وإلا توليد دائم في KV — لا يُطبع)
+        working-directory: aihub
+        env:
+          AUTH_PEPPER: ${{ secrets.AUTH_PEPPER }}
+        run: |
+          if [ -n "$AUTH_PEPPER" ]; then
+            printf '%s' "$AUTH_PEPPER" | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
+          else
+            PEPPER=$(npx wrangler kv key get "auth_pepper" --binding CACHE_KV --remote 2>/dev/null || true)
+            if [ -z "$PEPPER" ]; then
+              PEPPER=$(openssl rand -hex 32)
+              printf '%s' "$PEPPER" | npx wrangler kv key put "auth_pepper" --binding CACHE_KV --remote >/dev/null 2>&1
+              echo "::notice::أُنشئ رمز تمليح دائم وخُزِّن في KV"
+            else
+              echo "::notice::رمز التمليح الدائم جُلب من KV — ثابت عبر النشرات"
+            fi
+            printf '%s' "$PEPPER" | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
+          fi
+
+      - name: النشر
+        working-directory: aihub
+        run: |
+          npx wrangler deploy 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
+          if [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; else echo "::notice::تم النشر — راجع عنوان workers.dev في السجل"; fi
+
+      - name: فحص ما بعد النشر
+        working-directory: aihub
+        run: |
+          URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
+          [ -n "$URL" ] || { echo "::warning::لم يُستخرج العنوان — تجاوز"; exit 0; }
+          sleep 5
+          H=$(curl -s "$URL/health")
+          echo "health: $H"
+          echo "$H" | grep -q '"ok":true' || { echo "::error::الفحص بعد النشر فشل"; exit 1; }
+          echo "::notice::المنصة حية على $URL"

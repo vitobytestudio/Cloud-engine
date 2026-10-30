@@ -7,7 +7,7 @@ function esc(v) {
   return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-const LOGO = `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0a0d14" stroke="url(#lg2)" stroke-opacity=".4"/><path d="M9 22 16 9l7 13M12.2 17h7.6" stroke="url(#lg2)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const LOGO = `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0a0d14" stroke="url(#lg2)" stroke-opacity=".4"/><path d="M9.5 22.5v-13l13 13v-13" stroke="url(#lg2)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 const PROVIDERS = [
   { id: "instant", name: "Llama 3.1 (Instant)", sub: t("instant_sub"), color: "p-instant", free: true },
@@ -127,7 +127,7 @@ export async function renderApp(root, sub) {
   root.innerHTML = `
   <div class="app-shell">
     <aside class="side" id="side">
-      <a class="side-logo" href="#/">${LOGO} AIHub</a>
+      <a class="side-logo" href="#/">${LOGO} Nexus</a>
       <button class="side-item on" id="nav-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 21l1.6-5.3A8.5 8.5 0 1 1 21 12Z"/></svg>${t("chat")}</button>
       <button class="side-item" id="nav-usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V13M10 20V6.5M16 20v-9.5M21 20H3.5"/></svg>${t("usage")}</button>
       <button class="side-item" id="nav-conn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5 5.5 11a3.5 3.5 0 0 0 5 5l1-1M15 16.5 18.5 13a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M10.5 13.5 13.5 10.5"/></svg>${t("nav_conn")}</button>

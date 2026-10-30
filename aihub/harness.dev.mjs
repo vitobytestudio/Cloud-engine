@@ -13,7 +13,7 @@ const health = await fetch(`${BASE}/health`).then((r) => r.json()).catch(() => n
 check("الخادم حي", !!health?.ok, health?.v);
 
 const html = await fetch(BASE + "/").then((r) => r.text());
-check("صفحة الهبوط تُخدم", html.includes("AIHub") && html.includes("app.css"));
+check("صفحة الهبوط تُخدم", html.includes("Nexus") && html.includes("app.css"));
 
 // ——— 2) المصادقة ———
 const reg = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, password: "StrongPass9", full_name: "Vito Owner" }) });
@@ -97,7 +97,7 @@ const dom = new JSDOM(html, { runScripts: "dangerously", resources: "usable", ur
 await sleep(600);
 const d = dom.window.document;
 check("HTML يحمل جذر التطبيق", !!d.getElementById("app"));
-check("i18n: العنوان العربي في meta", html.includes("كل نماذج الذكاء الاصطناعي في منصة واحدة"));
+check("i18n: العنوان العربي في meta", html.includes("كل نماذج الذكاء في منصة واحدة"));
 
 // فحص وحدات العرض مباشرة (استيراد ديناميكي مع DOM وهمي)
 const dom2 = new JSDOM(`<!doctype html><html><body><div id="x"></div></body></html>`, { url: BASE });

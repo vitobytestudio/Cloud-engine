@@ -72,7 +72,7 @@ export default {
       }
     }
 
-    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.6.0-a" }), { headers: { "content-type": "application/json", ...cors } });
+    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.7.0-a" }), { headers: { "content-type": "application/json", ...cors } });
 
     // البقية = أصول ساكنة
     return env.ASSETS.fetch(req);
