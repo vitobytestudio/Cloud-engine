@@ -1,7 +1,8 @@
 // ——— المصادقة: PBKDF2 للدخول + جلسات مبهمة في KV — (مفاتيح النماذج لا علاقة لها بهذا الملف إطلاقاً) ———
 import type { Env } from "../env";
 
-const ITERATIONS = 210_000;
+// الدورات محفوظة داخل سلسلة التجزئة نفسها — الرفع لاحقاً لا يكسر الحسابات القديمة
+export const DEFAULT_ITER = 15_000; // ≤ 8ms CPU — ضمن حصة الخطة المجانية؛ ارفعها عبر AUTH_ITER مع الخطة المدفوعة
 
 function hex(n: number): string {
   const u = new Uint8Array(n);
@@ -20,16 +21,16 @@ function b64(buf: ArrayBuffer): string {
   return btoa(s);
 }
 
-export async function hashPassword(password: string, pepper: string): Promise<string> {
+export async function hashPassword(password: string, pepper: string, iter = DEFAULT_ITER): Promise<string> {
   const salt = hex(16);
-  const bits = await derive(password, salt, pepper);
-  return `pbkdf2$${ITERATIONS}$${salt}$${bits}`;
+  const bits = await derive(password, salt, pepper, iter);
+  return `pbkdf2$${iter}$${salt}$${bits}`;
 }
 
 export async function verifyPassword(password: string, stored: string, pepper: string): Promise<boolean> {
   const parts = stored.split("$");
   if (parts.length !== 4) return false;
-  const bits = await derive(password, parts[2], pepper);
+  const bits = await derive(password, parts[2], pepper, parseInt(parts[1], 10) || DEFAULT_ITER);
   const x = new TextEncoder().encode(bits), y = new TextEncoder().encode(parts[3]);
   if (x.length !== y.length) return false;
   let r = 0;
@@ -37,10 +38,10 @@ export async function verifyPassword(password: string, stored: string, pepper: s
   return r === 0;
 }
 
-async function derive(password: string, salt: string, pepper: string): Promise<string> {
+async function derive(password: string, salt: string, pepper: string, iter: number): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password + "|" + pepper), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(salt), iterations: ITERATIONS },
+    { name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(salt), iterations: Math.min(Math.max(iter, 1000), 500_000) },
     key, 256
   );
   return b64(bits);
