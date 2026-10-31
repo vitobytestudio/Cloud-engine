@@ -4,6 +4,7 @@ import { getSessionData } from "./lib/auth";
 import * as auth from "./controllers/auth.controller";
 import * as vault from "./controllers/vault.controller";
 import * as ai from "./controllers/ai.controller";
+import * as env from "./controllers/env.controller";
 
 type Route = { m: string; pat: string; h: (req: Request, env: Env, s: Session, p: Record<string, string>) => Promise<Response>; auth?: boolean; csrf?: boolean };
 
@@ -41,6 +42,11 @@ const routes: Route[] = [
   { m: "POST", pat: "/api/agent/run",           h: (r, e, s) => ai.agentRun(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/video/luma",          h: (r, e, s) => ai.lumaCreate(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/video/luma-status",   h: (r, e, s) => ai.lumaStatus(r, e, s), auth: true, csrf: true },
+  { m: "GET",  pat: "/api/env/status", h: (r, e, s) => env.envStatus(r, e, s), auth: true },
+  { m: "POST", pat: "/api/env",        h: (r, e, s) => env.envCreate(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/env/exec",   h: (r, e, s) => env.envExec(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/env/agent",  h: (r, e, s) => env.envAgent(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/env/stop",   h: (r, e, s) => env.envStop(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/:provider", h: (r, e, s, p) => ai.proxyInfer(r, e, s, p), auth: true },
   { m: "GET",  pat: "/api/usage",         h: (r, e, s) => ai.usageReport(r, e, s), auth: true },
 ];
@@ -88,7 +94,7 @@ export default {
       }
     }
 
-    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.10.1-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
+    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.11.0-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
 
     // البقية = أصول ساكنة (برؤوس الأمان نفسها)
     const asset = await env.ASSETS.fetch(req);
