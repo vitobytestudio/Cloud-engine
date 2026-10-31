@@ -25,6 +25,7 @@ const PROVIDERS = [
   { id: "anthropic", name: "Anthropic", sub: "Claude 4 family — your key", color: "p-anthropic", free: false },
   { id: "gemini", name: "Google Gemini", sub: "2.5 Pro/Flash — your key (free tier)", color: "p-gemini", free: true },
   { id: "luma", name: "Luma Ray-2", sub: "Dream Machine video — your key", color: "p-luma", free: false, hidden: true },
+  { id: "byteplus", name: "BytePlus · ByteDance", sub: "Seedance 2.5/2.0 — الربط الآن، التنفيذ في دفعة الفيديو القادمة", color: "p-byteplus", free: false, hidden: true },
 ];
 
 let currentProvider = localStorage.getItem("ah_provider") || "instant";
@@ -42,15 +43,20 @@ const MODEL_CATALOG = {
     ["GPT-5", "gpt-5"], ["GPT-5 mini", "gpt-5-mini"], ["GPT-5 nano", "gpt-5-nano"],
     ["GPT-4.1", "gpt-4.1"], ["GPT-4.1 mini", "gpt-4.1-mini"], ["GPT-4o", "gpt-4o"], ["GPT-4o mini", "gpt-4o-mini"],
     ["o3 — استدلال", "o3"], ["o4-mini — استدلال", "o4-mini"],
+    ["GPT-6.1 Sol — الأحدث", "gpt-6.1-sol", 0, "GPT-6.1"], ["GPT-6.1 Terra", "gpt-6.1-terra", 0, "GPT-6.1"],
+    ["GPT-6 Luna — الأسرع", "gpt-6-luna", 0, "GPT-6"],
   ],
   "anthropic": [
     ["Claude Fable 5.1", "claude-fable-5-1", 1], ["Claude Fable 5", "claude-fable-5"],
     ["Claude Opus 5.5", "claude-opus-5-5"], ["Claude Opus 4.8", "claude-opus-4-8"],
-    ["Claude Sonnet 5", "claude-sonnet-5"], ["Claude Sonnet 4.5", "claude-sonnet-4-5"], ["Claude Haiku 4.5", "claude-haiku-4-5"],
+    ["Claude Sonnet 5", "claude-sonnet-5"], ["Claude Sonnet 4.5", "claude-sonnet-4-5"],
+    ["Claude Haiku 5.5 — الأحدث", "claude-haiku-5-5"], ["Claude Haiku 4.5", "claude-haiku-4-5"],
   ],
   "gemini": [
-    ["Gemini 4 Argon", "gemini-4-argon", 1], ["Gemini 3.8 Flash", "gemini-3.8-flash"],
-    ["Gemini 3.5 Flash-Lite", "gemini-3.5-flash-lite"], ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
+    ["Gemini 4 Argon", "gemini-4-argon", 1, "Gemini 4"], ["Gemini 3.8 Flash", "gemini-3.8-flash", 0, "Gemini 3"],
+    ["Gemini 3.1 Pro", "gemini-3.1-pro", 0, "Gemini 3"], ["Gemini 3.5 Flash-Lite", "gemini-3.5-flash-lite", 0, "Gemini 3"],
+    ["Gemini Omni 1.1 Flash — فيديو", "gemini-omni-1.1-flash", 0, "الفيديو · Omni", "video"],
+    ["Gemini 3 Flash (معاينة)", "gemini-3-flash-preview"],
     ["Gemini 2.5 Pro", "gemini-2.5-pro"],
     ["Gemini 2.5 Flash", "gemini-2.5-flash"], ["Gemini 2.5 Flash-Lite", "gemini-2.5-flash-lite"], ["Gemini 2.0 Flash", "gemini-2.0-flash"],
   ],
@@ -59,6 +65,11 @@ const MODEL_CATALOG = {
     ["DeepSeek-R1", "deepseek-ai/deepseek-r1"], ["Llama 4 Maverick", "meta/llama-4-maverick-17b-128e-instruct"],
     ["Llama 4 Scout", "meta/llama-4-scout-17b-16e-instruct"], ["Qwen3 Coder 480B", "qwen/qwen3-coder-480b-a35b-instruct"],
     ["Kimi K2 Instruct", "moonshotai/kimi-k2-instruct"],
+  ],
+  "byteplus": [
+    ["Seedance 2.5 — 1080p", "seedance-2.5-1080p", 1, "Seedance"],
+    ["Seedance 2.5 — 720p", "seedance-2.5-720p", 0, "Seedance"],
+    ["Seedance 2.0 — 720p", "seedance-2.0-720p", 0, "Seedance"],
   ],
   "github-models": [
     ["GPT-4o", "gpt-4o"], ["GPT-4.1", "gpt-4.1"], ["DeepSeek-R1", "DeepSeek-R1"],
@@ -256,7 +267,7 @@ function otherProviders(provider, modelId) {
   const out = [];
   for (const p of PROVIDERS) {
     if (p.id === provider || p.id === "instant") continue;
-    for (const entry of MODEL_CATALOG[p.id] || []) {
+    for (const entry of (MODEL_CATALOG[p.id] || []).filter((e) => e[4] !== "video")) {
       if (normModel(entry[1]) === nid) { out.push([p, entry[1]]); break; }
     }
   }
@@ -282,7 +293,7 @@ function renderModelPick(root) {
   // قائمة العائلات (المستوى الثاني)
   const mmenu = holder.querySelector("#mm-menu") ;
   if (mmenu) {
-    const items = (MODEL_CATALOG[currentProvider] || []).map(([label, id, top]) => `
+    const items = (MODEL_CATALOG[currentProvider] || []).filter((e) => e[4] !== "video").map(([label, id, top]) => `
       <button data-m="${esc(id)}">
         <span><div class="mi-name">${esc(label)}${top ? `<i class="mm-pro">PRO</i>` : ""}</div><div class="mi-sub" dir="ltr">${esc(id)}</div>${(() => { const o = otherProviders(currentProvider, id); return o.length ? `<div class="mm-cross">${o.map(([pp, pid]) => `<span role="button" tabindex="0" data-pp="${pp.id}" data-pid="${esc(pid)}" title="${t("also_on")}">${t("also_on_short")} ${pp.name}</span>`).join("")}</div>` : ""; })()}</span>
         ${id === mdl ? `<span class="mi-check">✓</span>` : ""}
@@ -393,7 +404,7 @@ async function sendDuel(root, q) {
       else txt.textContent = errMsg(r.data?.error);
       done(); return { ok, acc };
     }
-    const kd = vaultState.keys.find((k) => k.provider === st.provider);
+    const kd = keyFor(st.provider, st.model || defaultModel(st.provider));
     if (!kd || !vaultState.unlocked) { txt.textContent = t("key_required"); done(); return { ok: false, acc: "" }; }
     await api.stream(st.provider, kd.key, { model: st.model || defaultModel(st.provider), messages: history.slice(-12), stream: true },
       (chunk) => { acc += chunk; txt.textContent = acc + "▍"; scroller.scrollTop = 1e9; },
@@ -439,7 +450,7 @@ function updateDuelBar(root) {
   if (!bar) return;
   bar.hidden = !duelOn;
   if (!duelOn) return;
-  const providers = PROVIDERS.filter((p) => p.id !== "instant" && p.id !== "auto");
+  const providers = PROVIDERS.filter((p) => p.id !== "instant" && p.id !== "auto" && !p.hidden);
   for (const side of ["A", "B"]) {
     const st = side === "A" ? duelA : duelB;
     const pSel = bar.querySelector(`#duel-p${side}`);
@@ -450,7 +461,7 @@ function updateDuelBar(root) {
     }
     pSel.innerHTML = providers.map((p) => `<option value="${p.id}" ${p.id === st.provider ? "selected" : ""}>${p.name}</option>`).join("");
     const fillModels = () => {
-      const cat = MODEL_CATALOG[st.provider] || [];
+      const cat = (MODEL_CATALOG[st.provider] || []).filter((e) => e[4] !== "video");
       const cur = modelSel[st.provider] || (cat[0] ? cat[0][1] : "");
       st.model = cur;
       mSel.innerHTML = cat.map(([label, id]) => `<option value="${esc(id)}" ${id === cur ? "selected" : ""}>${esc(shortModel(id))}</option>`).join("") || "";
@@ -596,7 +607,7 @@ function wireChat(root) {
     }
 
     // BYOK: نحتاج المفتاح من الخزنة المفتوحة في الذاكرة
-    const kd = vaultState.keys.find((k) => k.provider === currentProvider);
+    const kd = keyFor(currentProvider, currentModel());
     if (!kd || !vaultState.unlocked) { a.txt.textContent = t("key_required"); openVaultSheet(root); finish(); return; }
 
     let acc = "";
@@ -695,13 +706,16 @@ function openVaultSheet(root) {
         ${vaultState.keys.map((k, i) => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:12px">
           <span class="mi-dot ${PROVIDERS.find((p) => p.id === k.provider)?.color ?? "p-openai"}" style="width:8px;height:8px;border-radius:50%"></span>
           <span style="font-size:13px;font-weight:600">${esc(k.label || k.provider)}</span>
-          <span style="font-size:11px;color:var(--faint);margin-inline-start:auto">${k.provider}</span>
+          <span style="font-size:11px;color:var(--faint);margin-inline-start:auto">${k.provider}${k.model ? " · " + esc(shortModel(k.model)) : ""}</span>
           <button data-del="${i}" style="color:var(--err);font-size:13px;padding:4px 8px">✕</button>
         </div>`).join("")}
       </div>`}
       <div class="field"><label>${t("provider")}</label><select id="nk-prov">
         ${PROVIDERS.filter((p) => p.id !== "instant").map((p) => `<option value="${p.id}">${p.name}</option>`).join("")}
       </select></div>
+      <div class="field"><input id="nk-search" type="search" placeholder="${t("key_search")}" /></div>
+      <div class="field"><label>${t("key_model")}</label><select id="nk-model"><option value="">${t("key_all_models")}</option></select></div>
+      <div class="field" id="nk-custom-wrap" hidden><label>${t("key_custom")}</label><input id="nk-custom" dir="ltr" placeholder="${t("key_custom_ph")}" /></div>
       <div class="field"><label>${t("label")}</label><input id="nk-label" type="text" placeholder="Pro · work" /></div>
       <div class="field"><label>${t("api_key")}</label><input id="nk-key" type="password" autocomplete="off" placeholder="sk-…" /></div>
       <button class="btn btn-grad" style="width:100%" id="nk-go">${t("add_key")}</button>`;
@@ -710,12 +724,34 @@ function openVaultSheet(root) {
       await persist(root);
       close(); openVaultSheet(root);
     }));
+    const fillNkModels = () => {
+      const prov = (body.querySelector("#nk-prov") ).value;
+      const sel = body.querySelector("#nk-model");
+      const q = ((body.querySelector("#nk-search") ?? {}).value ?? "").trim().toLowerCase();
+      const rows = (MODEL_CATALOG[prov] || []).filter(([l, id]) => !q || l.toLowerCase().includes(q) || id.toLowerCase().includes(q));
+      const groups = [...new Set(rows.map((r) => r[3]).filter(Boolean))];
+      let html = `<option value="">${t("key_all_models")}</option>`;
+      for (const g of groups) html += `<optgroup label="${esc(g)}">` + rows.filter((r) => r[3] === g).map(([l, id]) => `<option value="${esc(id)}">${esc(l)}</option>`).join("") + `</optgroup>`;
+      html += rows.filter((r) => !r[3]).map(([l, id]) => `<option value="${esc(id)}">${esc(l)}</option>`).join("");
+      html += `<option value="__custom__">${t("key_custom")}</option>`;
+      sel.innerHTML = html;
+      body.querySelector("#nk-custom-wrap").hidden = sel.value !== "__custom__";
+    };
+    fillNkModels();
+    body.querySelector("#nk-prov")?.addEventListener("change", fillNkModels);
+    body.querySelector("#nk-search")?.addEventListener("input", fillNkModels);
+    body.querySelector("#nk-model")?.addEventListener("change", () => {
+      const sel = body.querySelector("#nk-model");
+      body.querySelector("#nk-custom-wrap").hidden = sel.value !== "__custom__";
+    });
     body.querySelector("#nk-go")?.addEventListener("click", async () => {
       const provider = (body.querySelector("#nk-prov") ).value;
       const key = (body.querySelector("#nk-key") ).value.trim();
       const label = (body.querySelector("#nk-label") ).value.trim();
       if (!key) return;
-      vaultState.keys.push({ id: `k-${Date.now().toString(36)}`, provider, label, key });
+      const sel = (body.querySelector("#nk-model") );
+      const model = sel.value === "__custom__" ? ((body.querySelector("#nk-custom") ).value.trim()) : sel.value;
+      vaultState.keys.push({ id: `k-${Date.now().toString(36)}`, provider, model, label, key });
       const ok = await persist(root);
       if (ok) { close(); openVaultSheet(root); }
     });

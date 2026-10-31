@@ -88,7 +88,7 @@ export default {
       }
     }
 
-    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.10.0-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
+    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.10.1-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
 
     // البقية = أصول ساكنة (برؤوس الأمان نفسها)
     const asset = await env.ASSETS.fetch(req);
