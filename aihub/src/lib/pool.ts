@@ -51,7 +51,7 @@ export type AutoResult = { ok: boolean; content?: string; via?: string; model?: 
 // ——— محرك التدوير: يجرّب السلسلة كاملة ويعدّ التحويلات ———
 export async function runChain(env: Env, messages: Array<{ role: string; content: string }>, maxTokens = 1024): Promise<AutoResult> {
   const t0 = Date.now();
-  const body = JSON.stringify({ messages, max_tokens: maxTokens })   // بلا temperature: نماذج الاستدلال (gpt-oss) ترفض غير 1 عند بعض المزودين;
+  const body = JSON.stringify({ model: link.model, messages, max_tokens: maxTokens })   // بلا temperature: نماذج الاستدلال (gpt-oss) ترفض غير 1 عند بعض المزودين;
   const trace: string[] = [];   // أرقام حالات فقط — لا أسرار ولا مفاتيح
   for (const link of CHAIN) {
     const key = env[link.envKey] as string | undefined;
