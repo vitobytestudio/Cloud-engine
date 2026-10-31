@@ -2,6 +2,7 @@
 import type { Env, Session } from "../env";
 import { rateLimit } from "../lib/rate";
 import { planLimits, bumpUsage, getUsage, audit } from "../lib/usage";
+import { CHAIN, runChain, faqKey, cacheGet, cachePut } from "../lib/pool";
 
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -63,6 +64,61 @@ export async function instant(req: Request, env: Env, s: Session): Promise<Respo
     }
   } catch { /* تعذّرت الحلقتان معاً */ }
   return json({ error: "ai_unavailable", used, cap: lim.instant_daily }, 503);
+}
+
+// ——— Nexus Open: تدوير ذكي عبر مفاتيح المنصة + كاش الأسئلة الشائعة — بلا مفتاح من المستخدم ———
+export async function autoInfer(req: Request, env: Env, s: Session): Promise<Response> {
+  if (!s.userId || !s.csrf) return json({ error: "auth_required" }, 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return json({ error: "csrf" }, 403);
+  const plan = (await env.DB.prepare("SELECT plan FROM users WHERE id=?").bind(s.userId).first<{ plan: string }>())?.plan ?? "FREE";
+  const lim = await planLimits(env, plan);
+  if (!(await rateLimit(env, `auto:${s.userId}`, lim.auto_daily, 86400))) {
+    return json({ error: "daily_cap", cap: lim.auto_daily, reset: "00:00 UTC" }, 429);
+  }
+  // صمام عالمي يحمي مفاتيح المنصة من التدفق (90 طلباً/دقيقة للجميع)
+  if (!(await rateLimit(env, "auto:global", 90, 60))) return json({ error: "busy", hint: "try_instant" }, 429);
+
+  const b = (await req.json().catch(() => ({}))) as { messages?: Array<{ role: string; content: string }> };
+  const msgs = Array.isArray(b.messages) ? b.messages.slice(-12) : [];
+  if (!msgs.length || msgs.some((m) => typeof m.content !== "string" || m.content.length > 8000))
+    return json({ error: "invalid_input" }, 400);
+
+  // 1) كاش الأسئلة الشائعة: آخر رسالة مستخدم مطبَّعة — إصابة واحدة توفر استدعاءً كاملاً
+  const lastUser = [...msgs].reverse().find((m) => m.role === "user")?.content ?? "";
+  if (lastUser.trim().length >= 6) {
+    const k = await faqKey(lastUser);
+    const hit = await cacheGet(env, k);
+    if (hit) {
+      const used = await bumpUsage(env, s.userId, "auto");
+      return json({ ok: true, content: hit, via: "cache", model: "faq-cache", cached: true, used, cap: lim.auto_daily });
+    }
+  }
+
+  // 2) سلسلة التدوير: Groq → Cerebras → Gemini → OpenRouter → احتياط أعمق
+  const r = await runChain(env, msgs);
+  if (r.ok && r.content) {
+    if (lastUser.trim().length >= 6) await cachePut(env, await faqKey(lastUser), r.content);
+    const used = await bumpUsage(env, s.userId, "auto");
+    await audit(env, s.userId, "auto", r.via ?? "");
+    return json({ ok: true, content: r.content, via: r.via, model: r.model, used, cap: lim.auto_daily });
+  }
+
+  // 3) الحلقة المجتمعية كصمام أخير
+  try {
+    const res = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ model: "openai", messages: msgs, private: true }),
+    });
+    if (res.ok) {
+      const d = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const content = d.choices?.[0]?.message?.content ?? "";
+      if (content) {
+        const used = await bumpUsage(env, s.userId, "auto");
+        return json({ ok: true, content, via: "pollinations", model: "community", used, cap: lim.auto_daily });
+      }
+    }
+  } catch { /* كل الحلقات تعثّرت */ }
+  return json({ error: "ai_unavailable", used: (await bumpUsage(env, s.userId, "auto")), cap: lim.auto_daily }, 503);
 }
 
 // ——— تجربة الصور الفورية: Workers AI من حصتنا المجانية — بسقف عدل معلن ———

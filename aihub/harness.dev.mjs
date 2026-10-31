@@ -69,6 +69,19 @@ const garbage = await fetch(`${BASE}/api/vault`, { method: "PUT", headers: { "co
 check("blob غير سليم مرفوض (400)", garbage.status === 400);
 
 // ——— 4) محرك الاستدلال ———
+// Nexus Open: القواعد ثم السلوك (بلا مفاتيح محلياً → مسار مجتمعي/غير متاح)
+const autoNoAuth = await fetch(`${BASE}/api/infer/auto`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).then((r) => r.status);
+check("Nexus Open بلا جلسة → 401", autoNoAuth === 401);
+const autoNoCsrf = await fetch(`${BASE}/api/infer/auto`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: "{}" }).then((r) => r.status);
+check("Nexus Open بلا CSRF → 403", autoNoCsrf === 403);
+const autoEmpty = await fetch(`${BASE}/api/infer/auto`, { method: "POST", headers: { "content-type": "application/json", cookie, "x-csrf": csrf }, body: JSON.stringify({ messages: [] }) }).then((r) => r.status);
+check("Nexus Open برسائل فارغة → 400", autoEmpty === 400);
+const autoRes = await fetch(`${BASE}/api/infer/auto`, { method: "POST", headers: { "content-type": "application/json", cookie, "x-csrf": csrf }, body: JSON.stringify({ messages: [{ role: "user", content: "ما هو الذكاء الاصطناعي؟" }] }) }).then((r) => r.json());
+check("Nexus Open: سلوك منظم بلا مفاتيح محلياً (سلسلة→مجتمع→غير متاح)", ["ok", "ai_unavailable"].includes(autoRes?.error ?? "ok"), autoRes?.via ?? autoRes?.error);
+const usage2 = await fetch(`${BASE}/api/usage`, { headers: { cookie } }).then((r) => r.json());
+check("عداد Nexus Open يزداد", usage2?.usage?.auto >= 1, `auto=${usage2?.usage?.auto}`);
+check("سقف Nexus Open معلن (بيتا 300)", usage2?.limits?.auto_daily === 300, `auto_daily=${usage2?.limits?.auto_daily}`);
+
 const infNoKey = await fetch(`${BASE}/api/infer/openai`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: JSON.stringify({ model: "gpt-4o-mini", messages: [] }) }).then((r) => r.status);
 check("الوكيل بلا مفتاح upstream → 401", infNoKey === 401);
 const infHf = await fetch(`${BASE}/api/infer/hf`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: "{}" }).then((r) => r.status);
@@ -95,9 +108,9 @@ check("الصورة داخل الحصة (محلياً ai_unavailable بلا AI)"
 
 const usage = await fetch(`${BASE}/api/usage`, { headers: { cookie } }).then((r) => r.json());
 check("لوحة الاستخدام تعدّ فعلاً", usage?.usage?.instant >= 1, `instant=${usage?.usage?.instant}`);
-check("سقوف البيتا السخية حية", usage?.limits?.instant_daily === 200, `free=${usage?.limits?.instant_daily}`);
+check("سقوف البيتا السخية حية", usage?.limits?.instant_daily === 500, `free=${usage?.limits?.instant_daily}`);
 check("عدّاد الصور يزداد فعلاً", usage?.usage?.instant_img >= 1, `img=${usage?.usage?.instant_img}`);
-check("سقف الصور البيتا معلن", usage?.limits?.instant_img_daily === 30, `free_img=${usage?.limits?.instant_img_daily}`);
+check("سقف الصور البيتا معلن", usage?.limits?.instant_img_daily === 60, `free_img=${usage?.limits?.instant_img_daily}`);
 
 // ——— 5) الواجهة (jsdom): الهبوط والمصادقة ———
 const dom = new JSDOM(html, { runScripts: "dangerously", resources: "usable", url: BASE });

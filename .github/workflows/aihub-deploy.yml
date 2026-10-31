@@ -67,12 +67,41 @@ jobs:
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV جاهزان"
 
+      - name: ترحيلات متسامحة (أعمدة الجولات الأحدث على قاعدة قائمة)
+        working-directory: aihub
+        run: |
+          for M in "ALTER TABLE plan_limits ADD COLUMN auto_daily INTEGER NOT NULL DEFAULT 300" "ALTER TABLE usage_daily ADD COLUMN auto INTEGER NOT NULL DEFAULT 0"; do
+            npx wrangler d1 execute DB --remote -y --command "$M" >/dev/null 2>&1 || true
+          done
+          echo "::notice::الترحيلات مكتملة — البيانات محفوظة"
+
       - name: المخطط + سقوف الباقات
         working-directory: aihub
         run: |
           npx wrangler d1 execute DB --remote -y --file schema.sql
           npx wrangler d1 execute DB --remote -y --file seed.sql
           echo "::notice::قاعدة nexus_hub_db جاهزة"
+
+      - name: مفاتيح المنصة (من أسرار GitHub إلى أسرار Worker — لا تُطبع أبداً)
+        working-directory: aihub
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || secrets.GROQ_KEY }}
+          CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY || secrets.CEREBRAS_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.GOOGLE_AI_API_KEY || secrets.GEMINI_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || secrets.OPENROUTER_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY || secrets.NVIDIA_NIM_API_KEY || secrets.NVIDIA_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY || secrets.MISTRAL_KEY }}
+          SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY || secrets.SAMBANOVA_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY || secrets.COHERE_KEY }}
+        run: |
+          for NAME in GROQ_API_KEY CEREBRAS_API_KEY GEMINI_API_KEY OPENROUTER_API_KEY NVIDIA_API_KEY MISTRAL_API_KEY SAMBANOVA_API_KEY COHERE_API_KEY; do
+            VAL="${!NAME}"
+            if [ -n "$VAL" ]; then
+              printf '%s' "$VAL" | npx wrangler secret put "$NAME" >/dev/null 2>&1
+              echo "::notice::مفتاح ${NAME%%_API_KEY} مُثبَّت"
+            fi
+          done
+          echo "::notice::انتهى تثبيت مفاتيح المنصة (الموجود منها فقط)"
 
       - name: رمز التمليح (سر المخزن إن وجد وإلا توليد دائم في KV — لا يُطبع)
         working-directory: aihub
