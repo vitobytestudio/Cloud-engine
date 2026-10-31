@@ -68,8 +68,9 @@ export default {
           if (r.m !== req.method) continue;
           const params = match(r.pat, path);
           if (!params) continue;
-          const sd = await getSessionData(env, parseCookies(req)["ah_s"] ?? null);
-          const s: Session = { token: parseCookies(req)["ah_s"] ?? null, csrf: sd?.csrf ?? null, userId: sd?.userId ?? null };
+          const rawTok = parseCookies(req)["__Host-ah_s"] ?? parseCookies(req)["ah_s"] ?? null;
+          const sd = await getSessionData(env, rawTok);
+          const s: Session = { token: rawTok, csrf: sd?.csrf ?? null, userId: sd?.userId ?? null };
           if (r.auth && !s.userId) return new Response(JSON.stringify({ error: "auth_required" }), { status: 401, headers: { "content-type": "application/json", ...cors, ...SEC } });
           if (r.csrf && (req.headers.get("x-csrf") ?? "") !== s.csrf) return new Response(JSON.stringify({ error: "csrf" }), { status: 403, headers: { "content-type": "application/json", ...cors, ...SEC } });
           const res = await r.h(req, env, s, params);
@@ -83,7 +84,7 @@ export default {
       }
     }
 
-    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.9.0-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
+    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.9.1-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
 
     // البقية = أصول ساكنة (برؤوس الأمان نفسها)
     const asset = await env.ASSETS.fetch(req);
