@@ -1,5 +1,5 @@
 // ——— صفحة الهبوط: مستوى Vercel — شبكة، توهجات، بينتو، نبض ———
-import { t } from "../i18n.js";
+import { t, setLang } from "../i18n.js";
 import { state } from "../api.js";
 
 const LOGO = `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0a0d14" stroke="url(#lg1)" stroke-opacity=".4"/><path d="M9.5 22.5v-13l13 13v-13" stroke="url(#lg1)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -10,6 +10,8 @@ const MODELS = [
   ["DeepSeek-V4", "#4d6bfe"], ["Nemotron 3", "#76b900"], ["Qwen 3.5", "#7b3fe4"], ["Kimi K2.5", "#ff6cb5"],
   ["Mistral", "#f55036"], ["Groq LPU", "#fb7185"], ["FLUX.2", "#8b5cf6"], ["Phi-4", "#00a4ef"],
 ];
+
+const LANGS = `<div class="lang-sw">${[["ar","ع"],["en","EN"],["fr","FR"]].map(([l,lb]) => `<button data-lang="${l}" class="${(localStorage.getItem("ah_lang")||"ar")===l?"on":""}">${lb}</button>`).join("")}</div>`;
 
 function bentoCard(cls, icSvg, title, body, glow) {
   return `<div class="b-card fade-up ${cls}">
@@ -28,6 +30,7 @@ export function renderLanding(root) {
         <a href="#pricing">${t("popular")}</a>
       </nav>
       <div class="nav-cta">
+        ${LANGS}
         ${state.user ? `<a class="btn btn-grad btn-sm" href="#/app">${t("cta_app")}</a>` : `
           <a class="btn btn-ghost btn-sm" href="#auth-login">${t("login")}</a>
           <a class="btn btn-primary btn-sm" href="#auth-register">${t("cta_start")}</a>`}
@@ -38,7 +41,7 @@ export function renderLanding(root) {
   <header class="hero">
     <div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
     <div class="grid-bg" style="position:absolute;inset:0"></div>
-    <div class="hero-kicker fade-up"><span class="dot"></span>${t("live")} · ${t("privacy_first")}</div>
+    <div class="hero-kicker fade-up"><span class="dot"></span>${t("beta_badge")} · ${t("beta_free")}</div>
     <h1 class="fade-up d1">${t("hero_1")}<br><span class="grad-text">${t("hero_2")}</span></h1>
     <p class="lead fade-up d2">${t("hero_p")}</p>
     <div class="hero-actions fade-up d3">
@@ -77,7 +80,7 @@ export function renderLanding(root) {
     <div class="plans">
       <div class="plan-card fade-up d1">
         <div class="plan-name">Free</div>
-        <div class="plan-price">0€</div><div class="plan-sub">${t("plan_f_p")}</div>
+        <div class="plan-price">0€</div><div class="plan-sub">${t("beta_plan")}</div>
         <ul class="plan-feats">
           <li>${CHECK} ${t("ring1_t")}</li><li>${CHECK} ${t("ring2_t")}</li><li>${CHECK} ${t("feat_instant20")}</li><li>${CHECK} ${t("vault_t")}</li>
         </ul>
@@ -86,8 +89,8 @@ export function renderLanding(root) {
       <div class="plan-card featured fade-up d2">
         <div class="plan-badge">${t("popular")}</div>
         <div class="plan-name">Pro</div>
-        <div class="plan-price">14€<small>${t("month")}</small></div>
-        <div class="plan-sub">134€${t("year")} (−20%)</div>
+        <div class="plan-price">0€<small>${t("beta_plan")}</small></div>
+        <div class="plan-sub">14€${t("month")} — ${t("soon")}</div>
         <ul class="plan-feats">
           <li>${CHECK} ${t("b1_t")}</li><li>${CHECK} ${t("b2_t")}</li><li>${CHECK} ${t("b5_t")}</li><li>${CHECK} 10 ${t("b3_t")}</li><li>${CHECK} ${t("b6_t")}</li>
         </ul>
@@ -95,8 +98,8 @@ export function renderLanding(root) {
       </div>
       <div class="plan-card fade-up d3">
         <div class="plan-name">Team</div>
-        <div class="plan-price">39€<small>${t("month")}</small></div>
-        <div class="plan-sub">374€${t("year")} · 5 ${t("seats")}</div>
+        <div class="plan-price">0€<small>${t("beta_plan")}</small></div>
+        <div class="plan-sub">39€${t("month")} — ${t("soon")}</div>
         <ul class="plan-feats">
           <li>${CHECK} Pro ×5</li><li>${CHECK} ${t("b3_t")}</li><li>${CHECK} ${t("b2_t")}</li><li>${CHECK} +8€ / ${t("seats")}</li>
         </ul>
@@ -123,6 +126,10 @@ export function renderLanding(root) {
   } else {
     root.querySelectorAll(".reveal").forEach((r) => r.classList.add("in"));
   }
+  root.querySelectorAll(".lang-sw [data-lang]").forEach((b) => b.addEventListener("click", () => {
+    setLang(b.dataset.lang);
+    location.reload();
+  }));
 }
 
 function ic_lock() { return `<svg viewBox="0 0 24 24" fill="none" stroke="url(#lg1)" stroke-width="1.8"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 1 1 8 0v2.7" stroke-linecap="round"/></svg>`; }

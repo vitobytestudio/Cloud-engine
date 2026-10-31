@@ -212,6 +212,32 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(900);
 
+// 7.8) المقارنة جنب إلى جنب:groq مقابل openai (المفتاحان موصولان من الخطوات السابقة)
+await page.evaluate(() => document.querySelector('button[data-m="duel"]')?.click());
+await page.waitForTimeout(300);
+check("المقارنة: شريط النموذجين يظهر", await page.evaluate(() => !document.querySelector("#duel-bar").hidden));
+await page.evaluate(() => {
+  const pa = document.querySelector("#duel-pA"), pb = document.querySelector("#duel-pB");
+  pa.value = "groq"; pa.dispatchEvent(new Event("change", { bubbles: true }));
+  pb.value = "openai"; pb.dispatchEvent(new Event("change", { bubbles: true }));
+});
+await page.waitForTimeout(300);
+await page.evaluate(() => {
+  const ta = document.querySelector("#prompt");
+  ta.value = "ما هو الذكاء الاصطناعي؟";
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector("#send").click();
+});
+await page.waitForFunction(() => {
+  const cols = document.querySelectorAll(".duel-col");
+  return cols.length === 2 && [...cols].every((c) => !c.querySelector(".typing"));
+}, null, { timeout: 25000 });
+check("المقارنة: عمودان اكتملا بالتوقيت", await page.evaluate(() => [...document.querySelectorAll(".duel-time")].every((t) => t.textContent.includes("s"))));
+check("المقارنة: زر التصدير متاح", await page.evaluate(() => !!document.querySelector("#export-chat")));
+await page.screenshot({ path: "shots/duel.png" });
+await page.evaluate(() => document.querySelector('button[data-m="duel"]')?.click());
+await page.waitForTimeout(200);
+
 // 8) مبدّل الدردشة/الصورة للفوري
 await page.evaluate(() => { location.hash = "#/app"; });
 await page.waitForTimeout(600);

@@ -42,6 +42,8 @@ check("الافتتاحية: 6 بطاقات رائدات (Astra/Fable/Argon…)"
 await page.evaluate(() => document.querySelector(".nx-skip").click());
 await page.waitForTimeout(900);
 check("الافتتاحية: التخطّي يكشف الهبوط", await page.evaluate(() => !document.querySelector(".nx-intro")));
+check("اللغة: مبدل ثلاثي على الهبوط", await page.evaluate(() => document.querySelectorAll(".lang-sw [data-lang]").length === 3));
+check("البيتا: شارة المجانية في البطل", await page.evaluate(() => document.querySelector(".hero-kicker")?.textContent.includes("مجانية") ?? false));
 await page.waitForTimeout(900);
 
 check("العنوان الصحيح", (await page.title()).includes("Nexus"));
@@ -87,15 +89,17 @@ check("صفحة التسجيل تفتح", await page.isVisible("#a-email"));
 await page.screenshot({ path: "shots/auth.png" });
 
 // EN: تبديل اللغة
-await page.evaluate(() => { localStorage.setItem("ah_lang", "en"); location.hash = "#/"; location.reload(); });
-await page.waitForTimeout(900);
+await page.evaluate(() => { localStorage.setItem("ah_lang", "en"); location.hash = "#/"; });
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(1200);
 check("EN: LTR", await page.evaluate(() => document.documentElement.dir) === "ltr");
 check("EN: بطل إنجليزي", (await page.textContent(".hero h1")).includes("One platform"));
 await page.screenshot({ path: "shots/landing-en.png" });
 
 // FR
-await page.evaluate(() => { localStorage.setItem("ah_lang", "fr"); location.reload(); });
-await page.waitForTimeout(900);
+await page.evaluate(() => localStorage.setItem("ah_lang", "fr"));
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(1200);
 check("FR: بطل فرنسي", (await page.textContent(".hero h1")).includes("Une plateforme"));
 
 // موبايل
