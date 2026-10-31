@@ -174,6 +174,17 @@ g.document.body.appendChild(authRoot);
 renderAuth(authRoot, "register");
 check("المصادقة: نموذج التسجيل مكتمل", !!authRoot.querySelector("#a-email") && !!authRoot.querySelector("#a-pass") && !!authRoot.querySelector("#a-name"));
 
+// ——— بيئة الفريق: المحرك محلياً غير مفعّل (بلا E2B_API_KEY) والبوابات سليمة ———
+const envStatus = await fetch(`${BASE}/api/env/status`, { headers: { cookie: cookie } });
+const envStatusD = await envStatus.json();
+check("بيئة الفريق: الحالة تعمل (engine=false محلياً)", envStatus.status === 200 && envStatusD.engine === false, JSON.stringify(envStatusD).slice(0, 80));
+const envCreateOff = await fetch(`${BASE}/api/env`, { method: "POST", headers: { "content-type": "application/json", cookie: cookie, "x-csrf": csrf }, body: "{}" });
+check("بيئة الفريق: الإنشاء بلا محرك يعيد 503 engine_off", envCreateOff.status === 503, JSON.stringify(await envCreateOff.json()).slice(0, 60));
+const envNoAuth = await fetch(`${BASE}/api/env/exec`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+check("بيئة الفريق: التنفيذ بلا جلسة مرفوض (401)", envNoAuth.status === 401);
+const envNoCsrf = await fetch(`${BASE}/api/env/agent`, { method: "POST", headers: { "content-type": "application/json", cookie: cookie }, body: "{}" });
+check("بيئة الفريق: الوكيل بلا csrf مرفوض (403)", envNoCsrf.status === 403);
+
 const fails = results.filter((r) => !r).length;
 console.log(`\n═══ النتيجة: ${results.length - fails}/${results.length} نجح ═══`);
 process.exit(fails ? 1 : 0);

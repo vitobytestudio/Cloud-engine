@@ -167,7 +167,7 @@ export async function renderApp(root, sub) {
       <a class="side-logo" href="#/">${LOGO} Nexus</a>
       <button class="side-item on" id="nav-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 21l1.6-5.3A8.5 8.5 0 1 1 21 12Z"/></svg>${t("chat")}</button>
       <button class="side-item" id="nav-agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><circle cx="9" cy="13" r="1.4"/><circle cx="15" cy="13" r="1.4"/><path d="M12 8V4.5M8.5 4.5h7"/></svg>${t("nav_agents")}</button>
-      <button class="side-item" id="nav-lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6.5L4.8 18a2.2 2.2 0 0 0 2 3h10.4a2.2 2.2 0 0 0 2-3L14 9.5V3"/></svg>${t("nav_lab")}</button>
+      <button class="side-item" id="nav-env"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>${t("nav_env")}</button>
       <button class="side-item" id="nav-usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V13M10 20V6.5M16 20v-9.5M21 20H3.5"/></svg>${t("usage")}</button>
       <button class="side-item" id="nav-conn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5 5.5 11a3.5 3.5 0 0 0 5 5l1-1M15 16.5 18.5 13a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M10.5 13.5 13.5 10.5"/></svg>${t("nav_conn")}</button>
       <div class="side-sep">${t("vault_t")}</div>
@@ -185,7 +185,7 @@ export async function renderApp(root, sub) {
         <span style="margin-inline-start:auto;font-size:12px;color:var(--faint)">${esc(state.user.email)}</span>
         <button class="icon-btn" id="export-chat" title="${t("export")}">⤓</button>
       </div>
-      ${isUsage || isConn || sub === "agents" || sub === "lab" ? `<div class="chat-scroll" id="usage-view"></div>` : `
+      ${isUsage || isConn || sub === "agents" || sub === "env" ? `<div class="chat-scroll" id="usage-view"></div>` : `
       <div class="chat-scroll" id="chat-scroll">
         <div class="chat-inner" id="chat-inner"></div>
       </div>
@@ -238,7 +238,7 @@ export async function renderApp(root, sub) {
   root.querySelector("#nav-conn")?.addEventListener("click", () => { location.hash = "#/app/connectors"; });
   root.querySelector("#nav-vault")?.addEventListener("click", () => openVaultSheet(root));
   root.querySelector("#nav-agents")?.addEventListener("click", () => { location.hash = "#/app/agents"; });
-  root.querySelector("#nav-lab")?.addEventListener("click", () => { location.hash = "#/app/lab"; });
+  root.querySelector("#nav-env")?.addEventListener("click", () => { location.hash = "#/app/env"; });
   root.querySelector("#nav-lang")?.addEventListener("click", async () => {
     const order = ["ar", "en", "fr"];
     const next = order[(order.indexOf(getLang()) + 1) % 3];
@@ -249,7 +249,7 @@ export async function renderApp(root, sub) {
   if (isConn) { await renderConnectors(root.querySelector("#usage-view")); return; }
   if (isUsage) { await renderUsage(root.querySelector("#usage-view") ); return; }
   if (sub === "agents") { renderAgents(root.querySelector("#usage-view")); return; }
-  if (sub === "lab") { renderLab(root.querySelector("#usage-view")); return; }
+  if (sub === "env") { renderEnv(root.querySelector("#usage-view")); return; }
   updateModeChips(root);
   wireChat(root);
   refreshUsagePill(root);
@@ -905,60 +905,158 @@ function renderAgents(view) {
   });
 }
 
-function renderLab(view) {
+const envState = { sid: "", busy: false };
+const shortSid = (s) => (s || "").slice(0, 8) + "…";
+
+function envStepHtml(st, i) {
+  const okCls = st.exit === 0 ? "ok" : "bad";
+  return `<div class="env-step fade-up">
+    <div class="env-step-head"><span class="env-n">${i + 1}</span><span class="env-explain">${esc(st.explain || "")}</span><span class="env-exit ${okCls}">exit ${st.exit}</span></div>
+    <pre class="env-cmd" dir="ltr">$ ${esc(st.cmd)}</pre>
+    ${st.stdout ? `<pre class="env-term" dir="ltr">${esc(st.stdout)}</pre>` : ""}
+    ${st.stderr ? `<pre class="env-term err" dir="ltr">${esc(st.stderr)}</pre>` : ""}
+  </div>`;
+}
+
+async function renderEnv(view) {
   if (!view) return;
-  view.innerHTML = `
-    <div class="page-head"><h2>${t("nav_lab")}</h2><p class="page-sub">${t("lab_sub")}</p></div>
-    <div class="mode-chips" style="position:static">
-      <button class="chip on" data-l="js">JavaScript</button>
-      <button class="chip" data-l="py">Python</button>
+  view.innerHTML = `<div class="env-wrap">
+    <div class="page-head"><h2>${t("nav_env")}</h2><p class="page-sub">${t("env_sub")}</p></div>
+    <div id="env-body"><div class="env-loading">${t("env_working")}</div></div>
+  </div>`;
+  const body = view.querySelector("#env-body");
+  let st = null;
+  try { st = await api.get("/api/env/status"); } catch {}
+  const engine = !!(st && st.data && st.data.engine);
+  const active = (st && st.data && st.data.active) || [];
+  envState.sid = active[0] || "";
+  if (!engine) {
+    body.innerHTML = `<div class="card env-off fade-up">
+      <h3>${t("env_off_title")}</h3>
+      <p>${t("env_off_sub")}</p>
+      <ol class="env-off-steps">
+        <li>${t("env_off_1")}</li>
+        <li>${t("env_off_2")}</li>
+        <li>${t("env_off_3")}</li>
+      </ol>
+      <a class="btn btn-grad" href="https://e2b.dev/dashboard" target="_blank" rel="noopener noreferrer">${t("env_off_cta")} ↗</a>
+    </div>`;
+    return;
+  }
+  body.innerHTML = `
+    <div class="card env-bar fade-up">
+      <span class="env-dot ${envState.sid ? "on" : ""}"></span>
+      <span class="env-bar-txt">${envState.sid ? `${t("env_active")} <code>${esc(shortSid(envState.sid))}</code>` : t("env_none")}</span>
+      ${envState.sid
+        ? `<button class="btn btn-ghost btn-sm" id="env-kill">${t("env_kill")}</button>`
+        : `<button class="btn btn-grad btn-sm" id="env-create">${t("env_create")}</button>`}
     </div>
-    <div class="field"><textarea id="lab-code" rows="10" dir="ltr" spellcheck="false"></textarea></div>
-    <button class="btn btn-grad" id="lab-go">${t("lab_run")}</button>
-    <div class="lab-out glass" id="lab-out"><span style="color:var(--faint)">stdout…</span></div>
-    <p class="hint" style="margin-top:10px">${t("lab_hint")}</p>`;
-  let lang = "js";
-  const setDefault = () => {
-    view.querySelector("#lab-code").value = lang === "js"
-      ? 'console.log("مرحباً من المعمل");\n[1,2,3].map(n => n ** 2).forEach(n => console.log(n));'
-      : 'print("مرحباً من بايثون")\nprint(sum(n**2 for n in range(10)))';
-  };
-  view.querySelectorAll("[data-l]").forEach((b) => b.addEventListener("click", () => {
-    lang = b.dataset.l;
-    view.querySelectorAll("[data-l]").forEach((x) => x.classList.toggle("on", x === b));
-    setDefault();
-  }));
-  setDefault();
-  const out = view.querySelector("#lab-out");
-  const onMsg = (e) => { if (e.data && e.data.__lab) { out.textContent = e.data.__lab; } };
-  window.addEventListener("message", onMsg);
-  view.querySelector("#lab-go").addEventListener("click", () => {
-    const code = view.querySelector("#lab-code").value;
-    out.textContent = "…";
-    const f = document.createElement("iframe");
-    f.style.display = "none";
-    f.setAttribute("sandbox", "allow-scripts");
-    const esc2 = (x) => x.replace(/<\/+/g, "<\\\\/");
-    if (lang === "js") {
-      f.srcdoc = '<!doctype html><script>(function(){const B=[];const P=(m)=>B.push(String(m));' +
-        'console.log=(...a)=>P(a.join(" "));console.error=P;console.warn=P;' +
-        'window.onerror=(m)=>P("خطأ: "+m);' +
-        'try{(function(){' + esc2(code) + '})();}catch(e){P("خطأ: "+e.message)}' +
-        'parent.postMessage({__lab:B.join("\\n")||"(بلا مخرجات)"},"*");})();</script>';
-    } else {
-      f.srcdoc = '<!doctype html><html><head><meta charset="utf-8">' +
-        '<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script></head><body><script>' +
-        '(async function(){const B=[];const P=(m)=>B.push(String(m));' +
-        'try{const py=await loadPyodide({stdout:(t)=>P(t),stderr:(t)=>P(t)});' +
-        'await py.runPythonAsync(window.__nexus_code);}' +
-        'catch(e){P("خطأ: "+e.message)}' +
-        'parent.postMessage({__lab:B.join("\\n")||"(بلا مخرجات)"},"*");})();</script></body></html>';
-      f.addEventListener("load", () => { try { f.contentWindow.__nexus_code = code; } catch {} }, { once: true });
+    <div class="card env-goal-card fade-up">
+      <label class="env-label">${t("env_goal_label")}</label>
+      <textarea id="env-goal" rows="2" placeholder="${t("env_goal_ph")}"></textarea>
+      <div class="env-actions">
+        <button class="btn btn-grad" id="env-build">${t("env_build")}</button>
+        <span class="env-hint">${t("env_build_hint")}</span>
+      </div>
+    </div>
+    <div id="env-log"></div>
+    <div class="card env-manual fade-up">
+      <label class="env-label">${t("env_manual")}</label>
+      <div class="env-cmd-row">
+        <input id="env-cmd" dir="ltr" placeholder="ls -la" />
+        <button class="btn btn-ghost" id="env-run">${t("env_run")}</button>
+      </div>
+      <pre class="env-term" id="env-out" dir="ltr" hidden></pre>
+      <div class="env-preview-row">
+        <label>${t("env_preview")}</label>
+        <input id="env-port" dir="ltr" type="number" min="1024" max="65535" placeholder="3000" />
+        <button class="btn btn-ghost btn-sm" id="env-open">${t("env_open")}</button>
+      </div>
+    </div>`;
+  body.querySelector("#env-create")?.addEventListener("click", async () => {
+    if (envState.busy) return;
+    envState.busy = true;
+    const r = await api.post("/api/env");
+    envState.busy = false;
+    if (r.ok && r.data.sid) { renderEnv(view); return; }
+    alert(envErrText(r));
+  });
+  body.querySelector("#env-kill")?.addEventListener("click", async () => {
+    if (!envState.sid) return;
+    await api.post("/api/env/stop", { sid: envState.sid });
+    renderEnv(view);
+  });
+  body.querySelector("#env-build")?.addEventListener("click", async () => {
+    const goal = (body.querySelector("#env-goal") ?? {}).value?.trim();
+    if (!goal || envState.busy) return;
+    if (envState.sid) {
+      const stop = await api.post("/api/env/stop", { sid: envState.sid });
+      if (!stop.ok) { alert(envErrText(stop)); return; }
     }
-    document.body.appendChild(f);
-    setTimeout(() => f.remove(), 180000);
+    const btn = body.querySelector("#env-build");
+    btn.disabled = true;
+    btn.textContent = t("env_working");
+    const log = body.querySelector("#env-log");
+    log.innerHTML = `<div class="env-loading pulse">${t("env_working")}</div>`;
+    const r = await api.post("/api/env/agent", { goal });
+    btn.disabled = false;
+    btn.textContent = t("env_build");
+    if (!r.ok || !r.data.sid) { log.innerHTML = `<div class="env-error">${esc(envErrText(r))}</div>`; return; }
+    envState.sid = r.data.sid;
+    const steps = r.data.steps || [];
+    log.innerHTML = steps.map((x, i) => envStepHtml(x, i)).join("") + `
+      ${r.data.preview ? `<div class="card env-preview-card fade-up"><div class="env-label">${t("env_live")}</div><a class="env-link" href="${esc(r.data.preview)}" target="_blank" rel="noopener noreferrer">${esc(r.data.preview)}</a><button class="btn btn-grad btn-sm" data-copy-link="${esc(r.data.preview)}">${t("env_copy")}</button></div>` : ""}
+      ${r.data.summary ? `<div class="card env-summary fade-up"><div class="env-label">${t("env_summary")}</div><p>${esc(r.data.summary)}</p></div>` : ""}`;
+    log.querySelector("[data-copy-link]")?.addEventListener("click", (e) => {
+      navigator.clipboard?.writeText(e.target.dataset.copyLink).catch(() => {});
+      e.target.textContent = t("env_copied");
+    });
+    const bar = body.querySelector(".env-bar");
+    if (bar) {
+      bar.querySelector(".env-dot")?.classList.add("on");
+      const txt = bar.querySelector(".env-bar-txt");
+      if (txt) txt.innerHTML = `${t("env_active")} <code>${esc(shortSid(envState.sid))}</code>`;
+    }
+    renderEnvStatus(view);
+  });
+  body.querySelector("#env-run")?.addEventListener("click", async () => {
+    const cmd = (body.querySelector("#env-cmd") ?? {}).value?.trim();
+    const out = body.querySelector("#env-out");
+    if (!cmd || !envState.sid) { out.hidden = false; out.textContent = t("env_need_env"); return; }
+    out.hidden = false;
+    out.textContent = "…";
+    const r = await api.post("/api/env/exec", { sid: envState.sid, script: cmd });
+    out.textContent = r.ok
+      ? [r.data.stdout, r.data.stderr].filter(Boolean).join("\n") || `(exit ${r.data.exit})`
+      : envErrText(r);
+  });
+  body.querySelector("#env-open")?.addEventListener("click", () => {
+    const port = parseInt((body.querySelector("#env-port") ?? {}).value, 10);
+    if (!port || !envState.sid) return;
+    window.open(`https://${port}-${envState.sid}.e2b.app`, "_blank", "noopener");
   });
 }
+
+function envErrText(r) {
+  const e = (r && r.data && r.data.error) || "error";
+  const map = {
+    engine_off: t("env_err_off"),
+    env_busy: t("env_err_busy"),
+    too_many: t("too_many"),
+    create_failed: t("env_err_create"),
+    plan_invalid: t("env_err_plan"),
+    forbidden_cmd: t("env_err_forbidden"),
+  };
+  return map[e] || e;
+}
+
+async function renderEnvStatus(view) {
+  try {
+    const st = await api.get("/api/env/status");
+    envState.sid = ((st.data && st.data.active) || [])[0] || "";
+  } catch {}
+}
+
 
 async function renderConnectors(view) {
   view.innerHTML = `<div class="conn-wrap">

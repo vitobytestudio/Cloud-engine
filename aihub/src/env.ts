@@ -16,6 +16,7 @@ export type Env = {
   MISTRAL_API_KEY?: string;
   SAMBANOVA_API_KEY?: string;
   COHERE_API_KEY?: string;
+  E2B_API_KEY?: string; // محرك بيئة الفريق اللحظية (E2B) — إن غاب اعتُبر المحرك غير مفعّل
 };
 
 export type Session = { token: string | null; csrf: string | null; userId: string | null };
