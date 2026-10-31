@@ -57,6 +57,7 @@ export async function register(req: Request, env: Env): Promise<Response> {
   const { token, csrf } = await createSession(env, id);
   return json({ ok: true, csrf, user: { id, email, full_name: name, plan: "FREE" } }, 201, { "set-cookie": [...authCookies(token, 2592000).getAll("set-cookie")] });
   } catch (e) {
+    console.error("register_err:", String((e as Error)?.stack ?? e).slice(0, 500));
     await audit(env, null, "register_err", String((e as Error)?.message ?? e).slice(0, 120));
     return json({ error: "server", stage: "register" }, 500);
   }

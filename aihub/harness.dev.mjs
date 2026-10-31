@@ -48,12 +48,23 @@ check("الحد على التسجيل المتكرر (429)", rlLast === 429, `la
 const regHdr = (reg.headers.get("set-cookie") ?? "");
 check("كوكي الجلسة محصّن (__Host- + HttpOnly)", regHdr.includes("__Host-ah_s=") && regHdr.includes("HttpOnly") && regHdr.includes("SameSite=Lax"));
 
+
 const login = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, k0: K0 }) });
 const badK0 = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, k0: "f".repeat(64) }) });
 check("k0 خاطئ مرفوض (401)", badK0.status === 401);
 const loginD = await login.json();
 const cookie = (login.headers.get("set-cookie") ?? "").split(";")[0];
 check("الدخول يعمل مع جلسة", login.status === 200 && cookie.startsWith("__Host-ah_s="));
+
+// ——— v0.10.0-a: راوترات الوكلاء والصور والفيديو ———
+const anonImg = await fetch(`${BASE}/api/infer/image`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+check("الصور المتقدمة تتطلب جلسة (401)", anonImg.status === 401);
+const anonAgent = await fetch(`${BASE}/api/agent/run`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+check("الوكلاء تتطلب جلسة (401)", anonAgent.status === 401);
+const lumaBad = await fetch(`${BASE}/api/video/luma`, { method: "POST", headers: { "content-type": "application/json", cookie, "x-csrf": loginD.csrf }, body: JSON.stringify({ key: "bad", prompt: "test" }) });
+check("مفتاح Luma تالف مرفوض (400)", lumaBad.status === 400);
+const csrfImg = await fetch(`${BASE}/api/infer/image`, { method: "POST", headers: { "content-type": "application/json", cookie }, body: "{}" });
+check("الصور تتطلب CSRF (403)", csrfImg.status === 403);
 const badLogin = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "vito@aihub.test", password: "WrongPass1" }) });
 check("كلمة مرور خاطئة → 401", badLogin.status === 401);
 

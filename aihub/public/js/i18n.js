@@ -1,6 +1,18 @@
 // ——— AIHub i18n — عربي/فرنسي/إنجليزي متكافئة ———
 const DICTS = {
   ar: {
+    nav_agents: "الوكلاء", nav_lab: "المعمل", agents_sub: "ثلاثة عقول تعمل لك — والباحث يقرأ الروابط العامة بنفسه",
+    ag_r_name: "الباحث", ag_r_desc: "يقرأ رابطاً عاماً ويستخلص الجواب بالتوثيق",
+    ag_a_name: "المحلل", ag_a_desc: "تفكيك بنيوي: قوة، مخاطر، توصيات مرقمة",
+    ag_w_name: "الكاتب", ag_w_desc: "صياغة تنفيذية احترافية بلا حشو",
+    agent_url: "رابط عام للقراءة (اختياري)", agent_task: "المهمة", agent_task_ph: "مثال: لخص هذه الصفحة في خمس نقاط",
+    agent_run: "شغّل الوكيل", agent_working: "الوكيل يعمل…",
+    lab_sub: "شغّل كودك في متصفحك مباشرة — JavaScript وبايثون، بلا خادم وبلا أثر",
+    lab_run: "شغّل", lab_hint: "التنفيذ معزول في بيئة المتصفح — بايثون عبر Pyodide الرسمي (أول تشغيل يحمّل ~10MB)",
+    mode_video: "فيديو", video_placeholder: "صف المشهد المرئي… (يتطلب مفتاح Luma في الخزنة)",
+    luma_key_needed: "أضف مفتاح Luma في الخزنة أولاً (luma-… من lumalabs.ai) — المفتاح يمرّ ولا يُخزَّن",
+    luma_pending: "الفيديو يُصنع… (Ray-2)", video_failed: "فشل توليد الفيديو", video_timeout: "انتهت مهلة الانتظار — تابع الحالة من لوحة Luma",
+    key_model: "النموذج (اختياري)", key_all_models: "كل نماذج المزود",
     tagline: "كل نماذج الذكاء الاصطناعي في منصة واحدة", hero_1: "كل نماذج الذكاء,", hero_2: "منصة واحدة.",
     hero_p: "دردشة وبرمجة وصور وفيديو — من GPT إلى Llama إلى Gemini. مفاتيحك أنت، مشفّرة في جهازك، ولا نرىها أبداً. بالعربية أخيراً.",
     cta_start: "ابدأ مجاناً", cta_app: "افتح الاستوديو", live: "مباشر", privacy_first: "خصوصية أولاً",
@@ -48,6 +60,18 @@ const DICTS = {
     mode_chat: "دردشة", mode_image: "صورة", img_placeholder: "صف الصورة التي تتخيلها… (سقفك العادل معلن في لوحة الاستخدام)", img_btn: "ارسم", img_gen: "جارٍ الرسم…", img_note: "تجربة صور من حصتنا — flux-1-schnell",
   },
   en: {
+    nav_agents: "Agents", nav_lab: "Lab", agents_sub: "Three minds at work — the Researcher reads public links itself",
+    ag_r_name: "Researcher", ag_r_desc: "Reads a public link and answers with citations",
+    ag_a_name: "Analyst", ag_a_desc: "Structured breakdown: strengths, risks, numbered actions",
+    ag_w_name: "Writer", ag_w_desc: "Sharp executive drafting without filler",
+    agent_url: "Public URL to read (optional)", agent_task: "Task", agent_task_ph: "e.g. Summarize this page in five bullets",
+    agent_run: "Run agent", agent_working: "Agent working…",
+    lab_sub: "Run code in your browser — JavaScript & Python, no server, no trace",
+    lab_run: "Run", lab_hint: "Executed in an isolated browser sandbox — Python via official Pyodide (first run loads ~10MB)",
+    mode_video: "Video", video_placeholder: "Describe the scene… (requires a Luma key in the vault)",
+    luma_key_needed: "Add a Luma key in the vault first (luma-… from lumalabs.ai) — the key passes through, never stored",
+    luma_pending: "Rendering video… (Ray-2)", video_failed: "Video generation failed", video_timeout: "Timed out — track progress in your Luma dashboard",
+    key_model: "Model (optional)", key_all_models: "All provider models",
     tagline: "Every AI model in one platform", hero_1: "Every AI model.", hero_2: "One platform.",
     hero_p: "Chat, code, images and video — from GPT to Llama to Gemini. Your keys, encrypted on your device, never seen by us. English first.",
     cta_start: "Start free", cta_app: "Open Studio", live: "LIVE", privacy_first: "Privacy first",
@@ -95,6 +119,18 @@ const DICTS = {
     mode_chat: "Chat", mode_image: "Image", img_placeholder: "Describe the image you imagine… (your fair cap is shown in Usage)", img_btn: "Draw", img_gen: "Drawing…", img_note: "Image trial from our allowance — flux-1-schnell",
   },
   fr: {
+    nav_agents: "Agents", nav_lab: "Labo", agents_sub: "Trois esprits à votre service — le Chercheur lit les liens publics lui-même",
+    ag_r_name: "Chercheur", ag_r_desc: "Lit un lien public et répond avec sources",
+    ag_a_name: "Analyste", ag_a_desc: "Décomposition structurée : forces, risques, actions numérotées",
+    ag_w_name: "Rédacteur", ag_w_desc: "Rédaction exécutive nette, sans remplissage",
+    agent_url: "URL publique à lire (optionnel)", agent_task: "Tâche", agent_task_ph: "ex. Résumez cette page en cinq points",
+    agent_run: "Lancer l'agent", agent_working: "L'agent travaille…",
+    lab_sub: "Exécutez votre code dans le navigateur — JavaScript et Python, sans serveur",
+    lab_run: "Exécuter", lab_hint: "Exécution isolée dans le navigateur — Python via Pyodide officiel (premier lancement ~10 Mo)",
+    mode_video: "Vidéo", video_placeholder: "Décrivez la scène… (nécessite une clé Luma dans le coffre)",
+    luma_key_needed: "Ajoutez d'abord une clé Luma dans le coffre (luma-… depuis lumalabs.ai) — la clé transite, jamais stockée",
+    luma_pending: "Génération vidéo… (Ray-2)", video_failed: "Échec de la génération vidéo", video_timeout: "Délai dépassé — suivez l'état dans votre tableau Luma",
+    key_model: "Modèle (optionnel)", key_all_models: "Tous les modèles du fournisseur",
     tagline: "Tous les modèles d'IA sur une seule plateforme", hero_1: "Tous les modèles d'IA.", hero_2: "Une plateforme.",
     hero_p: "Chat, code, images et vidéo — de GPT à Llama à Gemini. Vos clés, chiffrées sur votre appareil, jamais visibles par nous. En français enfin.",
     cta_start: "Commencer gratuitement", cta_app: "Ouvrir le Studio", live: "EN DIRECT", privacy_first: "Confidentialité d'abord",
@@ -140,7 +176,7 @@ const DICTS = {
     groq_sub2: "Le plus rapide au monde — inférence instantanée en modèle ouvert",
     or_sub2: "Des centaines de modèles :free — une clé ouvre le marché",
     mode_chat: "Chat", mode_image: "Image", img_placeholder: "Décrivez l'image que vous imaginez… (votre quota équitable est dans Usage)", img_btn: "Dessiner", img_gen: "Dessin…", img_note: "Essai d'images depuis notre quota — flux-1-schnell",
-  },
+  }
 };
 
 let lang = localStorage.getItem("ah_lang") || "ar";
