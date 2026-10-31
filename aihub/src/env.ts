@@ -5,6 +5,7 @@ export type Env = {
   AI?: unknown; // ربط Workers AI — الإنتاج فقط (التطوير بلا شبكة يعيد خطأ لطيفاً)
   ENVIRONMENT: string;
   AUTH_PEPPER?: string;
+  AUTH_ITER?: string; // دورات PBKDF2 — المجانية 15k، المدفوعة ارفعها لـ100k+
   // مفاتيح المنصة (من أسرار GitHub → أسرار Worker) — للحلقة المفتوحة فقط، لا تُسجَّل ولا تُعاد للمستخدم
   GROQ_API_KEY?: string;
   CEREBRAS_API_KEY?: string;

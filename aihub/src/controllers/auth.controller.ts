@@ -1,6 +1,6 @@
 // ——— المصادقة ———
 import type { Env, Session } from "../env";
-import { hashPassword, verifyPassword, createSession, destroySession } from "../lib/auth";
+import { hashPassword, verifyPassword, createSession, destroySession, DEFAULT_ITER } from "../lib/auth";
 import { rateLimit } from "../lib/rate";
 import { audit } from "../lib/usage";
 
@@ -27,7 +27,10 @@ function authCookies(token: string, maxAge: number): Headers {
   return h;
 }
 
+const ITER = (env: Env) => Math.min(Math.max(parseInt(env.AUTH_ITER ?? "", 10) || DEFAULT_ITER, 1000), 500_000);
+
 export async function register(req: Request, env: Env): Promise<Response> {
+  try {
   const b = (await req.json().catch(() => ({}))) as Record<string, string>;
   const email = (b.email ?? "").trim().toLowerCase();
   const name = (b.full_name ?? "").trim().slice(0, 60);
@@ -39,14 +42,19 @@ export async function register(req: Request, env: Env): Promise<Response> {
   const exists = await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
   if (exists) return json({ error: "email_taken" }, 409);
   const id = `u-${crypto.randomUUID().slice(0, 12)}`;
-  const hash = await hashPassword(password, env.AUTH_PEPPER ?? "");
+  const hash = await hashPassword(password, env.AUTH_PEPPER ?? "", ITER(env));
   await env.DB.prepare("INSERT INTO users (id,email,pass_hash,full_name) VALUES (?,?,?,?)").bind(id, email, hash, name).run();
   await audit(env, id, "register", email);
   const { token, csrf } = await createSession(env, id);
   return json({ ok: true, csrf, user: { id, email, full_name: name, plan: "FREE" } }, 201, { "set-cookie": [...authCookies(token, 2592000).getAll("set-cookie")] });
+  } catch (e) {
+    await audit(env, null, "register_err", String((e as Error)?.message ?? e).slice(0, 120));
+    return json({ error: "server", stage: "register" }, 500);
+  }
 }
 
 export async function login(req: Request, env: Env): Promise<Response> {
+  try {
   const b = (await req.json().catch(() => ({}))) as Record<string, string>;
   const email = (b.email ?? "").trim().toLowerCase();
   const password = b.password ?? "";
@@ -63,6 +71,10 @@ export async function login(req: Request, env: Env): Promise<Response> {
   }
   const { token, csrf } = await createSession(env, u.id);
   return json({ ok: true, csrf, user: { id: u.id, email, full_name: u.full_name, plan: u.plan } }, 200, { "set-cookie": [...authCookies(token, 2592000).getAll("set-cookie")] });
+  } catch (e) {
+    await audit(env, null, "login_err", String((e as Error)?.message ?? e).slice(0, 120));
+    return json({ error: "server", stage: "login" }, 500);
+  }
 }
 
 export async function logout(req: Request, env: Env, s: Session): Promise<Response> {

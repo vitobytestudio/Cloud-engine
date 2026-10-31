@@ -224,8 +224,11 @@ jobs:
           TS=$(date +%s); EM="deploy-check-$TS@aihub.test"
           CODE=$(curl -s -o /tmp/reg.json -w "%{http_code}" -X POST "$URL/api/auth/register" -H "content-type: application/json" -d "{\"email\":\"$EM\",\"full_name\":\"Deploy Check\",\"password\":\"StrongPass9x\"}")
           echo "register probe: $CODE $(cat /tmp/reg.json)"
+          echo "::notice::probe-register: $CODE $(head -c 200 /tmp/reg.json)"
+          echo "::notice::probe-login: $LCODE"
           if [ "$CODE" = "201" ]; then echo "::notice::إنشاء الحساب يعمل على الإنتاج ✓"; else echo "::error::إنشاء الحساب معطل على الإنتاج (HTTP $CODE)"; fi
           LCODE=$(curl -s -o /tmp/log.json -w "%{http_code}" -X POST "$URL/api/auth/login" -H "content-type: application/json" -d "{\"email\":\"$EM\",\"password\":\"StrongPass9x\"}")
+          echo "::notice::probe-login-final: $LCODE $(head -c 200 /tmp/log.json 2>/dev/null)"
           if [ "$LCODE" = "200" ]; then echo "::notice::تسجيل الدخول يعمل على الإنتاج ✓"; else echo "::error::تسجيل الدخول معطل على الإنتاج (HTTP $LCODE)"; fi
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM audit_events WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'deploy-check-%')" >/dev/null 2>&1 || true
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM users WHERE email LIKE 'deploy-check-%'" >/dev/null 2>&1 || true
