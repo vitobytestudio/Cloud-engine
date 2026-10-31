@@ -10,6 +10,7 @@ export type Env = {
   CEREBRAS_API_KEY?: string;
   GEMINI_API_KEY?: string;
   OPENROUTER_API_KEY?: string;
+  HUGGINGFACE_API_KEY?: string;
   NVIDIA_API_KEY?: string;
   MISTRAL_API_KEY?: string;
   SAMBANOVA_API_KEY?: string;
