@@ -96,6 +96,7 @@ export async function autoInfer(req: Request, env: Env, s: Session): Promise<Res
 
   // 2) سلسلة التدوير: Groq → Cerebras → Gemini → OpenRouter → احتياط أعمق
   const r = await runChain(env, msgs);
+  if (!r.ok) await audit(env, s.userId, "auto_fail", (r.trace ?? "").slice(0, 290));
   if (r.ok && r.content) {
     if (lastUser.trim().length >= 6) await cachePut(env, await faqKey(lastUser), r.content);
     const used = await bumpUsage(env, s.userId, "auto");
@@ -118,7 +119,7 @@ export async function autoInfer(req: Request, env: Env, s: Session): Promise<Res
       }
     }
   } catch { /* كل الحلقات تعثّرت */ }
-  return json({ error: "ai_unavailable", used: (await bumpUsage(env, s.userId, "auto")), cap: lim.auto_daily }, 503);
+  return json({ error: "ai_unavailable", used: (await bumpUsage(env, s.userId, "auto")), cap: lim.auto_daily, trace: r.trace ?? "" }, 503);
 }
 
 // ——— تجربة الصور الفورية: Workers AI من حصتنا المجانية — بسقف عدل معلن ———
@@ -300,7 +301,8 @@ export async function agentRun(req: Request, env: Env, s: Session): Promise<Resp
     await audit(env, s.userId, "agent_ok", agent);
     return json({ ok: true, agent, content: r.content, via: r.via, ms: Date.now() - t0, used });
   }
-  return json({ error: "agent_unavailable", used }, 503);
+  await audit(env, s.userId, "agent_fail", (r.trace ?? "").slice(0, 290));
+  return json({ error: "agent_unavailable", used, trace: r.trace ?? "" }, 503);
 }
 
 // ═══ فيديو Luma Ray-2 — الواجهة الرسمية، المفتاح يمرّ ولا يُخزَّن (علم صفر المعرفة) ═══
