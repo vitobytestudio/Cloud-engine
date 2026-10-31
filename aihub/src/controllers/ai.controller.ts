@@ -2,7 +2,7 @@
 import type { Env, Session } from "../env";
 import { rateLimit } from "../lib/rate";
 import { planLimits, bumpUsage, getUsage, audit } from "../lib/usage";
-import { CHAIN, runChain, faqKey, cacheGet, cachePut } from "../lib/pool";
+import { runChain, faqKey, cacheGet, cachePut, isCooled, cool } from "../lib/pool";
 
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -197,4 +197,146 @@ export async function usageReport(req: Request, env: Env, s: Session): Promise<R
   const lim = await planLimits(env, plan);
   const u = await getUsage(env, s.userId);
   return json({ ok: true, plan, limits: lim, usage: u });
+}
+
+// ═══ v0.10.0-a: صور متقدمة — Gemini nano-banana ثم HF FLUX.1-schnell ثم Pollinations ═══
+const stripTags = (h: string): string => h.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+export async function imageAuto(req: Request, env: Env, s: Session): Promise<Response> {
+  if (!s.userId) return json({ error: "auth_required" }, 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return json({ error: "csrf" }, 403);
+  const b = (await req.json().catch(() => ({}))) as { prompt?: string };
+  const prompt = (b.prompt ?? "").slice(0, 1200).trim();
+  if (prompt.length < 3) return json({ error: "invalid_input" }, 400);
+  if (!(await rateLimit(env, `img:${s.userId}`, 60, 86400))) return json({ error: "too_many" }, 429);
+  const used = await bumpUsage(env, s.userId, "instant_img");
+  const lim = await planLimits(env, (await env.DB.prepare("SELECT plan FROM users WHERE id=?").bind(s.userId).first<{ plan: string }>())?.plan ?? "FREE");
+  // 1) Gemini (nano-banana) بمفتاح المنصة — واجهة generateContent الرسمية
+  const gk = env.GEMINI_API_KEY;
+  if (gk && !(await isCooled(env, "gemini-img"))) {
+    try {
+      const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent", {
+        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": gk },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      if (r.ok) {
+        const d = await r.json() as { candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string } }> } }> };
+        const part = d.candidates?.[0]?.content?.parts?.find((x) => x.inlineData?.data);
+        if (part?.inlineData?.data) {
+          await audit(env, s.userId, "img_ok", "gemini-image");
+          return json({ ok: true, image: part.inlineData.data, mime: part.inlineData.mimeType ?? "image/png", via: "gemini", model: "gemini-2.5-flash-image", used, cap: lim.instant_img_daily });
+        }
+      } else if (r.status === 401 || r.status === 403 || r.status === 429) {
+        await cool(env, "gemini-img", 300);
+      }
+    } catch { /* التالي */ }
+  }
+  // 2) Hugging Face FLUX.1-schnell بمفتاح المنصة — واجهة الاستدلال الرسمية
+  const hk = env.HUGGINGFACE_API_KEY;
+  if (hk && !(await isCooled(env, "hf-img"))) {
+    try {
+      const r = await fetch("https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell", {
+        method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${hk}` },
+        body: JSON.stringify({ inputs: prompt })
+      });
+      if (r.ok) {
+        const buf = new Uint8Array(await r.arrayBuffer());
+        let bin = ""; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        await audit(env, s.userId, "img_ok", "flux-schnell");
+        return json({ ok: true, image: btoa(bin), mime: r.headers.get("content-type") ?? "image/jpeg", via: "huggingface", model: "FLUX.1-schnell", used, cap: lim.instant_img_daily });
+      } else if (r.status === 401 || r.status === 403 || r.status === 429 || r.status === 503) {
+        await cool(env, "hf-img", 300);
+      }
+    } catch { /* التالي */ }
+  }
+  // 3) Pollinations (مجتمعي، بلا مفتاح)
+  try {
+    const seed = Math.floor(Math.random() * 1e9);
+    const r = await fetch(`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&model=flux&nologo=true&seed=${seed}`);
+    if (r.ok) {
+      const buf = new Uint8Array(await r.arrayBuffer());
+      let bin = ""; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      await audit(env, s.userId, "img_ok", "pollinations");
+      return json({ ok: true, image: btoa(bin), mime: r.headers.get("content-type") ?? "image/jpeg", via: "pollinations", model: "flux", used, cap: lim.instant_img_daily });
+    }
+  } catch { /* الأخير */ }
+  await audit(env, s.userId, "img_unavailable");
+  return json({ error: "img_unavailable", used, cap: lim.instant_img_daily }, 503);
+}
+
+// ═══ الوكلاء — ثلاثة: الباحث (يقرأ رابطاً عاماً) والمحلل والكاتب ═══
+export async function agentRun(req: Request, env: Env, s: Session): Promise<Response> {
+  if (!s.userId) return json({ error: "auth_required" }, 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return json({ error: "csrf" }, 403);
+  const b = (await req.json().catch(() => ({}))) as { agent?: string; task?: string; url?: string };
+  const task = (b.task ?? "").slice(0, 2000).trim();
+  const agent = b.agent ?? "writer";
+  const url = (b.url ?? "").trim();
+  if (task.length < 3) return json({ error: "invalid_input" }, 400);
+  if (!["researcher", "analyst", "writer"].includes(agent)) return json({ error: "invalid_input" }, 400);
+  if (url && !/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url)) return json({ error: "invalid_input" }, 400);
+  if (!(await rateLimit(env, `agent:${s.userId}`, 30, 86400))) return json({ error: "too_many" }, 429);
+  const t0 = Date.now();
+  const msgs: Array<{ role: string; content: string }> = [];
+  let toolNote = "";
+  if (agent === "researcher" && url) {
+    try {
+      const page = await fetch(url, { headers: { "user-agent": "NexusHub-Researcher/1.0" } });
+      const raw = stripTags(await page.text()).slice(0, 4000);
+      toolNote = raw ? `\\n\\n[مقتطف من ${url}]\\n${raw}` : "";
+      await audit(env, s.userId, "agent_fetch", url.slice(0, 100));
+    } catch { toolNote = "\\n\\n[تعذر قراءة الرابط — اعتمد على معرفتك مع التنويه]"; }
+  }
+  const personas: Record<string, string> = {
+    researcher: "أنت «الباحث» في منصة Nexus — تجيب بدقة وتستشهد بالمصدر إن توفر، وتنوّه عند نقص الأدلة.",
+    analyst: "أنت «المحلل» في منصة Nexus — تحلل بنيوياً: نقاط القوة، المخاطر، التوصيات مرقمة، وخطوات عملية.",
+    writer: "أنت «الكاتب التنفيذي» في منصة Nexus — صياغة احترافية واضحة بلا حشو، بعناوين وبنود.",
+  };
+  msgs.push({ role: "system", content: personas[agent] });
+  msgs.push({ role: "user", content: task + toolNote });
+  const r = await runChain(env, msgs, 2048);
+  const used = await bumpUsage(env, s.userId, "auto");
+  if (r.ok) {
+    await audit(env, s.userId, "agent_ok", agent);
+    return json({ ok: true, agent, content: r.content, via: r.via, ms: Date.now() - t0, used });
+  }
+  return json({ error: "agent_unavailable", used }, 503);
+}
+
+// ═══ فيديو Luma Ray-2 — الواجهة الرسمية، المفتاح يمرّ ولا يُخزَّن (علم صفر المعرفة) ═══
+export async function lumaCreate(req: Request, env: Env, s: Session): Promise<Response> {
+  if (!s.userId) return json({ error: "auth_required" }, 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return json({ error: "csrf" }, 403);
+  const b = (await req.json().catch(() => ({}))) as { key?: string; prompt?: string; resolution?: string; duration?: string };
+  const key = (b.key ?? "").trim();
+  const prompt = (b.prompt ?? "").slice(0, 1500).trim();
+  if (!/^luma-[A-Za-z0-9-]{8,}$/.test(key)) return json({ error: "key_required" }, 400);
+  if (prompt.length < 3) return json({ error: "invalid_input" }, 400);
+  if (!(await rateLimit(env, `luma:${s.userId}`, 10, 3600))) return json({ error: "too_many" }, 429);
+  try {
+    const r = await fetch("https://api.lumalabs.ai/dream-machine/v1/generations", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json", authorization: `Bearer ${key}` },
+      body: JSON.stringify({ prompt, model: "ray-2", resolution: b.resolution === "1080p" ? "1080p" : "720p", duration: b.duration === "9s" ? "9s" : "5s" })
+    });
+    const d = await r.json().catch(() => ({})) as { id?: string; error?: unknown };
+    await audit(env, s.userId, "luma_create", String(r.status));
+    if (r.ok && d.id) return json({ ok: true, id: d.id, state: "queued" });
+    return json({ error: "luma_error", status: r.status }, r.status === 401 ? 401 : 502);
+  } catch { return json({ error: "luma_error" }, 502); }
+}
+
+export async function lumaStatus(req: Request, env: Env, s: Session): Promise<Response> {
+  if (!s.userId) return json({ error: "auth_required" }, 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return json({ error: "csrf" }, 403);
+  const b = (await req.json().catch(() => ({}))) as { key?: string; id?: string };
+  const key = (b.key ?? "").trim(), id = (b.id ?? "").trim();
+  if (!/^luma-[A-Za-z0-9-]{8,}$/.test(key) || !/^[A-Za-z0-9-]{6,}$/.test(id)) return json({ error: "invalid_input" }, 400);
+  try {
+    const r = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${encodeURIComponent(id)}`, {
+      headers: { accept: "application/json", authorization: `Bearer ${key}` }
+    });
+    const d = await r.json().catch(() => ({})) as { state?: string; assets?: { video?: string }; failure_reason?: string };
+    return json({ ok: true, state: d.state ?? "unknown", video: d.assets?.video ?? null, failure: d.failure_reason ?? null });
+  } catch { return json({ error: "luma_error" }, 502); }
 }

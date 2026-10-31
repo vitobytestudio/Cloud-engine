@@ -24,10 +24,15 @@ const PROVIDERS = [
   { id: "openai", name: "OpenAI", sub: "GPT-4o · o-series — your key", color: "p-openai", free: false },
   { id: "anthropic", name: "Anthropic", sub: "Claude 4 family — your key", color: "p-anthropic", free: false },
   { id: "gemini", name: "Google Gemini", sub: "2.5 Pro/Flash — your key (free tier)", color: "p-gemini", free: true },
+  { id: "luma", name: "Luma Ray-2", sub: "Dream Machine video — your key", color: "p-luma", free: false, hidden: true },
 ];
 
 let currentProvider = localStorage.getItem("ah_provider") || "instant";
 let modelSel = {}; // { provider: modelId } — اختيار المستخدم لكل مزود
+function keyFor(provider, model) {
+  const ks = vaultState.keys.filter((k) => k.provider === provider);
+  return ks.find((k) => k.model && k.model === model) || ks.find((k) => !k.model) || ks[0];
+}
 try { modelSel = JSON.parse(localStorage.getItem("ah_models") || "{}"); } catch { modelSel = {}; }
 const MODEL_CATALOG = {
   "instant": [],
@@ -150,6 +155,8 @@ export async function renderApp(root, sub) {
     <aside class="side" id="side">
       <a class="side-logo" href="#/">${LOGO} Nexus</a>
       <button class="side-item on" id="nav-chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.5 0-3-.4-4.2-1.1L3 21l1.6-5.3A8.5 8.5 0 1 1 21 12Z"/></svg>${t("chat")}</button>
+      <button class="side-item" id="nav-agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><circle cx="9" cy="13" r="1.4"/><circle cx="15" cy="13" r="1.4"/><path d="M12 8V4.5M8.5 4.5h7"/></svg>${t("nav_agents")}</button>
+      <button class="side-item" id="nav-lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6.5L4.8 18a2.2 2.2 0 0 0 2 3h10.4a2.2 2.2 0 0 0 2-3L14 9.5V3"/></svg>${t("nav_lab")}</button>
       <button class="side-item" id="nav-usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V13M10 20V6.5M16 20v-9.5M21 20H3.5"/></svg>${t("usage")}</button>
       <button class="side-item" id="nav-conn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7.5 5.5 11a3.5 3.5 0 0 0 5 5l1-1M15 16.5 18.5 13a3.5 3.5 0 0 0-5-5l-1 1"/><path d="M10.5 13.5 13.5 10.5"/></svg>${t("nav_conn")}</button>
       <div class="side-sep">${t("vault_t")}</div>
@@ -167,7 +174,7 @@ export async function renderApp(root, sub) {
         <span style="margin-inline-start:auto;font-size:12px;color:var(--faint)">${esc(state.user.email)}</span>
         <button class="icon-btn" id="export-chat" title="${t("export")}">⤓</button>
       </div>
-      ${isUsage || isConn ? `<div class="chat-scroll" id="usage-view"></div>` : `
+      ${isUsage || isConn || sub === "agents" || sub === "lab" ? `<div class="chat-scroll" id="usage-view"></div>` : `
       <div class="chat-scroll" id="chat-scroll">
         <div class="chat-inner" id="chat-inner"></div>
       </div>
@@ -219,6 +226,8 @@ export async function renderApp(root, sub) {
   root.querySelector("#nav-usage")?.addEventListener("click", () => { location.hash = "#/app/usage"; });
   root.querySelector("#nav-conn")?.addEventListener("click", () => { location.hash = "#/app/connectors"; });
   root.querySelector("#nav-vault")?.addEventListener("click", () => openVaultSheet(root));
+  root.querySelector("#nav-agents")?.addEventListener("click", () => { location.hash = "#/app/agents"; });
+  root.querySelector("#nav-lab")?.addEventListener("click", () => { location.hash = "#/app/lab"; });
   root.querySelector("#nav-lang")?.addEventListener("click", async () => {
     const order = ["ar", "en", "fr"];
     const next = order[(order.indexOf(getLang()) + 1) % 3];
@@ -228,6 +237,8 @@ export async function renderApp(root, sub) {
   renderModelPick(root);
   if (isConn) { await renderConnectors(root.querySelector("#usage-view")); return; }
   if (isUsage) { await renderUsage(root.querySelector("#usage-view") ); return; }
+  if (sub === "agents") { renderAgents(root.querySelector("#usage-view")); return; }
+  if (sub === "lab") { renderLab(root.querySelector("#usage-view")); return; }
   updateModeChips(root);
   wireChat(root);
   refreshUsagePill(root);
@@ -409,7 +420,8 @@ function updateModeChips(root) {
   const isInstant = currentProvider === "instant";
   holder.innerHTML = `
     <button class="chip ${mode === "chat" ? "on" : ""}" data-m="chat">${t("mode_chat")}</button>
-    ${currentProvider === "instant" ? `<button class="chip ${mode === "image" ? "on" : ""}" data-m="image">${t("mode_image")}</button>` : ""}
+    <button class="chip ${mode === "image" ? "on" : ""}" data-m="image">${t("mode_image")}</button>
+    <button class="chip ${mode === "video" ? "on" : ""}" data-m="video">${t("mode_video")}</button>
     <button class="chip ${duelOn ? "on" : ""}" data-m="duel">⚖ ${t("duel")}</button>`;
   holder.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.m === "duel") { duelOn = !duelOn; localStorage.setItem("ah_duel", duelOn ? "1" : "0"); }
@@ -417,7 +429,7 @@ function updateModeChips(root) {
     updateModeChips(root);
   }));
   const ta = root.querySelector("#prompt");
-  if (ta) ta.placeholder = mode === "image" && isInstant ? t("img_placeholder") : t("placeholder");
+  if (ta) ta.placeholder = mode === "image" ? t("img_placeholder") : mode === "video" ? t("video_placeholder") : t("placeholder");
   updateDuelBar(root);
 }
 
@@ -521,8 +533,33 @@ function wireChat(root) {
       finish(); return;
     }
 
-    // تجربة الصور الفورية — من حصتنا، بسقف عدل معلن
-    if (currentProvider === "instant" && mode === "image") {
+    // فيديو Luma Ray-2 — المفتاح من الخزنة يمرّ ولا يُخزَّن
+    if (mode === "video") {
+      const lk = keyFor("luma", "");
+      if (!lk || !vaultState.unlocked) { a.txt.textContent = t("luma_key_needed"); openVaultSheet(root); finish(); return; }
+      a.txt.textContent = t("luma_pending");
+      const cr = await api.post("/api/video/luma", { key: lk.key, prompt: q });
+      if (!cr.ok || !cr.data.id) { a.txt.textContent = cr.data?.error === "key_required" ? t("luma_key_needed") : errMsg(cr.data?.error); finish(); return; }
+      for (let i = 0; i < 40; i++) {
+        await new Promise((res) => setTimeout(res, 6000));
+        const st = await api.post("/api/video/luma-status", { key: lk.key, id: cr.data.id });
+        if (st.ok && st.data.state === "completed" && st.data.video) {
+          a.txt.textContent = "";
+          const v = document.createElement("video");
+          v.controls = true; v.src = st.data.video; v.style.maxWidth = "100%"; v.style.borderRadius = "14px";
+          a.txt.appendChild(v);
+          const cap = document.createElement("div"); cap.className = "img-cap"; cap.textContent = "Luma Ray-2";
+          a.txt.appendChild(cap);
+          history.push({ role: "assistant", content: "[Luma Ray-2 video]" });
+          finish(); return;
+        }
+        if (st.ok && (st.data.state === "failed")) { a.txt.textContent = t("video_failed") + (st.data.failure ? " — " + st.data.failure : ""); finish(); return; }
+        a.txt.textContent = t("luma_pending") + " · " + (st.data?.state ?? "queued") + " (" + (i + 1) + ")";
+      }
+      a.txt.textContent = t("video_timeout"); finish(); return;
+    }
+    // الصور المتقدمة — Gemini ثم HF FLUX ثم Pollinations
+    if (mode === "image") {
       a.txt.textContent = t("img_gen");
       const pr = await api.post("/api/infer/instant-image", { prompt: q });
       if (pr.ok && pr.data.image) {
@@ -792,6 +829,100 @@ const CONN_META = [
   { sec: "paid", id: "anthropic", name: "Anthropic", sub: "Claude 4 family", color: "p-anthropic", url: "https://console.anthropic.com/settings/keys", prefix: "sk-ant-" },
 ];
 const SECTIONS = [["keyless", "conn_keyless"], ["free", "conn_official_free"], ["paid", "conn_paid"]];
+
+function renderAgents(view) {
+  if (!view) return;
+  const agents = [
+    { id: "researcher", name: t("ag_r_name"), desc: t("ag_r_desc"), icon: "M10.5 3.5a7 7 0 1 0 4.9 12l4.1 4.1M10.5 3.5a7 7 0 0 1 4.9 12" },
+    { id: "analyst", name: t("ag_a_name"), desc: t("ag_a_desc"), icon: "M4 20V13M10 20V6.5M16 20v-9.5M21 20H3.5" },
+    { id: "writer", name: t("ag_w_name"), desc: t("ag_w_desc"), icon: "M4 20l4-1L19.5 7.5a2.1 2.1 0 0 0-3-3L5 16l-1 4Z" },
+  ];
+  view.innerHTML = `
+    <div class="page-head"><h2>${t("nav_agents")}</h2><p class="page-sub">${t("agents_sub")}</p></div>
+    <div class="agent-grid">
+      ${agents.map((a) => `
+      <button class="agent-card glass" data-agent="${a.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${a.icon}"/></svg>
+        <strong>${a.name}</strong><span>${a.desc}</span>
+      </button>`).join("")}
+    </div>
+    <div class="field" id="ag-url-wrap" hidden><label>${t("agent_url")}</label><input id="ag-url" dir="ltr" placeholder="https://example.com/article" /></div>
+    <div class="field"><label>${t("agent_task")}</label><textarea id="ag-task" rows="3" placeholder="${t("agent_task_ph")}"></textarea></div>
+    <button class="btn btn-grad" id="ag-go">${t("agent_run")}</button>
+    <div class="lab-out glass" id="ag-out" hidden></div>`;
+  let cur = "writer";
+  view.querySelectorAll(".agent-card").forEach((c) => c.addEventListener("click", () => {
+    cur = c.dataset.agent;
+    view.querySelectorAll(".agent-card").forEach((x) => x.classList.toggle("on", x === c));
+    view.querySelector("#ag-url-wrap").hidden = cur !== "researcher";
+  }));
+  view.querySelector('.agent-card[data-agent="writer"]').classList.add("on");
+  view.querySelector("#ag-go").addEventListener("click", async () => {
+    const task = view.querySelector("#ag-task").value.trim();
+    const url = view.querySelector("#ag-url").value.trim();
+    const out = view.querySelector("#ag-out");
+    if (task.length < 3) return;
+    out.hidden = false; out.textContent = t("agent_working");
+    const r = await api.post("/api/agent/run", { agent: cur, task, url });
+    out.hidden = false;
+    out.textContent = r.ok ? (r.data.content ?? "") : errMsg(r.data?.error);
+  });
+}
+
+function renderLab(view) {
+  if (!view) return;
+  view.innerHTML = `
+    <div class="page-head"><h2>${t("nav_lab")}</h2><p class="page-sub">${t("lab_sub")}</p></div>
+    <div class="mode-chips" style="position:static">
+      <button class="chip on" data-l="js">JavaScript</button>
+      <button class="chip" data-l="py">Python</button>
+    </div>
+    <div class="field"><textarea id="lab-code" rows="10" dir="ltr" spellcheck="false"></textarea></div>
+    <button class="btn btn-grad" id="lab-go">${t("lab_run")}</button>
+    <div class="lab-out glass" id="lab-out"><span style="color:var(--faint)">stdout…</span></div>
+    <p class="hint" style="margin-top:10px">${t("lab_hint")}</p>`;
+  let lang = "js";
+  const setDefault = () => {
+    view.querySelector("#lab-code").value = lang === "js"
+      ? 'console.log("مرحباً من المعمل");\n[1,2,3].map(n => n ** 2).forEach(n => console.log(n));'
+      : 'print("مرحباً من بايثون")\nprint(sum(n**2 for n in range(10)))';
+  };
+  view.querySelectorAll("[data-l]").forEach((b) => b.addEventListener("click", () => {
+    lang = b.dataset.l;
+    view.querySelectorAll("[data-l]").forEach((x) => x.classList.toggle("on", x === b));
+    setDefault();
+  }));
+  setDefault();
+  const out = view.querySelector("#lab-out");
+  const onMsg = (e) => { if (e.data && e.data.__lab) { out.textContent = e.data.__lab; } };
+  window.addEventListener("message", onMsg);
+  view.querySelector("#lab-go").addEventListener("click", () => {
+    const code = view.querySelector("#lab-code").value;
+    out.textContent = "…";
+    const f = document.createElement("iframe");
+    f.style.display = "none";
+    f.setAttribute("sandbox", "allow-scripts");
+    const esc2 = (x) => x.replace(/<\/+/g, "<\\\\/");
+    if (lang === "js") {
+      f.srcdoc = '<!doctype html><script>(function(){const B=[];const P=(m)=>B.push(String(m));' +
+        'console.log=(...a)=>P(a.join(" "));console.error=P;console.warn=P;' +
+        'window.onerror=(m)=>P("خطأ: "+m);' +
+        'try{(function(){' + esc2(code) + '})();}catch(e){P("خطأ: "+e.message)}' +
+        'parent.postMessage({__lab:B.join("\\n")||"(بلا مخرجات)"},"*");})();</script>';
+    } else {
+      f.srcdoc = '<!doctype html><html><head><meta charset="utf-8">' +
+        '<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script></head><body><script>' +
+        '(async function(){const B=[];const P=(m)=>B.push(String(m));' +
+        'try{const py=await loadPyodide({stdout:(t)=>P(t),stderr:(t)=>P(t)});' +
+        'await py.runPythonAsync(window.__nexus_code);}' +
+        'catch(e){P("خطأ: "+e.message)}' +
+        'parent.postMessage({__lab:B.join("\\n")||"(بلا مخرجات)"},"*");})();</script></body></html>';
+      f.addEventListener("load", () => { try { f.contentWindow.__nexus_code = code; } catch {} }, { once: true });
+    }
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 180000);
+  });
+}
 
 async function renderConnectors(view) {
   view.innerHTML = `<div class="conn-wrap">

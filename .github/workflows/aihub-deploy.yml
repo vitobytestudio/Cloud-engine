@@ -240,6 +240,15 @@ jobs:
           const log = await fetch(process.env.PURL + "/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: em, k0 }) });
           console.log("::notice::probe-login: " + log.status);
           if (reg.status !== 201 || log.status !== 200) process.exit(1);
+          const sc = (log.headers.getSetCookie ? log.headers.getSetCookie() : [log.headers.get("set-cookie")]).map(c => c.split(";")[0]).join("; ");
+          const loginD = await log.json();
+          const auto = await fetch(process.env.PURL + "/api/infer/auto", {
+            method: "POST",
+            headers: { "content-type": "application/json", cookie: sc, "x-csrf": loginD.csrf },
+            body: JSON.stringify({ messages: [{ role: "user", content: "قل: جاهز" }] })
+          });
+          const autoD = await auto.json().catch(() => ({}));
+          console.log("::notice::probe-auto: " + auto.status + " via=" + (autoD.via ?? "none") + " " + String(autoD.content ?? autoD.error ?? "").slice(0, 80));
           console.log("::notice::المصادقة على الإنتاج سليمة ✓");
           NODE
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM audit_events WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'deploy-check-%')" >/dev/null 2>&1 || true

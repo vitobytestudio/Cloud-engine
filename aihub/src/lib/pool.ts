@@ -6,10 +6,10 @@ export type ChainLink = { id: string; envKey: keyof Env; base: string; model: st
 
 // ترتيب السلسلة كما أراد المالك: Groq → Cerebras → Gemini → OpenRouter، ثم احتياط أعمق
 export const CHAIN: ChainLink[] = [
-  { id: "groq",       envKey: "GROQ_API_KEY",       base: "https://api.groq.com/openai/v1",                        model: "llama-3.3-70b-versatile",            cool401: 3600, cool429: 60 },
+  { id: "groq",       envKey: "GROQ_API_KEY",       base: "https://api.groq.com/openai/v1",                        model: "openai/gpt-oss-120b",            cool401: 3600, cool429: 60 },
   { id: "cerebras",   envKey: "CEREBRAS_API_KEY",   base: "https://api.cerebras.ai/v1",                            model: "llama-3.3-70b",                      cool401: 3600, cool429: 60 },
-  { id: "gemini",     envKey: "GEMINI_API_KEY",     base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash",                 cool401: 3600, cool429: 45 },
-  { id: "openrouter", envKey: "OPENROUTER_API_KEY", base: "https://openrouter.ai/api/v1",                          model: "meta-llama/llama-3.3-70b-instruct:free", cool401: 3600, cool429: 30 },
+  { id: "gemini",     envKey: "GEMINI_API_KEY",     base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-3.5-flash-lite",                 cool401: 3600, cool429: 45 },
+  { id: "openrouter", envKey: "OPENROUTER_API_KEY", base: "https://openrouter.ai/api/v1",                          model: "openai/gpt-oss-120b:free", cool401: 3600, cool429: 30 },
   { id: "huggingface", envKey: "HUGGINGFACE_API_KEY", base: "https://router.huggingface.co/v1",                 model: "openai/gpt-oss-120b:fastest",        cool401: 3600, cool429: 120 },
   { id: "nvidia",     envKey: "NVIDIA_API_KEY",     base: "https://integrate.api.nvidia.com/v1",                   model: "deepseek-ai/deepseek-v4-flash",      cool401: 3600, cool429: 60 },
   { id: "mistral",    envKey: "MISTRAL_API_KEY",    base: "https://api.mistral.ai/v1",                             model: "mistral-small-latest",               cool401: 3600, cool429: 60 },
@@ -21,7 +21,7 @@ export const CHAIN: ChainLink[] = [
 export async function isCooled(env: Env, id: string): Promise<boolean> {
   return (await env.CACHE_KV.get(`cool:${id}`)) !== null;
 }
-async function cool(env: Env, id: string, sec: number): Promise<void> {
+export async function cool(env: Env, id: string, sec: number): Promise<void> {
   await env.CACHE_KV.put(`cool:${id}`, "1", { expirationTtl: Math.max(60, sec) });
 }
 

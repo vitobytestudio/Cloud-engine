@@ -37,6 +37,10 @@ const routes: Route[] = [
   { m: "POST", pat: "/api/infer/instant", h: (r, e, s) => ai.instant(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/auto",      h: (r, e, s) => ai.autoInfer(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/instant-image", h: (r, e, s) => ai.instantImage(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/infer/image",         h: (r, e, s) => ai.imageAuto(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/agent/run",           h: (r, e, s) => ai.agentRun(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/video/luma",          h: (r, e, s) => ai.lumaCreate(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/video/luma-status",   h: (r, e, s) => ai.lumaStatus(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/:provider", h: (r, e, s, p) => ai.proxyInfer(r, e, s, p), auth: true },
   { m: "GET",  pat: "/api/usage",         h: (r, e, s) => ai.usageReport(r, e, s), auth: true },
 ];
@@ -84,7 +88,7 @@ export default {
       }
     }
 
-    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.9.2-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
+    if (path === "/health") return new Response(JSON.stringify({ ok: true, v: "0.10.0-a" }), { headers: { "content-type": "application/json", ...cors, ...SEC } });
 
     // البقية = أصول ساكنة (برؤوس الأمان نفسها)
     const asset = await env.ASSETS.fetch(req);
