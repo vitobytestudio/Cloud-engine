@@ -63,7 +63,11 @@ export async function runChain(env: Env, messages: Array<{ role: string; content
         headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
         body,
       });
-      trace.push(`${link.id}:${res.status}`);
+      if (res.status === 400) {
+        // تشخيص: أول 100 حرف من رسالة المزود (لا تحوي أسراراً)
+        const et = (await res.text()).replace(/\s+/g, " ").slice(0, 100);
+        trace.push(`${link.id}:400:${et}`);
+      } else trace.push(`${link.id}:${res.status}`);
       if (res.status === 401 || res.status === 403) { await cool(env, link.id, link.cool401); continue; }
       if (res.status === 429 || res.status >= 500) { await cool(env, link.id, link.cool429); continue; }
       if (!res.ok) { continue; }
