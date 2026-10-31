@@ -48,15 +48,29 @@ async function derive(password: string, salt: string, pepper: string): Promise<s
 
 export type SessionData = { userId: string; csrf: string; lastSeen: number };
 
+// مفتاح KV = SHA-256 للتوكن: تسريب KV أو نسخة قاعدة لا يعطي جلسات صالحة
+async function tokenHash(token: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export async function createSession(env: Env, userId: string): Promise<{ token: string; csrf: string }> {
   const token = hex(32), csrf = hex(16);
-  await env.CACHE_KV.put(`session:${token}`, JSON.stringify({ userId, csrf, lastSeen: Date.now() }), { expirationTtl: 60 * 60 * 24 * 30 });
+  await env.CACHE_KV.put(`session:${await tokenHash(token)}`, JSON.stringify({ userId, csrf, lastSeen: Date.now() }), { expirationTtl: 60 * 60 * 24 * 30 });
   return { token, csrf };
 }
 
 export async function getSessionData(env: Env, token: string | null): Promise<SessionData | null> {
   if (!token) return null;
-  const raw = await env.CACHE_KV.get(`session:${token}`);
+  let raw = await env.CACHE_KV.get(`session:${await tokenHash(token)}`);
+  if (!raw) {
+    // جلسات أقدم من التجزئة: نرقّها صامتاً إلى المفتاح المجزأ
+    raw = await env.CACHE_KV.get(`session:${token}`);
+    if (raw) {
+      await env.CACHE_KV.put(`session:${await tokenHash(token)}`, raw, { expirationTtl: 60 * 60 * 24 * 30 });
+      await env.CACHE_KV.delete(`session:${token}`);
+    }
+  }
   if (!raw) return null;
   try {
     const d = JSON.parse(raw) as SessionData;
@@ -65,5 +79,7 @@ export async function getSessionData(env: Env, token: string | null): Promise<Se
 }
 
 export async function destroySession(env: Env, token: string | null): Promise<void> {
-  if (token) await env.CACHE_KV.delete(`session:${token}`);
+  if (!token) return;
+  await env.CACHE_KV.delete(`session:${await tokenHash(token)}`);
+  await env.CACHE_KV.delete(`session:${token}`);
 }

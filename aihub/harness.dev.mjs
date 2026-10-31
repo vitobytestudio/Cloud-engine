@@ -27,11 +27,22 @@ const dup = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: 
 check("البريد المكرر مرفوض (409)", dup.status === 409);
 const weak = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "w@w.test", password: "123", full_name: "W" }) });
 check("كلمة المرور الضعيفة مرفوضة (400)", weak.status === 400);
+const noDigit = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "nd@nd.test", password: "abcdefghij", full_name: "ND" }) });
+check("كلمة المرور بلا رقم مرفوضة (400)", noDigit.status === 400);
+const rlEmail = `rl-${Date.now().toString(36)}@rl.test`;
+let rlLast = 0;
+for (let i = 0; i < 6; i++) {
+  const r = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: rlEmail, password: "StrongPass9", full_name: "RL" }) });
+  rlLast = r.status;
+}
+check("الحد على التسجيل المتكرر (429)", rlLast === 429, `last=${rlLast}`);
+const regHdr = (reg.headers.get("set-cookie") ?? "");
+check("كوكي الجلسة محصّن (__Host- + HttpOnly)", regHdr.includes("__Host-ah_s=") && regHdr.includes("HttpOnly") && regHdr.includes("SameSite=Lax"));
 
 const login = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, password: "StrongPass9" }) });
 const loginD = await login.json();
 const cookie = (login.headers.get("set-cookie") ?? "").split(";")[0];
-check("الدخول يعمل مع جلسة", login.status === 200 && cookie.startsWith("ah_s="));
+check("الدخول يعمل مع جلسة", login.status === 200 && cookie.startsWith("__Host-ah_s="));
 const badLogin = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "vito@aihub.test", password: "WrongPass1" }) });
 check("كلمة مرور خاطئة → 401", badLogin.status === 401);
 

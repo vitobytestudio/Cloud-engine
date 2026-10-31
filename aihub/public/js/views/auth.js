@@ -39,14 +39,14 @@ export function renderAuth(root, mode) {
     const password = root.querySelector("#a-pass").value;
     const name = (root.querySelector("#a-name") || {}).value?.trim() ?? "";
     err.textContent = "";
-    if (!isLogin && password.length < 8) { err.textContent = t("weak_pass"); return; }
+    if (!isLogin && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) { err.textContent = t("weak_pass"); return; }
     go.disabled = true;
     const r = isLogin
       ? await api.post("/api/auth/login", { email, password })
       : await api.post("/api/auth/register", { email, password, full_name: name });
     go.disabled = false;
     if (!r.ok) {
-      const map = { weak_password: t("weak_pass"), email_taken: t("email_taken"), invalid_credentials: t("invalid_creds"), too_many: t("err_generic") };
+      const map = { weak_password: t("weak_pass"), email_taken: t("email_taken"), invalid_credentials: t("invalid_creds"), too_many: t("too_many"), invalid_input: t("err_generic") };
       err.textContent = map[r.data?.error] ?? t("err_generic");
       return;
     }
