@@ -35,6 +35,7 @@ const routes: Route[] = [
   { m: "GET",  pat: "/api/vault",         h: (r, e, s) => vault.getVault(r, e, s), auth: true },
   { m: "PUT",  pat: "/api/vault",         h: (r, e, s) => vault.putVault(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/instant", h: (r, e, s) => ai.instant(r, e, s), auth: true, csrf: true },
+  { m: "POST", pat: "/api/infer/auto",      h: (r, e, s) => ai.autoInfer(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/instant-image", h: (r, e, s) => ai.instantImage(r, e, s), auth: true, csrf: true },
   { m: "POST", pat: "/api/infer/:provider", h: (r, e, s, p) => ai.proxyInfer(r, e, s, p), auth: true },
   { m: "GET",  pat: "/api/usage",         h: (r, e, s) => ai.usageReport(r, e, s), auth: true },

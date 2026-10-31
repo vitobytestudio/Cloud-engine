@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS plan_limits (
   instant_daily INTEGER NOT NULL,       -- طلبات الحلقة الفورية (Workers AI) يومياً
   proxy_rpm INTEGER NOT NULL,           -- طلبات الاستدلال في الدقيقة
   agents INTEGER NOT NULL,
+  auto_daily INTEGER NOT NULL DEFAULT 300,      -- طلبات Nexus Open (التدوير الذكي) يومياً
   instant_img_daily INTEGER NOT NULL DEFAULT 5, -- تجربة الصور الفورية يومياً (سقف عدل معلن)
   vault_size INTEGER NOT NULL           -- بايت
 );
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS usage_daily (
   user_id TEXT NOT NULL,
   day TEXT NOT NULL,
   instant INTEGER NOT NULL DEFAULT 0,
+  auto INTEGER NOT NULL DEFAULT 0,
   instant_img INTEGER NOT NULL DEFAULT 0,
   proxy INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (user_id, day)

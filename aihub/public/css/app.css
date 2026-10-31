@@ -389,6 +389,7 @@ h1, h2, .hero h1, .plan-price, .side-logo, .nav-logo, .sec-head h2 { font-family
 
 /* ———————— v0.8.0-a: المقارنة + لوحة الحقيقة + التصدير ———————— */
 .duel-bar { display: flex; gap: 10px; width: min(760px, 100%); margin: 0 auto 10px; flex-wrap: wrap; }
+.duel-bar[hidden] { display: none; }
 .duel-side { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 280px; border: 1px dashed var(--border-2); border-radius: 12px; padding: 7px 10px; }
 .duel-tag { font-size: 11px; font-weight: 700; color: var(--faint); white-space: nowrap; }
 .duel-side select { flex: 1; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 6px 8px; font-size: 12px; outline: none; color: var(--text); min-width: 0; }
@@ -410,3 +411,6 @@ h1, h2, .hero h1, .plan-price, .side-logo, .nav-logo, .sec-head h2 { font-family
 .lang-sw [data-lang] { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px; color: var(--dim); transition: all .15s var(--ease); }
 .lang-sw [data-lang]:hover { color: var(--text); }
 .lang-sw [data-lang].on { background: var(--grad); color: #fff; }
+
+/* Nexus Open */
+.p-nexus { background: var(--grad); box-shadow: 0 0 8px rgba(124,108,255,.6); }

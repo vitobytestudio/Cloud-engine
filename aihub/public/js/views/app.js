@@ -10,6 +10,7 @@ function esc(v) {
 const LOGO = `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c6cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0a0d14" stroke="url(#lg2)" stroke-opacity=".4"/><path d="M9.5 22.5v-13l13 13v-13" stroke="url(#lg2)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 const PROVIDERS = [
+  { id: "auto", name: "Nexus Open", sub: t("auto_sub"), color: "p-nexus", free: true },
   { id: "instant", name: "Llama 3.1 (Instant)", sub: t("instant_sub"), color: "p-instant", free: true },
   { id: "nvidia", name: "NVIDIA NIM", sub: "DeepSeek-V4 · Nemotron · Llama 4 — free API", color: "p-nvidia", free: true },
   { id: "github-models", name: "GitHub Models", sub: "GPT-4o · Llama · Phi — free for devs", color: "p-github", free: true },
@@ -260,9 +261,10 @@ function renderModelPick(root) {
   const holder = root.querySelector("#model-pick") ;
   const cur = PROVIDERS.find((p) => p.id === currentProvider) || PROVIDERS[0];
   const mdl = currentModel();
+  const keyless = currentProvider === "instant" || currentProvider === "auto";
   holder.innerHTML = `
     <button class="model-btn" id="mp-btn"><span class="dot ${cur.color}"></span>${cur.name} <span style="color:var(--faint)">▾</span></button>
-    ${currentProvider !== "instant" ? `<button class="model-btn model-btn2" id="mp-model" title="${t("pick_model")}"><span class="mi-name">${esc(shortModel(mdl))}</span> <span style="color:var(--faint)">▾</span></button>
+    ${!keyless ? `<button class="model-btn model-btn2" id="mp-model" title="${t("pick_model")}"><span class="mi-name">${esc(shortModel(mdl))}</span> <span style="color:var(--faint)">▾</span></button>
     <div class="model-menu glass" id="mm-menu" hidden></div>` : ""}
     <div class="model-menu glass" id="mp-menu" hidden></div>`;
   const menu = holder.querySelector("#mp-menu");
@@ -407,7 +409,7 @@ function updateModeChips(root) {
   const isInstant = currentProvider === "instant";
   holder.innerHTML = `
     <button class="chip ${mode === "chat" ? "on" : ""}" data-m="chat">${t("mode_chat")}</button>
-    ${isInstant ? `<button class="chip ${mode === "image" ? "on" : ""}" data-m="image">${t("mode_image")}</button>` : ""}
+    ${currentProvider === "instant" ? `<button class="chip ${mode === "image" ? "on" : ""}" data-m="image">${t("mode_image")}</button>` : ""}
     <button class="chip ${duelOn ? "on" : ""}" data-m="duel">⚖ ${t("duel")}</button>`;
   holder.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.m === "duel") { duelOn = !duelOn; localStorage.setItem("ah_duel", duelOn ? "1" : "0"); }
@@ -425,13 +427,15 @@ function updateDuelBar(root) {
   if (!bar) return;
   bar.hidden = !duelOn;
   if (!duelOn) return;
-  const providers = PROVIDERS.filter((p) => p.id !== "instant");
+  const providers = PROVIDERS.filter((p) => p.id !== "instant" && p.id !== "auto");
   for (const side of ["A", "B"]) {
     const st = side === "A" ? duelA : duelB;
     const pSel = bar.querySelector(`#duel-p${side}`);
     const mSel = bar.querySelector(`#duel-m${side}`);
-    if (![...pSel.options].some((o) => o.value === st.provider))
-      st.provider = localStorage.getItem(side === "A" ? "ah_duel_pa" : "ah_duel_pb") || providers[0].id;
+    if (!providers.some((p) => p.id === st.provider)) {
+      const stored = localStorage.getItem(side === "A" ? "ah_duel_pa" : "ah_duel_pb");
+      st.provider = stored && providers.some((p) => p.id === stored) ? stored : "groq";
+    }
     pSel.innerHTML = providers.map((p) => `<option value="${p.id}" ${p.id === st.provider ? "selected" : ""}>${p.name}</option>`).join("");
     const fillModels = () => {
       const cat = MODEL_CATALOG[st.provider] || [];
@@ -499,6 +503,23 @@ function wireChat(root) {
     send.disabled = true;
 
     const finish = () => { send.disabled = false; (root.querySelector("#chat-scroll") ).scrollTop = 1e9; };
+
+    // Nexus Open: التدوير الذكي عبر مفاتيح المنصة
+    if (currentProvider === "auto") {
+      const r = await api.post("/api/infer/auto", { messages: history.slice(-12) });
+      if (r.ok) {
+        history.push({ role: "assistant", content: r.data.content });
+        a.txt.textContent = r.data.content;
+        const chips = [];
+        if (r.data.cached) chips.push(`<span class="cost-chip via">⚡ ${t("cached_hit")}</span>`);
+        chips.push(`<span class="cost-chip">↻ ${esc(r.data.via ?? "")} · ${esc(r.data.model ?? "")}</span>`);
+        a.txt.insertAdjacentHTML("beforeend", chips.join(""));
+      } else {
+        a.txt.textContent = errMsg(r.data?.error);
+        if (r.status === 401 && r.data?.error === "auth_required") location.hash = "#auth-login";
+      }
+      finish(); return;
+    }
 
     // تجربة الصور الفورية — من حصتنا، بسقف عدل معلن
     if (currentProvider === "instant" && mode === "image") {

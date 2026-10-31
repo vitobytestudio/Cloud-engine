@@ -238,6 +238,29 @@ await page.screenshot({ path: "shots/duel.png" });
 await page.evaluate(() => document.querySelector('button[data-m="duel"]')?.click());
 await page.waitForTimeout(200);
 
+// 7.9) Nexus Open: التدوير الذكي من الواجهة
+await page.evaluate(() => { localStorage.setItem("ah_provider", "auto"); location.reload(); });
+await page.waitForSelector("#prompt", { timeout: 8000 });
+await page.waitForTimeout(500);
+check("Nexus Open: يظهر في المختار بلا زر نموذج", await page.evaluate(() => !document.querySelector("#mp-model")));
+check("Nexus Open: زر المقارنة لا يعرضه (بلا نموذج محدد)", await page.evaluate(() => ![...document.querySelectorAll("#duel-pA option")].some((o) => o.value === "auto")));
+await page.evaluate(() => {
+  const ta = document.querySelector("#prompt");
+  ta.value = "اشرح لي ما هو التعلّم العميق بإيجاز";
+  ta.dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector("#send").click();
+});
+await page.waitForFunction(() => {
+  const msgs = document.querySelectorAll(".msg-ai .txt");
+  const last = msgs[msgs.length - 1];
+  return last && !last.querySelector(".typing") && last.textContent.length > 0;
+}, null, { timeout: 20000 });
+const autoTxt = await page.evaluate(() => [...document.querySelectorAll(".msg-ai .txt")].pop().textContent);
+check("Nexus Open: دورة كاملة (رد حقيقي أو رسالة لطيفة محلياً)", autoTxt.length > 5, autoTxt.slice(0, 40));
+await page.screenshot({ path: "shots/auto.png" });
+await page.evaluate(() => { localStorage.setItem("ah_provider", "instant"); location.reload(); });
+await page.waitForTimeout(800);
+
 // 8) مبدّل الدردشة/الصورة للفوري
 await page.evaluate(() => { location.hash = "#/app"; });
 await page.waitForTimeout(600);
