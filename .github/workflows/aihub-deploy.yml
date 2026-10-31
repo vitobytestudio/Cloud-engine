@@ -241,7 +241,7 @@ jobs:
           console.log("::notice::probe-login: " + log.status);
           if (reg.status !== 201 || log.status !== 200) process.exit(1);
           console.log("::notice::المصادقة على الإنتاج سليمة ✓");
-NODE
+          NODE
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM audit_events WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'deploy-check-%')" >/dev/null 2>&1 || true
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM users WHERE email LIKE 'deploy-check-%'" >/dev/null 2>&1 || true
           echo "::notice::حساب الفحص التجريبي نُظّف"
