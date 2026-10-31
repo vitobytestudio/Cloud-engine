@@ -82,16 +82,27 @@ jobs:
           npx wrangler d1 execute DB --remote -y --file seed.sql
           echo "::notice::قاعدة nexus_hub_db جاهزة"
 
-      - name: تشخيص وجود الأسماء (أسماء فقط — لا قيم أبداً)
+      - name: تشخيص AI_KEYS (الطول وأسماء المفاتيح فقط — لا قيم أبداً)
         env:
+          SEC_AI_KEYS: ${{ secrets.AI_KEYS }}
           VAR_AI_KEYS: ${{ vars.AI_KEYS }}
         run: |
-          FOUND=0
-          for S in AI_KEYS GROQ_API_KEY GROQ_API_TOKEN GEMINI_API_KEY GOOGLE_API_TOKEN GOOGLE_API_KEY OPENROUTER_API_KEY OPENROUTER_API_TOKEN CEREBRAS_API_KEY NVIDIA_API_KEY MISTRAL_API_KEY SAMBANOVA_API_KEY SAMPANOVA_API_TOKEN COHERE_API_KEY; do
-            if [ -n "${!S}" ]; then echo "::notice::موجود: $S"; FOUND=$((FOUND+1)); fi
-          done
-          if [ -n "$VAR_AI_KEYS" ]; then echo "::notice::موجود: AI_KEYS كمتغير Repository variables"; FOUND=$((FOUND+1)); fi
-          if [ "$FOUND" -eq 0 ]; then echo "::warning::لم يُعثَر على AI_KEYS في أسرار ولا متغيرات المستودع — راجع الموضع"; fi
+          echo "::notice::الطول secrets.AI_KEYS = ${#SEC_AI_KEYS} | الطول vars.AI_KEYS = ${#VAR_AI_KEYS}"
+          SRC="$SEC_AI_KEYS"
+          [ -n "$SRC" ] || SRC="$VAR_AI_KEYS"
+          if [ -z "$SRC" ]; then echo "::warning::الحزمة فارغة في الخانتين"; exit 0; fi
+          NAMES=""
+          case "$SRC" in
+            '{'*)
+              echo "::notice::التنسيق: JSON"
+              NAMES="$(printf '%s' "$SRC" | grep -oE '"[A-Za-z0-9_]+"[[:space:]]*:' | tr -d '" :' | sort -u)"
+              ;;
+            *)
+              NAMES="$(printf '%s' "$SRC" | grep -oE '(^|[[:space:]])(exports?[[:space:]]+)?[A-Za-z0-9_]+[[:space:]]*[=:]' | sed -E "s/^([[:space:]]+)?(exports?[[:space:]]+)?//; s/[[:space:]]*[=:]$//" | sort -u)"
+              if [ -z "$NAMES" ]; then NAMES="$(printf '%s' "$SRC" | grep -oE '^[A-Za-z0-9_]+' | sort -u)"; echo "::notice::التنسيق: أسطر بلا فاصل = أو : (إظهار أول كلمة)"; fi
+              ;;
+          esac
+          printf '%s\n' "$NAMES" | while read -r K; do [ -n "$K" ] && echo "::notice::اسم داخل الحزمة: $K"; done
 
       - name: مفاتيح المنصة (من أسرار GitHub إلى أسرار Worker — لا تُطبع أبداً)
         working-directory: aihub
@@ -131,6 +142,7 @@ jobs:
             esac
           }
           if [ -n "$AI_KEYS" ]; then
+            case "$AI_KEYS" in '{'*) AI_KEYS="$(printf '%s' "$AI_KEYS" | python3 -c 'import sys,json;o=json.load(sys.stdin);print("\n".join(k+"="+v for k,v in o.items() if isinstance(v,str)))')" ;; esac
             while IFS= read -r LINE; do
               LINE="$(printf '%s' "$LINE" | tr -d '\r')"
               LINE="${LINE#"${LINE%%[![:space:]]*}"}"; LINE="${LINE%"${LINE##*[![:space:]]}"}"
@@ -139,9 +151,13 @@ jobs:
               case "$LINE" in
                 *=*) RAW_NAME="${LINE%%=*}"; VAL="${LINE#*=}";;
                 *:*) RAW_NAME="${LINE%%:*}"; VAL="${LINE#*:}";;
-                *) continue;;
+                *)
+                  set -- $LINE
+                  if [ "$#" -eq 2 ]; then RAW_NAME="$1"; VAL="$2"; else continue; fi;;
               esac
-              RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d '"' | tr -d "'" | tr -d ' ' | tr '[:lower:]' '[:upper:]')"
+              RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d '"' | tr -d "'" | tr '[:lower:]' '[:upper:]')"
+              RAW_NAME="${RAW_NAME#EXPORT}"; RAW_NAME="${RAW_NAME#_}"
+              RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d ' ')"
               RAW_NAME="${RAW_NAME%:}"
               VAL="${VAL#"${VAL%%[![:space:]]*}"}"; VAL="${VAL%"${VAL##*[![:space:]]}"}"
               VAL="${VAL%,}"; VAL="${VAL%\"}"; VAL="${VAL#\"}"; VAL="${VAL%'}"; VAL="${VAL#'}"
