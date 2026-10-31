@@ -82,10 +82,19 @@ jobs:
           npx wrangler d1 execute DB --remote -y --file seed.sql
           echo "::notice::قاعدة nexus_hub_db جاهزة"
 
+      - name: تشخيص وجود الأسماء (أسماء فقط — لا قيم أبداً)
+        env:
+          VAR_AI_KEYS: ${{ vars.AI_KEYS }}
+        run: |
+          for S in AI_KEYS GROQ_API_KEY GROQ_API_TOKEN GEMINI_API_KEY GOOGLE_API_TOKEN GOOGLE_API_KEY OPENROUTER_API_KEY OPENROUTER_API_TOKEN CEREBRAS_API_KEY NVIDIA_API_KEY MISTRAL_API_KEY SAMBANOVA_API_KEY SAMPANOVA_API_TOKEN COHERE_API_KEY; do
+            if [ -n "${!S}" ]; then echo "::notice::موجود: $S"; else echo "::warning::غائب: $S"; fi
+          done
+          if [ -n "$VAR_AI_KEYS" ]; then echo "::notice::موجود: AI_KEYS كمتغير Variables"; else echo "::warning::غائب: AI_KEYS كمتغير Variables"; fi
+
       - name: مفاتيح المنصة (من أسرار GitHub إلى أسرار Worker — لا تُطبع أبداً)
         working-directory: aihub
         env:
-          AI_KEYS: ${{ secrets.AI_KEYS }}
+          AI_KEYS: ${{ secrets.AI_KEYS || vars.AI_KEYS }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || secrets.GROQ_KEY || secrets.GROQ }}
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY || secrets.CEREBRAS_KEY || secrets.CEREBRAS }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.GOOGLE_AI_API_KEY || secrets.GEMINI_KEY || secrets.GOOGLE_API_KEY || secrets.GOOGLE_API_TOKEN || secrets.GEMINI }}
