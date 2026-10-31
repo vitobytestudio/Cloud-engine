@@ -428,3 +428,4 @@ h1, h2, .hero h1, .plan-price, .side-logo, .nav-logo, .sec-head h2 { font-family
 .page-sub { margin: 0 0 18px; color: var(--faint); font-size: 13px; }
 .p-luma { background: linear-gradient(135deg, #ff6cb5, #7c6cff); }
 @media (max-width: 760px) { .agent-grid { grid-template-columns: 1fr; } }
+.p-byteplus { background: linear-gradient(135deg, #ff9f43, #ff5e62); }

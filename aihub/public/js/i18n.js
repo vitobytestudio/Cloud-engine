@@ -1,6 +1,7 @@
 // ——— AIHub i18n — عربي/فرنسي/إنجليزي متكافئة ———
 const DICTS = {
   ar: {
+    key_search: "ابحث في النماذج…", key_custom: "معرّف مخصص — أي نموذج في العالم", key_custom_ph: "مثال: xai/grok-4.7 أو seedance-2.5",
     nav_agents: "الوكلاء", nav_lab: "المعمل", agents_sub: "ثلاثة عقول تعمل لك — والباحث يقرأ الروابط العامة بنفسه",
     ag_r_name: "الباحث", ag_r_desc: "يقرأ رابطاً عاماً ويستخلص الجواب بالتوثيق",
     ag_a_name: "المحلل", ag_a_desc: "تفكيك بنيوي: قوة، مخاطر، توصيات مرقمة",
@@ -60,6 +61,7 @@ const DICTS = {
     mode_chat: "دردشة", mode_image: "صورة", img_placeholder: "صف الصورة التي تتخيلها… (سقفك العادل معلن في لوحة الاستخدام)", img_btn: "ارسم", img_gen: "جارٍ الرسم…", img_note: "تجربة صور من حصتنا — flux-1-schnell",
   },
   en: {
+    key_search: "Search models…", key_custom: "Custom model ID — any model in the world", key_custom_ph: "e.g. xai/grok-4.7 or seedance-2.5",
     nav_agents: "Agents", nav_lab: "Lab", agents_sub: "Three minds at work — the Researcher reads public links itself",
     ag_r_name: "Researcher", ag_r_desc: "Reads a public link and answers with citations",
     ag_a_name: "Analyst", ag_a_desc: "Structured breakdown: strengths, risks, numbered actions",
@@ -119,6 +121,7 @@ const DICTS = {
     mode_chat: "Chat", mode_image: "Image", img_placeholder: "Describe the image you imagine… (your fair cap is shown in Usage)", img_btn: "Draw", img_gen: "Drawing…", img_note: "Image trial from our allowance — flux-1-schnell",
   },
   fr: {
+    key_search: "Rechercher un modèle…", key_custom: "ID personnalisé — tout modèle au monde", key_custom_ph: "ex. xai/grok-4.7 ou seedance-2.5",
     nav_agents: "Agents", nav_lab: "Labo", agents_sub: "Trois esprits à votre service — le Chercheur lit les liens publics lui-même",
     ag_r_name: "Chercheur", ag_r_desc: "Lit un lien public et répond avec sources",
     ag_a_name: "Analyste", ag_a_desc: "Décomposition structurée : forces, risques, actions numérotées",
