@@ -10,6 +10,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ——— 1) البنية ———
 const health = await fetch(`${BASE}/health`).then((r) => r.json()).catch(() => null);
+const hRes = await fetch(`${BASE}/health`);
+check("رؤوس الأمان: CSP", (hRes.headers.get("content-security-policy") ?? "").includes("default-src"));
+check("رؤوس الأمان: DENY + nosniff", hRes.headers.get("x-frame-options") === "DENY" && hRes.headers.get("x-content-type-options") === "nosniff");
+check("CORS البري أُسقط", hRes.headers.get("access-control-allow-origin") === null);
 check("الخادم حي", !!health?.ok, health?.v);
 
 const html = await fetch(BASE + "/").then((r) => r.text());
@@ -58,6 +62,9 @@ check("كلمة سر خزنة خاطئة تفشل الفك", decBad === false);
 const noLeak = getV.blob.includes(SECRET);
 check("⚠ لا تسريب: الخادم لا يخزّن المفتاح نصاً صريحاً", !noLeak);
 
+const big = await fetch(`${BASE}/api/infer/openai`, { method: "POST", headers: { "content-type": "application/json", cookie, "x-upstream-key": "sk-x" }, body: JSON.stringify({ messages: [{ role: "user", content: "x".repeat(250_000) }] }) });
+check("جسم الوكيل العملاق → 413", big.status === 413, String(big.status));
+
 const garbage = await fetch(`${BASE}/api/vault`, { method: "PUT", headers: { "content-type": "application/json", cookie, "x-csrf": csrf }, body: JSON.stringify({ blob: "not-json" }) });
 check("blob غير سليم مرفوض (400)", garbage.status === 400);
 
@@ -88,9 +95,9 @@ check("الصورة داخل الحصة (محلياً ai_unavailable بلا AI)"
 
 const usage = await fetch(`${BASE}/api/usage`, { headers: { cookie } }).then((r) => r.json());
 check("لوحة الاستخدام تعدّ فعلاً", usage?.usage?.instant >= 1, `instant=${usage?.usage?.instant}`);
-check("سقوف الخطة حية من جدول", usage?.limits?.instant_daily === 20, `free=${usage?.limits?.instant_daily}`);
+check("سقوف البيتا السخية حية", usage?.limits?.instant_daily === 200, `free=${usage?.limits?.instant_daily}`);
 check("عدّاد الصور يزداد فعلاً", usage?.usage?.instant_img >= 1, `img=${usage?.usage?.instant_img}`);
-check("سقف الصور معلن من الجدول", usage?.limits?.instant_img_daily === 5, `free_img=${usage?.limits?.instant_img_daily}`);
+check("سقف الصور البيتا معلن", usage?.limits?.instant_img_daily === 30, `free_img=${usage?.limits?.instant_img_daily}`);
 
 // ——— 5) الواجهة (jsdom): الهبوط والمصادقة ———
 const dom = new JSDOM(html, { runScripts: "dangerously", resources: "usable", url: BASE });

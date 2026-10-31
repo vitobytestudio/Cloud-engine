@@ -386,3 +386,27 @@ h1, h2, .hero h1, .plan-price, .side-logo, .nav-logo, .sec-head h2 { font-family
 @media (prefers-reduced-motion: reduce) {
   .nx-logos-track, .nx-enter, .nx-arrow, .grad-text { animation: none !important; }
 }
+
+/* ———————— v0.8.0-a: المقارنة + لوحة الحقيقة + التصدير ———————— */
+.duel-bar { display: flex; gap: 10px; width: min(760px, 100%); margin: 0 auto 10px; flex-wrap: wrap; }
+.duel-side { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 280px; border: 1px dashed var(--border-2); border-radius: 12px; padding: 7px 10px; }
+.duel-tag { font-size: 11px; font-weight: 700; color: var(--faint); white-space: nowrap; }
+.duel-side select { flex: 1; background: var(--surface-2); border: 1px solid var(--border-2); border-radius: 9px; padding: 6px 8px; font-size: 12px; outline: none; color: var(--text); min-width: 0; }
+.duel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.duel-col { border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; background: var(--surface); }
+.duel-head { display: flex; align-items: center; gap: 7px; font-size: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+.duel-head .dot { width: 8px; height: 8px; border-radius: 50%; }
+.duel-time { color: var(--faint); font-size: 11px; margin-inline-start: auto; font-family: ui-monospace, monospace; }
+.duel-badge { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; background: linear-gradient(135deg, #34d399, #00d4ff); color: #04222b; border-radius: 99px; padding: 2px 8px; }
+.duel-txt { font-size: 13.5px; line-height: 1.75; white-space: pre-wrap; word-break: break-word; }
+.cost-chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; margin-inline-end: 6px; font-size: 10.5px; color: var(--faint); border: 1px solid var(--border); border-radius: 99px; padding: 3px 9px; background: rgba(255,255,255,.02); }
+.cost-chip.via { color: var(--dim); }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--border-2); border-radius: 10px; color: var(--dim); font-size: 15px; transition: all .18s var(--ease); flex-shrink: 0; }
+.icon-btn:hover { color: var(--brand-2); border-color: var(--brand-2); }
+@media (max-width: 700px) { .duel-grid { grid-template-columns: 1fr; } }
+
+/* مبدل اللغة */
+.lang-sw { display: inline-flex; gap: 3px; border: 1px solid var(--border-2); border-radius: 99px; padding: 3px; }
+.lang-sw [data-lang] { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px; color: var(--dim); transition: all .15s var(--ease); }
+.lang-sw [data-lang]:hover { color: var(--text); }
+.lang-sw [data-lang].on { background: var(--grad); color: #fff; }

@@ -12,6 +12,7 @@ export function renderAuth(root, mode) {
     <div class="blob blob-1"></div><div class="blob blob-2"></div>
     <div class="grid-bg" style="position:absolute;inset:0"></div>
     <div class="glass fade-up" style="position:relative;width:min(420px,100%);border-radius:22px;padding:34px 30px">
+      <div style="position:absolute;top:14px;inset-inline-end:14px"><div class="lang-sw">${[["ar","ع"],["en","EN"],["fr","FR"]].map(([l,lb]) => `<button data-lang="${l}" class="${(localStorage.getItem("ah_lang")||"ar")===l?"on":""}">${lb}</button>`).join("")}</div></div>
       <div style="text-align:center;margin-bottom:26px">
         ${LOGO}
         <h1 style="font-size:22px;font-weight:800;letter-spacing:-.4px;margin-top:16px">${isLogin ? t("login") : t("register")}</h1>
@@ -54,4 +55,7 @@ export function renderAuth(root, mode) {
   };
   go.addEventListener("click", submit);
   root.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); }, { once: false });
+  root.querySelectorAll(".lang-sw [data-lang]").forEach((b) => b.addEventListener("click", () => {
+    import("../i18n.js").then((m) => { m.setLang(b.dataset.lang); location.reload(); });
+  }));
 }

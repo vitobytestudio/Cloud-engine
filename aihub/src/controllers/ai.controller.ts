@@ -109,6 +109,8 @@ export async function proxyInfer(req: Request, env: Env, s: Session, p: Record<s
   if (!def) return json({ error: "unknown_provider" }, 404);
   const auth = req.headers.get("x-upstream-key") ?? "";
   if (!auth) return json({ error: "key_required" }, 401); // المفتاح يمرّ فقط — لا يلمس القرص ولا السجل
+  const clen = parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (clen > 200_000) return json({ error: "payload_too_large" }, 413); // سقف حماية للبنية والمزود
   const plan = (await env.DB.prepare("SELECT plan FROM users WHERE id=?").bind(s.userId).first<{ plan: string }>())?.plan ?? "FREE";
   const lim = await planLimits(env, plan);
   if (!(await rateLimit(env, `inf:${s.userId}`, lim.proxy_rpm, 60))) return json({ error: "rate_limited", rpm: lim.proxy_rpm }, 429);

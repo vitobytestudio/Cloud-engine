@@ -118,6 +118,26 @@ function currentModel() {
   return modelSel[currentProvider] || defaultModel(currentProvider);
 }
 let mode = localStorage.getItem("ah_mode") || "chat"; // دردشة | صورة (للفوري فقط)
+let duelOn = localStorage.getItem("ah_duel") === "1";
+const duelA = { provider: localStorage.getItem("ah_duel_pa") || "groq", model: "" };
+const duelB = { provider: localStorage.getItem("ah_duel_pb") || "openai", model: "" };
+
+// ——— لوحة الحقيقة: أسعار رسمية موثقة فقط ($ لكل مليون توكن: [دخل، خرج]) ———
+const PRICES = {
+  "gpt-6-astra": [10, 50], "gpt-5.6-sol": [5, 30],
+  "claude-fable-5-1": [10, 50], "claude-fable-5": [10, 50],
+  "gemini-4-argon": [4, 20], "gemini-2.5-pro": [1.25, 10],
+  "gemini-2.5-flash": [0.30, 2.50], "gpt-4o": [2.50, 10], "gpt-4o-mini": [0.15, 0.60],
+  "claude-sonnet-4-5": [3, 15], "claude-haiku-4-5": [1, 5], "o3": [2, 8],
+};
+const tokEst = (chars) => Math.max(1, Math.round(chars / 4));
+function costChip(modelId, charsIn, charsOut) {
+  const pr = PRICES[modelId];
+  const tk = `~${tokEst(charsIn) + tokEst(charsOut)} ${t("cost_tokens")}`;
+  if (!pr) return `<span class="cost-chip">${tk}</span>`;
+  const usd = (tokEst(charsIn) / 1e6) * pr[0] + (tokEst(charsOut) / 1e6) * pr[1];
+  return `<span class="cost-chip">${tk} · ${t("cost_est")}: $${usd < 0.01 ? usd.toFixed(5) : usd.toFixed(4)}</span>`;
+}
 let history = [];
 
 export async function renderApp(root, sub) {
@@ -144,6 +164,7 @@ export async function renderApp(root, sub) {
         <button class="btn btn-ghost btn-sm" id="burger" style="display:none">☰</button>
         <div class="model-pick" id="model-pick"></div>
         <span style="margin-inline-start:auto;font-size:12px;color:var(--faint)">${esc(state.user.email)}</span>
+        <button class="icon-btn" id="export-chat" title="${t("export")}">⤓</button>
       </div>
       ${isUsage || isConn ? `<div class="chat-scroll" id="usage-view"></div>` : `
       <div class="chat-scroll" id="chat-scroll">
@@ -151,6 +172,14 @@ export async function renderApp(root, sub) {
       </div>
       <div class="composer"><div class="composer-in">
         <div class="mode-chips" id="mode-chips" hidden></div>
+        <div class="duel-bar" id="duel-bar" hidden>
+          ${["A", "B"].map((side) => `
+          <div class="duel-side">
+            <span class="duel-tag">${side === "A" ? t("duel_a") : t("duel_b")}</span>
+            <select id="duel-p${side}" dir="ltr"></select>
+            <select id="duel-m${side}" dir="ltr"></select>
+          </div>`).join("")}
+        </div>
         <div class="composer-box">
           <textarea id="prompt" rows="1" placeholder="${t("placeholder")}"></textarea>
           <button class="send-btn" id="send" aria-label="${t("send")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg></button>
@@ -168,6 +197,17 @@ export async function renderApp(root, sub) {
       if (side.classList.contains("open") && !side.contains(e.target) && e.target !== burger) side.classList.remove("open");
     }, { once: false });
   }
+  root.querySelector("#export-chat")?.addEventListener("click", () => {
+    if (!history.length) return;
+    const md = [`# Nexus — ${t("export")}`, `_${new Date().toISOString().slice(0, 16).replace("T", " ")}_`, ""]
+      .concat(history.map((m) => `**${m.role === "user" ? (state.user?.full_name ?? "You") : "Nexus"}:**\n${m.content}\n`)).join("\n");
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const aEl = document.createElement("a");
+    aEl.href = URL.createObjectURL(blob);
+    aEl.download = `nexus-chat-${new Date().toISOString().slice(0, 10)}.md`;
+    aEl.click();
+    setTimeout(() => URL.revokeObjectURL(aEl.href), 4000);
+  });
   root.querySelector("#nav-logout")?.addEventListener("click", async () => {
     await api.post("/api/auth/logout");
     state.user = null; state.csrf = null;
@@ -294,21 +334,115 @@ function renderModelPick(root) {
   document.addEventListener("click", () => { menu.hidden = true; }, { once: true });
 }
 
+// ——— المقارنة الجنب إلى جنب: نفس السؤال لنموذجين متوازيين مع التوقيت والتكلفة ———
+async function sendDuel(root, q) {
+  const send = root.querySelector("#send");
+  const inner = root.querySelector("#chat-inner");
+  const scroller = root.querySelector("#chat-scroll");
+  if (duelA.provider === "instant" && duelB.provider === "instant") {
+    const a = addMsgEl(root, "ai");
+    a.txt.textContent = t("duel_need2");
+    return;
+  }
+  send.disabled = true;
+  const el = document.createElement("div");
+  el.className = "msg msg-ai";
+  el.innerHTML = `<div class="msg-ava">AI</div><div class="msg-body"><div class="who">Nexus · ⚖ ${t("duel")}</div>
+    <div class="duel-grid">
+      ${["A", "B"].map((side) => {
+        const st = side === "A" ? duelA : duelB;
+        return `<div class="duel-col" data-side="${side}">
+          <div class="duel-head"><span class="dot ${PROVIDERS.find((p) => p.id === st.provider)?.color ?? "p-openai"}"></span>
+          <b dir="ltr">${esc(shortModel(st.model || defaultModel(st.provider)))}</b>
+          <span class="duel-time" dir="ltr"></span><span class="duel-badge" hidden>${t("duel_fast")}</span></div>
+          <div class="duel-txt"><span class="typing"><i></i><i></i><i></i></span></div>
+        </div>`;
+      }).join("")}
+    </div></div>`;
+  inner.appendChild(el);
+  scroller.scrollTop = 1e9;
+
+  const runSide = async (side) => {
+    const st = side === "A" ? duelA : duelB;
+    const col = el.querySelector(`.duel-col[data-side="${side}"]`);
+    const txt = col.querySelector(".duel-txt");
+    const timeEl = col.querySelector(".duel-time");
+    const t0 = performance.now();
+    let acc = "", ok = false;
+    const done = () => {
+      timeEl.textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s";
+      if (ok) txt.insertAdjacentHTML("beforeend", costChip(st.model || defaultModel(st.provider), q.length, acc.length));
+      scroller.scrollTop = 1e9;
+    };
+    if (st.provider === "instant") {
+      const r = await api.post("/api/infer/instant", { messages: [...history.slice(-12)] });
+      if (r.ok) { ok = true; acc = r.data.content; txt.textContent = acc; }
+      else txt.textContent = errMsg(r.data?.error);
+      done(); return { ok, acc };
+    }
+    const kd = vaultState.keys.find((k) => k.provider === st.provider);
+    if (!kd || !vaultState.unlocked) { txt.textContent = t("key_required"); done(); return { ok: false, acc: "" }; }
+    await api.stream(st.provider, kd.key, { model: st.model || defaultModel(st.provider), messages: history.slice(-12), stream: true },
+      (chunk) => { acc += chunk; txt.textContent = acc + "▍"; scroller.scrollTop = 1e9; },
+      () => { ok = acc.length > 0; if (!ok) txt.textContent = t("provider_unreachable"); else txt.textContent = acc; done(); },
+      (err) => { txt.textContent = errMsg(err); done(); });
+    return { ok, acc };
+  };
+
+  const [ra, rb] = await Promise.all([runSide("A"), runSide("B")]);
+  if (ra.ok && rb.ok) {
+    const fastSide = parseFloat(el.querySelector('.duel-col[data-side="A"] .duel-time').textContent) <= parseFloat(el.querySelector('.duel-col[data-side="B"] .duel-time').textContent) ? "A" : "B";
+    el.querySelector(`.duel-col[data-side="${fastSide}"] .duel-badge`).hidden = false;
+  }
+  const dump = (side, r) => `[⚖ ${side} · ${side === "A" ? duelA : duelB}.provider}/${(side === "A" ? duelA : duelB).model || ""}] ${r.acc || "—"}`;
+  history.push({ role: "assistant", content: `${dump("A", ra)}\n${dump("B", rb)}` });
+  send.disabled = false;
+  scroller.scrollTop = 1e9;
+}
+
 function updateModeChips(root) {
   const holder = root.querySelector("#mode-chips");
   if (!holder) return;
-  if (currentProvider !== "instant") { holder.hidden = true; return; }
   holder.hidden = false;
+  const isInstant = currentProvider === "instant";
   holder.innerHTML = `
     <button class="chip ${mode === "chat" ? "on" : ""}" data-m="chat">${t("mode_chat")}</button>
-    <button class="chip ${mode === "image" ? "on" : ""}" data-m="image">${t("mode_image")}</button>`;
+    ${isInstant ? `<button class="chip ${mode === "image" ? "on" : ""}" data-m="image">${t("mode_image")}</button>` : ""}
+    <button class="chip ${duelOn ? "on" : ""}" data-m="duel">⚖ ${t("duel")}</button>`;
   holder.querySelectorAll("button[data-m]").forEach((b) => b.addEventListener("click", () => {
-    mode = b.dataset.m;
-    localStorage.setItem("ah_mode", mode);
+    if (b.dataset.m === "duel") { duelOn = !duelOn; localStorage.setItem("ah_duel", duelOn ? "1" : "0"); }
+    else { mode = b.dataset.m; localStorage.setItem("ah_mode", mode); duelOn = false; localStorage.setItem("ah_duel", "0"); }
     updateModeChips(root);
   }));
   const ta = root.querySelector("#prompt");
-  if (ta) ta.placeholder = mode === "image" ? t("img_placeholder") : t("placeholder");
+  if (ta) ta.placeholder = mode === "image" && isInstant ? t("img_placeholder") : t("placeholder");
+  updateDuelBar(root);
+}
+
+// ——— شريط اختيار النموذجين للمقارنة ———
+function updateDuelBar(root) {
+  const bar = root.querySelector("#duel-bar");
+  if (!bar) return;
+  bar.hidden = !duelOn;
+  if (!duelOn) return;
+  const providers = PROVIDERS.filter((p) => p.id !== "instant");
+  for (const side of ["A", "B"]) {
+    const st = side === "A" ? duelA : duelB;
+    const pSel = bar.querySelector(`#duel-p${side}`);
+    const mSel = bar.querySelector(`#duel-m${side}`);
+    if (![...pSel.options].some((o) => o.value === st.provider))
+      st.provider = localStorage.getItem(side === "A" ? "ah_duel_pa" : "ah_duel_pb") || providers[0].id;
+    pSel.innerHTML = providers.map((p) => `<option value="${p.id}" ${p.id === st.provider ? "selected" : ""}>${p.name}</option>`).join("");
+    const fillModels = () => {
+      const cat = MODEL_CATALOG[st.provider] || [];
+      const cur = modelSel[st.provider] || (cat[0] ? cat[0][1] : "");
+      st.model = cur;
+      mSel.innerHTML = cat.map(([label, id]) => `<option value="${esc(id)}" ${id === cur ? "selected" : ""}>${esc(shortModel(id))}</option>`).join("") || "";
+    };
+    fillModels();
+    pSel.addEventListener("change", () => { st.provider = pSel.value; localStorage.setItem(side === "A" ? "ah_duel_pa" : "ah_duel_pb", st.provider); fillModels(); });
+    mSel.addEventListener("change", () => { st.model = mSel.value; modelSel[st.provider] = st.model; localStorage.setItem("ah_models", JSON.stringify(modelSel)); });
+  }
 }
 
 // ——— الدردشة ———
@@ -356,6 +490,9 @@ function wireChat(root) {
     history.push({ role: "user", content: q });
     const u = addMsgEl(root, "user"); u.txt.textContent = q;
 
+    // ——— وضع المقارنة: نفس السؤال لنموذجين في وقت واحد ———
+    if (duelOn) { await sendDuel(root, q, ta); return; }
+
     // فقاعة الرد + النقاط
     const a = addMsgEl(root, "ai");
     a.txt.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
@@ -394,12 +531,7 @@ function wireChat(root) {
       if (r.ok) {
         history.push({ role: "assistant", content: r.data.content });
         a.txt.textContent = r.data.content;
-        if (r.data.via === "pollinations") {
-          const via = document.createElement("div");
-          via.className = "via-note";
-          via.textContent = "✦ " + t("comm_via");
-          a.txt.appendChild(via);
-        }
+        a.txt.insertAdjacentHTML("beforeend", costChip("llama-3.1-8b", q.length, r.data.content.length) + (r.data.via === "pollinations" ? `<span class="cost-chip via">✦ ${t("comm_via")}</span>` : ""));
       }
       else { a.txt.textContent = errMsg(r.data?.error); if (r.status === 401 && r.data?.error === "auth_required") location.hash = "#auth-login"; }
       finish(); return;
@@ -422,6 +554,7 @@ function wireChat(root) {
         if (!acc && first) { a.txt.textContent = t("provider_unreachable"); finish(); return; }
         history.push({ role: "assistant", content: acc });
         a.txt.textContent = acc;
+        a.txt.insertAdjacentHTML("beforeend", costChip(currentModel(), q.length, acc.length));
         finish();
       },
       (err) => { a.txt.textContent = errMsg(err); finish(); }
