@@ -34,6 +34,14 @@ export function renderAuth(root, mode) {
 
   const go = root.querySelector("#a-go");
   const err = root.querySelector("#a-err");
+  // تمطيط كلمة المرور في المتصفح: 200k دورة مجاناً — الخادم لا يرى كلمة المرور أبداً في الحسابات الجديدة
+  const stretch = async (email, password) => {
+    if (!window.crypto?.subtle) return null;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode("nexus-hub:c1:" + email.toLowerCase()), iterations: 200000 }, key, 256);
+    return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  };
   const submit = async () => {
     const email = root.querySelector("#a-email").value.trim();
     const password = root.querySelector("#a-pass").value;
@@ -41,12 +49,16 @@ export function renderAuth(root, mode) {
     err.textContent = "";
     if (!isLogin && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) { err.textContent = t("weak_pass"); return; }
     go.disabled = true;
-    const r = isLogin
-      ? await api.post("/api/auth/login", { email, password })
-      : await api.post("/api/auth/register", { email, password, full_name: name });
+    const k0 = await stretch(email, password);
+    if (!k0) { go.disabled = false; err.textContent = t("no_subtle"); return; }
+    let r = isLogin
+      ? await api.post("/api/auth/login", { email, k0 })
+      : await api.post("/api/auth/register", { email, k0, full_name: name });
+    if (isLogin && !r.ok && r.data?.error === "legacy")
+      r = await api.post("/api/auth/login", { email, k0, password }); // ترقية صامتة لحساب قديم
     go.disabled = false;
     if (!r.ok) {
-      const map = { weak_password: t("weak_pass"), email_taken: t("email_taken"), invalid_credentials: t("invalid_creds"), too_many: t("too_many"), invalid_input: t("err_generic") };
+      const map = { weak_password: t("weak_pass"), email_taken: t("email_taken"), invalid_credentials: t("invalid_creds"), too_many: t("too_many"), invalid_input: t("err_generic"), legacy: t("err_generic") };
       err.textContent = map[r.data?.error] ?? t("err_generic");
       return;
     }

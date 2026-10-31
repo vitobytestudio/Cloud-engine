@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   pass_hash TEXT NOT NULL,          -- pbkdf2$iter$salt$hash (تفعيل الحساب فقط — لا علاقة له بمفاتيح النماذج)
   full_name TEXT NOT NULL,
+  kdf TEXT NOT NULL DEFAULT 's1',   -- c1: تمطيط المتصفح 200k؛ s1: تجزئة خادم قديمة (تُرقّى صامتاً)
   plan TEXT NOT NULL DEFAULT 'FREE',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

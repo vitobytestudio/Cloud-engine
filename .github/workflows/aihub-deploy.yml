@@ -70,16 +70,19 @@ jobs:
       - name: ترحيلات متسامحة (أعمدة الجولات الأحدث على قاعدة قائمة)
         working-directory: aihub
         run: |
-          for M in "ALTER TABLE plan_limits ADD COLUMN auto_daily INTEGER NOT NULL DEFAULT 300" "ALTER TABLE usage_daily ADD COLUMN auto INTEGER NOT NULL DEFAULT 0"; do
+          for M in "ALTER TABLE plan_limits ADD COLUMN auto_daily INTEGER NOT NULL DEFAULT 300" "ALTER TABLE usage_daily ADD COLUMN auto INTEGER NOT NULL DEFAULT 0" "ALTER TABLE users ADD COLUMN kdf TEXT NOT NULL DEFAULT '"'"'s1'"'"' NOT NULL"; do
             npx wrangler d1 execute DB --remote -y --command "$M" >/dev/null 2>&1 || true
           done
           COLS_U=$(npx wrangler d1 execute DB --remote -y --json --command "PRAGMA table_info(usage_daily)" 2>/dev/null | grep -oE '"name"[[:space:]]*:[[:space:]]*"[a-z_]+"' | sed 's/.*"\([a-z_]*\)"$/\1/' | sort | tr '\n' ' ' || true)
           COLS_P=$(npx wrangler d1 execute DB --remote -y --json --command "PRAGMA table_info(plan_limits)" 2>/dev/null | grep -oE '"name"[[:space:]]*:[[:space:]]*"[a-z_]+"' | sed 's/.*"\([a-z_]*\)"$/\1/' | sort | tr '\n' ' ' || true)
           echo "::notice::أعمدة usage_daily: $COLS_U"
           echo "::notice::أعمدة plan_limits: $COLS_P"
+          COLS_R=$(npx wrangler d1 execute DB --remote -y --json --command "PRAGMA table_info(users)" 2>/dev/null | grep -oE '"name"[[:space:]]*:[[:space:]]*"[a-z_]+"' | sed 's/.*"\([a-z_]*\)"$/\1/' | sort | tr '\n' ' ' || true)
+          echo "::notice::أعمدة users: $COLS_R"
           OK=1
           echo "$COLS_U" | grep -qw auto || { echo "::error::عمود auto مفقود في usage_daily — الترحيل لم يُطبَّق"; OK=0; }
           echo "$COLS_P" | grep -qw auto_daily || { echo "::error::عمود auto_daily مفقود في plan_limits — الترحيل لم يُطبَّق"; OK=0; }
+          echo "$COLS_R" | grep -qw kdf || { echo "::error::عمود kdf مفقود في users — الترحيل لم يُطبَّق"; OK=0; }
           [ "$OK" = "1" ] || exit 1
           echo "::notice::الترحيلات مكتملة — البيانات محفوظة"
 
@@ -221,15 +224,24 @@ jobs:
           echo "health: $H"
           echo "$H" | grep -q '"ok":true' || { echo "::error::الفحص بعد النشر فشل"; exit 1; }
           echo "::notice::المنصة حية على $URL"
-          TS=$(date +%s); EM="deploy-check-$TS@aihub.test"
-          CODE=$(curl -s -o /tmp/reg.json -w "%{http_code}" -X POST "$URL/api/auth/register" -H "content-type: application/json" -d "{\"email\":\"$EM\",\"full_name\":\"Deploy Check\",\"password\":\"StrongPass9x\"}")
-          echo "register probe: $CODE $(cat /tmp/reg.json)"
-          echo "::notice::probe-register: $CODE $(head -c 200 /tmp/reg.json)"
-          echo "::notice::probe-login: $LCODE"
-          if [ "$CODE" = "201" ]; then echo "::notice::إنشاء الحساب يعمل على الإنتاج ✓"; else echo "::error::إنشاء الحساب معطل على الإنتاج (HTTP $CODE)"; fi
-          LCODE=$(curl -s -o /tmp/log.json -w "%{http_code}" -X POST "$URL/api/auth/login" -H "content-type: application/json" -d "{\"email\":\"$EM\",\"password\":\"StrongPass9x\"}")
-          echo "::notice::probe-login-final: $LCODE $(head -c 200 /tmp/log.json 2>/dev/null)"
-          if [ "$LCODE" = "200" ]; then echo "::notice::تسجيل الدخول يعمل على الإنتاج ✓"; else echo "::error::تسجيل الدخول معطل على الإنتاج (HTTP $LCODE)"; fi
+          export PURL="$URL"
+          node <<'NODE' || { echo "::error::فحص المصادقة على الإنتاج فشل"; exit 1; }
+          const enc = new TextEncoder();
+          const k0Of = async (email, password) => {
+            const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+            const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode("nexus-hub:c1:" + email.toLowerCase()), iterations: 200000 }, key, 256);
+            return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+          };
+          const em = "deploy-check-" + Date.now() + "@aihub.test";
+          const k0 = await k0Of(em, "StrongPass9x");
+          const reg = await fetch(process.env.PURL + "/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: em, full_name: "Deploy Check", k0 }) });
+          const regD = await reg.json().catch(() => ({}));
+          console.log("::notice::probe-register: " + reg.status + " " + JSON.stringify(regD).slice(0, 120));
+          const log = await fetch(process.env.PURL + "/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: em, k0 }) });
+          console.log("::notice::probe-login: " + log.status);
+          if (reg.status !== 201 || log.status !== 200) process.exit(1);
+          console.log("::notice::المصادقة على الإنتاج سليمة ✓");
+NODE
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM audit_events WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'deploy-check-%')" >/dev/null 2>&1 || true
           npx wrangler d1 execute DB --remote -y --command "DELETE FROM users WHERE email LIKE 'deploy-check-%'" >/dev/null 2>&1 || true
           echo "::notice::حساب الفحص التجريبي نُظّف"

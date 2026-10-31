@@ -19,27 +19,38 @@ check("الخادم حي", !!health?.ok, health?.v);
 const html = await fetch(BASE + "/").then((r) => r.text());
 check("صفحة الهبوط تُخدم", html.includes("Nexus") && html.includes("app.css"));
 
-// ——— 2) المصادقة ———
-const reg = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, password: "StrongPass9", full_name: "Vito Owner" }) });
+// ——— 2) المصادقة (عقد k0: تمطيط المتصفح 200k ثم تجزئة الخادم) ———
+const enc = new TextEncoder();
+const k0Of = async (email, password) => {
+  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode("nexus-hub:c1:" + email.toLowerCase()), iterations: 200000 }, key, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+const K0 = await k0Of(EMAIL, "StrongPass9");
+const reg = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, k0: K0, full_name: "Vito Owner" }) });
 const regD = await reg.json();
 check("التسجيل يعمل (201)", reg.status === 201, JSON.stringify(regD).slice(0, 60));
-const dup = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, password: "StrongPass9", full_name: "Vito" }) });
+const dup = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, k0: K0, full_name: "Vito" }) });
 check("البريد المكرر مرفوض (409)", dup.status === 409);
-const weak = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "w@w.test", password: "123", full_name: "W" }) });
-check("كلمة المرور الضعيفة مرفوضة (400)", weak.status === 400);
-const noDigit = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "nd@nd.test", password: "abcdefghij", full_name: "ND" }) });
-check("كلمة المرور بلا رقم مرفوضة (400)", noDigit.status === 400);
+const weak = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "w@w.test", k0: "123", full_name: "W" }) });
+check("k0 تالف مرفوض (400)", weak.status === 400);
+const rawPw = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "rp@rp.test", password: "Whatever123", full_name: "RP" }) });
+check("تسجيل بكلمة مرور خام مرفوض (400)", rawPw.status === 400);
+
 const rlEmail = `rl-${Date.now().toString(36)}@rl.test`;
 let rlLast = 0;
 for (let i = 0; i < 6; i++) {
-  const r = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: rlEmail, password: "StrongPass9", full_name: "RL" }) });
+  const rlK0 = await k0Of(rlEmail, "StrongPass9");
+  const r = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: rlEmail, k0: rlK0, full_name: "RL" }) });
   rlLast = r.status;
 }
 check("الحد على التسجيل المتكرر (429)", rlLast === 429, `last=${rlLast}`);
 const regHdr = (reg.headers.get("set-cookie") ?? "");
 check("كوكي الجلسة محصّن (__Host- + HttpOnly)", regHdr.includes("__Host-ah_s=") && regHdr.includes("HttpOnly") && regHdr.includes("SameSite=Lax"));
 
-const login = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, password: "StrongPass9" }) });
+const login = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, k0: K0 }) });
+const badK0 = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: EMAIL, k0: "f".repeat(64) }) });
+check("k0 خاطئ مرفوض (401)", badK0.status === 401);
 const loginD = await login.json();
 const cookie = (login.headers.get("set-cookie") ?? "").split(";")[0];
 check("الدخول يعمل مع جلسة", login.status === 200 && cookie.startsWith("__Host-ah_s="));
