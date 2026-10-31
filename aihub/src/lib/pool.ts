@@ -46,31 +46,32 @@ export async function cachePut(env: Env, k: string, content: string, ttlSec = 21
   await env.CACHE_KV.put(`faq:${k}`, content, { expirationTtl: ttlSec });
 }
 
-export type AutoResult = { ok: boolean; content?: string; via?: string; model?: string; cached?: boolean; ms?: number };
+export type AutoResult = { ok: boolean; content?: string; via?: string; model?: string; cached?: boolean; ms?: number; trace?: string };
 
 // ——— محرك التدوير: يجرّب السلسلة كاملة ويعدّ التحويلات ———
 export async function runChain(env: Env, messages: Array<{ role: string; content: string }>, maxTokens = 1024): Promise<AutoResult> {
   const t0 = Date.now();
   const body = JSON.stringify({ messages, max_tokens: maxTokens, temperature: 0.6 });
-  let switches = 0;
+  const trace: string[] = [];   // أرقام حالات فقط — لا أسرار ولا مفاتيح
   for (const link of CHAIN) {
     const key = env[link.envKey] as string | undefined;
-    if (!key) continue;                     // مفتاح غير مثبّت — نتجاوز بصمت
-    if (await isCooled(env, link.id)) { switches++; continue; }
+    if (!key) { trace.push(`${link.id}:skip`); continue; }        // مفتاح غير مثبّت
+    if (await isCooled(env, link.id)) { trace.push(`${link.id}:cool`); continue; }
     try {
       const res = await fetch(`${link.base}/chat/completions`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
         body,
       });
-      if (res.status === 401 || res.status === 403) { await cool(env, link.id, link.cool401); switches++; continue; }
-      if (res.status === 429 || res.status >= 500) { await cool(env, link.id, link.cool429); switches++; continue; }
-      if (!res.ok) { switches++; continue; }
+      trace.push(`${link.id}:${res.status}`);
+      if (res.status === 401 || res.status === 403) { await cool(env, link.id, link.cool401); continue; }
+      if (res.status === 429 || res.status >= 500) { await cool(env, link.id, link.cool429); continue; }
+      if (!res.ok) { continue; }
       const d = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
       const content = d.choices?.[0]?.message?.content ?? "";
-      if (!content) { switches++; continue; }
-      return { ok: true, content, via: link.id, model: link.model, ms: Date.now() - t0 };
-    } catch { switches++; continue; }
+      if (!content) { trace.push(`${link.id}:empty`); continue; }
+      return { ok: true, content, via: link.id, model: link.model, ms: Date.now() - t0, trace: trace.join(",") };
+    } catch { trace.push(`${link.id}:net`); continue; }
   }
-  return { ok: false, ms: Date.now() - t0 };
+  return { ok: false, ms: Date.now() - t0, trace: trace.join(",") };
 }
