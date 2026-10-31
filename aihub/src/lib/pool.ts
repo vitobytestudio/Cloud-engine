@@ -8,7 +8,7 @@ export type ChainLink = { id: string; envKey: keyof Env; base: string; model: st
 export const CHAIN: ChainLink[] = [
   { id: "groq",       envKey: "GROQ_API_KEY",       base: "https://api.groq.com/openai/v1",                        model: "openai/gpt-oss-120b",            cool401: 3600, cool429: 60 },
   { id: "cerebras",   envKey: "CEREBRAS_API_KEY",   base: "https://api.cerebras.ai/v1",                            model: "llama-3.3-70b",                      cool401: 3600, cool429: 60 },
-  { id: "gemini",     envKey: "GEMINI_API_KEY",     base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-3.5-flash-lite",                 cool401: 3600, cool429: 45 },
+  { id: "gemini",     envKey: "GEMINI_API_KEY",     base: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash",                 cool401: 3600, cool429: 45 },
   { id: "openrouter", envKey: "OPENROUTER_API_KEY", base: "https://openrouter.ai/api/v1",                          model: "openai/gpt-oss-120b:free", cool401: 3600, cool429: 30 },
   { id: "huggingface", envKey: "HUGGINGFACE_API_KEY", base: "https://router.huggingface.co/v1",                 model: "openai/gpt-oss-120b:fastest",        cool401: 3600, cool429: 120 },
   { id: "nvidia",     envKey: "NVIDIA_API_KEY",     base: "https://integrate.api.nvidia.com/v1",                   model: "deepseek-ai/deepseek-v4-flash",      cool401: 3600, cool429: 60 },
@@ -51,7 +51,7 @@ export type AutoResult = { ok: boolean; content?: string; via?: string; model?: 
 // ——— محرك التدوير: يجرّب السلسلة كاملة ويعدّ التحويلات ———
 export async function runChain(env: Env, messages: Array<{ role: string; content: string }>, maxTokens = 1024): Promise<AutoResult> {
   const t0 = Date.now();
-  const body = JSON.stringify({ messages, max_tokens: maxTokens, temperature: 0.6 });
+  const body = JSON.stringify({ messages, max_tokens: maxTokens })   // بلا temperature: نماذج الاستدلال (gpt-oss) ترفض غير 1 عند بعض المزودين;
   const trace: string[] = [];   // أرقام حالات فقط — لا أسرار ولا مفاتيح
   for (const link of CHAIN) {
     const key = env[link.envKey] as string | undefined;
