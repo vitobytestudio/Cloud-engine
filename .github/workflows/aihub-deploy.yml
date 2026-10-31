@@ -86,10 +86,12 @@ jobs:
         env:
           VAR_AI_KEYS: ${{ vars.AI_KEYS }}
         run: |
+          FOUND=0
           for S in AI_KEYS GROQ_API_KEY GROQ_API_TOKEN GEMINI_API_KEY GOOGLE_API_TOKEN GOOGLE_API_KEY OPENROUTER_API_KEY OPENROUTER_API_TOKEN CEREBRAS_API_KEY NVIDIA_API_KEY MISTRAL_API_KEY SAMBANOVA_API_KEY SAMPANOVA_API_TOKEN COHERE_API_KEY; do
-            if [ -n "${!S}" ]; then echo "::notice::موجود: $S"; else echo "::warning::غائب: $S"; fi
+            if [ -n "${!S}" ]; then echo "::notice::موجود: $S"; FOUND=$((FOUND+1)); fi
           done
-          if [ -n "$VAR_AI_KEYS" ]; then echo "::notice::موجود: AI_KEYS كمتغير Variables"; else echo "::warning::غائب: AI_KEYS كمتغير Variables"; fi
+          if [ -n "$VAR_AI_KEYS" ]; then echo "::notice::موجود: AI_KEYS كمتغير Repository variables"; FOUND=$((FOUND+1)); fi
+          if [ "$FOUND" -eq 0 ]; then echo "::warning::لم يُعثَر على AI_KEYS في أسرار ولا متغيرات المستودع — راجع الموضع"; fi
 
       - name: مفاتيح المنصة (من أسرار GitHub إلى أسرار Worker — لا تُطبع أبداً)
         working-directory: aihub
