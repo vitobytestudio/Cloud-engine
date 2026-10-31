@@ -85,6 +85,7 @@ jobs:
       - name: مفاتيح المنصة (من أسرار GitHub إلى أسرار Worker — لا تُطبع أبداً)
         working-directory: aihub
         env:
+          AI_KEYS: ${{ secrets.AI_KEYS }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || secrets.GROQ_KEY || secrets.GROQ }}
           CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY || secrets.CEREBRAS_KEY || secrets.CEREBRAS }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.GOOGLE_AI_API_KEY || secrets.GEMINI_KEY || secrets.GOOGLE_API_KEY || secrets.GOOGLE_API_TOKEN || secrets.GEMINI }}
@@ -94,14 +95,56 @@ jobs:
           SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY || secrets.SAMBANOVA_KEY || secrets.SAMBANOVA_API_TOKEN || secrets.SAMPANOVA_API_TOKEN || secrets.SAMBANOVA_API || secrets.SAMBANOVA }}
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY || secrets.COHERE_KEY || secrets.COHERE }}
         run: |
+          N=0
+          INSTALLED=" "
+          put_key () {
+            CANON="$1"; VAL="$2"
+            if [ -z "$VAL" ]; then return 0; fi
+            case "$INSTALLED" in *" $CANON "*) return 0;; esac
+            printf '%s' "$VAL" | npx wrangler secret put "$CANON" >/dev/null 2>&1
+            echo "::notice::مفتاح ${CANON%%_API_KEY} مُثبَّت"
+            INSTALLED="$INSTALLED$CANON "
+            N=$((N+1))
+          }
+          canon_for () {
+            case "$1" in
+              GROQ_API_KEY|GROQ_API_TOKEN|GROQ_KEY|GROQ) printf 'GROQ_API_KEY';;
+              CEREBRAS_API_KEY|CEREBRAS_KEY|CEREBRAS) printf 'CEREBRAS_API_KEY';;
+              GEMINI_API_KEY|GOOGLE_AI_API_KEY|GEMINI_KEY|GOOGLE_API_KEY|GOOGLE_API_TOKEN|GOOGLE_TOKEN|GEMINI) printf 'GEMINI_API_KEY';;
+              OPENROUTER_API_KEY|OPENROUTER_KEY|OPENROUTER_API_TOKEN|OPENROUTER_TOKEN|OPENROUTER) printf 'OPENROUTER_API_KEY';;
+              NVIDIA_API_KEY|NVIDIA_NIM_API_KEY|NVIDIA_KEY|NVIDIA) printf 'NVIDIA_API_KEY';;
+              MISTRAL_API_KEY|MISTRAL_KEY|MISTRAL) printf 'MISTRAL_API_KEY';;
+              SAMBANOVA_API_KEY|SAMBANOVA_KEY|SAMBANOVA_API_TOKEN|SAMPANOVA_API_TOKEN|SAMBANOVA_TOKEN|SAMBANOVA_API|SAMBANOVA) printf 'SAMBANOVA_API_KEY';;
+              COHERE_API_KEY|COHERE_KEY|COHERE) printf 'COHERE_API_KEY';;
+              *) printf '';;
+            esac
+          }
+          if [ -n "$AI_KEYS" ]; then
+            while IFS= read -r LINE; do
+              LINE="$(printf '%s' "$LINE" | tr -d '\r')"
+              LINE="${LINE#"${LINE%%[![:space:]]*}"}"; LINE="${LINE%"${LINE##*[![:space:]]}"}"
+              if [ -z "$LINE" ]; then continue; fi
+              case "$LINE" in "#"*) continue;; esac
+              case "$LINE" in
+                *=*) RAW_NAME="${LINE%%=*}"; VAL="${LINE#*=}";;
+                *:*) RAW_NAME="${LINE%%:*}"; VAL="${LINE#*:}";;
+                *) continue;;
+              esac
+              RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d '"' | tr -d "'" | tr -d ' ' | tr '[:lower:]' '[:upper:]')"
+              RAW_NAME="${RAW_NAME%:}"
+              VAL="${VAL#"${VAL%%[![:space:]]*}"}"; VAL="${VAL%"${VAL##*[![:space:]]}"}"
+              VAL="${VAL%,}"; VAL="${VAL%\"}"; VAL="${VAL#\"}"; VAL="${VAL%'}"; VAL="${VAL#'}"
+              if [ -z "$RAW_NAME" ]; then continue; fi
+              CANON="$(canon_for "$RAW_NAME")"
+              if [ -z "$CANON" ]; then
+                echo "::notice::AI_KEYS يحوي اسماً غير معروف: $RAW_NAME — أبلغني لإضافته إلى الخريطة"
+                continue
+              fi
+              put_key "$CANON" "$VAL"
+            done <<< "$AI_KEYS"
+          fi
           for NAME in GROQ_API_KEY CEREBRAS_API_KEY GEMINI_API_KEY OPENROUTER_API_KEY NVIDIA_API_KEY MISTRAL_API_KEY SAMBANOVA_API_KEY COHERE_API_KEY; do
-            N=0
-            VAL="${!NAME}"
-            if [ -n "$VAL" ]; then
-              printf '%s' "$VAL" | npx wrangler secret put "$NAME" >/dev/null 2>&1
-              echo "::notice::مفتاح ${NAME%%_API_KEY} مُثبَّت"
-              N=$((N+1))
-            fi
+            put_key "$NAME" "${!NAME}"
           done
           echo "::notice::انتهى تثبيت مفاتيح المنصة — $N من 8 مزوداً"
 
