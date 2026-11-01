@@ -7,6 +7,7 @@ export type Env = {
   GROQ_API_KEY?: string;
   OPENROUTER_API_KEY?: string;
   ADMIN_BOOTSTRAP_EMAIL?: string;
+  ADMIN_PATH_SECRET?: string;
 };
 
 export type Session = { userId: string; role: string; csrf: string } | null;

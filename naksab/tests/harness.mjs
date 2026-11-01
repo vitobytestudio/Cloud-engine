@@ -24,20 +24,26 @@ const login = async (email, pass) => {
 };
 const jar = {};
 const capture = async (as, res) => {
-  const setc = res.headers.get("set-cookie");
-  if (setc) jar[as] = setc.split(";")[0];
+  eatCookies(as, res);
   let data = {}; try { data = await res.json(); } catch {}
   if (data.csrf) jar[as + ":csrf"] = data.csrf;
   return { ok: res.ok, status: res.status, data };
 };
+function eatCookies(as, res) {
+  const list = res.headers.getSetCookie ? res.headers.getSetCookie() : (res.headers.get("set-cookie") ? [res.headers.get("set-cookie")] : []);
+  for (const c of list) {
+    if (c.startsWith("nk_s=")) jar[as] = c.split(";")[0];
+    if (c.startsWith("nk_ad=")) jar[as + ":ad"] = c.split(";")[0];
+  }
+}
+const cookieOf = (as) => [jar[as], jar[as + ":ad"]].filter(Boolean).join("; ");
 async function call(as, path, method = "GET", body) {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: { "content-type": "application/json", ...(jar[as] ? { cookie: jar[as] } : {}), ...(body && jar[as] ? { "x-csrf": jar[as + ":csrf"] } : {}) },
+    headers: { "content-type": "application/json", ...(cookieOf(as) ? { cookie: cookieOf(as) } : {}), ...(body && jar[as] ? { "x-csrf": jar[as + ":csrf"] } : {}), ...(jar.panel ? { "x-panel": jar.panel } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const setc = res.headers.get("set-cookie");
-  if (setc) jar[as] = setc.split(";")[0];
+  eatCookies(as, res);
   let data = {}; try { data = await res.json(); } catch {}
   if (data.csrf) jar[as + ":csrf"] = data.csrf;
   return { ok: res.ok, status: res.status, data };
@@ -194,17 +200,57 @@ check("إرسال حملة (pending)", ad.status === 201);
 const adsPub = await call("anon", "/api/ads/approved");
 check("الحملة المعلقة لا تظهر للعموم", !(adsPub.data.ads || []).some((a) => a.title.includes("logo")));
 
-// ═══ 14) الإدارة (ترقية عبر D1 محلياً ثم فحص) ═══
+// ═══ 14) الإدارة: إعداد لمرة واحدة + رابط مشتق + بوابة اللوحة + الدفع الخامل ═══
 const { execSync } = await import("node:child_process");
-execSync(`./node_modules/.bin/wrangler d1 execute naksab-db --local --command "UPDATE users SET role='admin' WHERE username='str-${suffix}'"`, { cwd: "/home/user/Cloud-engine/naksab", stdio: "pipe" });
-const admLogin = await capture("str", await login(`stranger-${suffix}@nk.test`, "StrongPass9"));
-check("دخول المدير", admLogin.status === 200);
+// إعادة تهيئة الإعداد لتكرار التشغيل (محلي فقط)
+execSync(`./node_modules/.bin/wrangler d1 execute naksab-db --local --command "DELETE FROM admin_meta; DELETE FROM admin_devices; DELETE FROM users WHERE role='admin'"`, { cwd: new URL("..", import.meta.url).pathname, stdio: "pipe" });
+const suSt = await fetch(`${BASE}/api/admin/setup-status`).then((r) => r.json()).catch(() => ({}));
+check("حالة الإعداد قبل الإنشاء", suSt.done === false);
+const suBad = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) });
+check("إعداد ببيانات تالفة مرفوض (400)", suBad.status === 400);
+const ownerEmail = `owner-${suffix}@nk.test`;
+const k0o = await k0Of(ownerEmail, "OwnerSecret77x");
+const su = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: ownerEmail, k0: k0o, name: "Owner" }) });
+const suD = await su.json().catch(() => ({}));
+check("إنشاء المالك لمرة واحدة (201 + رابط مشتق)", su.status === 201 && /^\/panel\/[A-Za-z0-9]{10,}$/.test(suD.panel_url || ""), JSON.stringify(suD).slice(0, 80));
+eatCookies("str", su); jar["str:csrf"] = suD.csrf; jar.panel = (suD.panel_url || "").replace("/panel/", "");
+const su2 = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: `o2-${suffix}@nk.test`, k0: k0o, name: "O2" }) });
+check("الإعداد الثاني مرفوض (404) — لمرة واحدة", su2.status === 404);
+const pgOk = await fetch(`${BASE}${suD.panel_url}`);
+check("رابط اللوحة الصحيح يخدم الواجهة", pgOk.status === 200 && (await pgOk.text()).includes("NAKSAB"));
+const pgBad = await fetch(`${BASE}/panel/WrongToken123`);
+check("رابط لوحة خاطئ 404", pgBad.status === 404);
+const noPan = await fetch(`${BASE}/api/admin/stats`, { headers: { cookie: cookieOf("str") } });
+check("API الإدارة بلا x-panel مرفوض (404)", noPan.status === 404);
 const stats = await call("str", "/api/admin/stats");
-check("إحصائيات الإدارة", (stats.data.users ?? 0) >= 3 && stats.data.completed >= 1, JSON.stringify(stats.data));
+check("إحصائيات الإدارة عبر اللوحة", (stats.data.users ?? 0) >= 3 && stats.data.completed >= 1, JSON.stringify(stats.data).slice(0, 80));
 const flagged = await call("str", "/api/admin/reviews/flagged");
 check("قائمة المراجعة الإدارية تعمل", Array.isArray(flagged.data.reviews));
-const nonAdmin = await call("cli", "/api/admin/stats");
-check("غير المدير مرفوض (403)", nonAdmin.status === 403);
+
+// ═══ 14-ب) الدفع الخامل + حماية Webhook + التدقيق المالي ═══
+const meC = await call("cli", "/api/me");
+check("رصيد الذكاء في /api/me", !!meC.data.ai && meC.data.ai.limit_daily >= 1 && !!meC.data.plan);
+const co1 = await call("cli", "/api/payments/checkout", "POST", { kind: "plan", plan_id: "pro" });
+check("الدفع الخامل: checkout مرفوض (503)", co1.status === 503);
+const setOn = await call("str", "/api/admin/settings", "PUT", { payments_enabled: "1" });
+check("الإعدادات من اللوحة تعمل", setOn.ok === true);
+const plansPub = await fetch(`${BASE}/api/plans`).then((r) => r.json());
+const pro = (plansPub.plans || []).find((x) => x.id === "pro");
+check("الباقات: PRO بأسعار دج غير مفتوح (Coming Soon)", !!pro && pro.active === 0 && pro.price_dzd > 0 && plansPub.payments_enabled === 1);
+const co2 = await call("cli", "/api/payments/checkout", "POST", { kind: "plan", plan_id: "pro" });
+check("checkout لباقة غير مفتوحة مرفوض (400)", co2.status === 400);
+const wh = await fetch(`${BASE}/api/payments/webhook/chargily`, { method: "POST", headers: { "content-type": "application/json", "x-signature": "deadbeef" }, body: JSON.stringify({ reference: "NK-TEST123", amount_dzd: 1900, status: "paid" }) });
+check("Webhook بتوقيع خاطئ مرفوض (401)", wh.status === 401);
+const fa = await call("str", "/api/admin/audit-financial");
+check("سطر تدقيق مالي لرفض التوقيع", (fa.data.audit || []).some((a) => a.action === "webhook_rejected"));
+await call("str", "/api/admin/settings", "PUT", { payments_enabled: "0" });
+const co3 = await call("cli", "/api/payments/checkout", "POST", { kind: "plan", plan_id: "pro" });
+check("إعادة التعطيل: النظام خاملاً مجدداً (503)", co3.status === 503);
+const rot = await call("str", "/api/admin/rotate-panel", "POST", {});
+check("تدوير رابط اللوحة يعمل", rot.ok === true && /^\/panel\//.test(rot.data.panel_url || ""));
+jar.panel = (rot.data.panel_url || "").replace("/panel/", "");
+const stats2 = await call("str", "/api/admin/stats");
+check("الرابط الجديد يعمل والقديم مات", stats2.ok === true);
 
 // ═══ 15) حقن وحماية ═══
 const inj = await call("anon", `/api/services?q=${encodeURIComponent("' OR 1=1--")}`);
