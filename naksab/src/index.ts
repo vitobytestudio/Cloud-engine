@@ -233,6 +233,7 @@ route("GET", "/api/u/:username", async (_r, env, _s, p) => {
 route("POST", "/api/requests", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  if (s.role !== "client" && s.role !== "admin") return bad("client_only", 403);
   if (!(await rl(env, `req:${s.userId}`, 10, 86400))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
   const title = clip(String(b.title ?? "").trim(), 120);

@@ -116,6 +116,8 @@ const like2 = await call("cli", `/api/portfolio/${pf.data.id}/like`, "POST", {})
 check("إلغاء الإعجاب يعمل", like2.data.liked === false);
 
 // ═══ 6) الطلبات + الهيكلة الذكية ═══
+const rqFre = await call("fre", "/api/requests", "POST", { title: "Freelancer trying", description: "should be blocked", category: "design" });
+check("المستقل لا ينشر طلبات مشاريع (403)", rqFre.status === 403);
 const rqBad = await call("cli", "/api/requests", "POST", { title: "x", description: "y" });
 check("طلب ناقص مرفوض (400)", rqBad.status === 400);
 const ai = await call("cli", "/api/requests/structure", "POST", { text: "I need a modern landing page for my SaaS product with pricing and a contact form, budget around 300 dollars, two weeks timeline." });
