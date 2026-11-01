@@ -1438,6 +1438,7 @@ async function boot() {
   document.documentElement.lang = S.lang;
   document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
   // رابط اللوحة من المسار حصراً — قرار المالك: الإدارة لا تُفتح إلا من رابطه السري، الذاكرة لا تكفي
+  if (location.pathname.startsWith("/panel/")) S.panel = location.pathname.slice("/panel/".length).replace(/\/+$/, "");
   if (location.pathname === "/setup") location.hash = "#/setup";
   const me = await api("/api/me");
   S.user = me.data.user; S.csrf = me.data.csrf || null;
