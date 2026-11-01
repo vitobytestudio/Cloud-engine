@@ -12,7 +12,7 @@
 ## الحالة الراهنة
 - الإنتاج: v0.11.0-a (merge #83) — بيئة الفريق اللحظية + الخزنة بالكتالوج الطويل + الحلقة المفتوحة.
 - بانتظار يد المالك: سر `E2B_API_KEY` لتفعيل محرك البيئة (دليل التفعيل معروض في صفحة البيئة).
-- **NAKSAB**: **Stage 1 لايف على الإنتاج** — https://naksab.vitobytestudio.workers.dev (PRs #86/#87، run 41330557560 ✓، D1 `naksab-db` + KV `naksab-cache` أُنشئتا، 4 مفاتيح AI مثبتة، probes الإنتاج: register/login/me/services كلها خضراء). Worker كامل (~40 مساراً) + واجهة SPA premium؛ **harness 68/68** ✓، tsc نظيف، node --check نظيف. N11 (BOOST) مؤجل لStage 2.
+- **NAKSAB**: **Stage 1 لايف على الإنتاج** — https://naksab.vitobytestudio.workers.dev (PRs #86/#87، run 41330557560 ✓، D1 `naksab-db` + KV `naksab-cache` أُنشئتا، 4 مفاتيح AI مثبتة، probes الإنتاج: register/login/me/services كلها خضراء). Worker كامل (~40 مساراً) + **واجهة SPA v2 premium** (Space Grotesk/Inter/IBM Plex Arabic، هيرو بمنتج حي متحرك، spotlight cards، عربي كامل RTL بمفتاح تبديل — 280 مفتاحاً EN/AR)؛ **harness 68/68** ✓، tsc نظيف، node --check نظيف. N11 (BOOST) مؤجل لStage 2.
 
 ## القرارات الثابتة (لا تُناقش من جديد)
 - **أرينا**: استخدام شخصي فقط — لا قناة آلية إليها أبداً. المصنع الخارجي لمستخدمي المنصة = وكيل نكسس الداخلي (مفاتيح ZK + سلاسل مجانية رسمية + بيئة الفريق) + BYOA (Jules وأخواته بقنواتها الرسمية).
