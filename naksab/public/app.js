@@ -127,7 +127,7 @@ en: {
   setup_name: "Owner name", setup_email: "Owner email", setup_pass: "Secret code (16+ chars, mixed)",
   setup_pass_hint: "Use a long mixed code — upper, lower, digits", setup_go: "Create owner account & mint panel link",
   panel_warn_title: "⚠ Save this link now — it is shown only once",
-  panel_warn: "This is your private panel address. Bookmark it in your browser now. Combined with your secret code it is the only way in.",
+  panel_warn: "This is your private panel address. Bookmark it now — it is the ONLY door. Without it, your email and code will not open the admin panel from the main site at all.",
   panel_copy: "Copy link", panel_open: "Open my panel",
   remember_me: "Keep me signed in on this device",
   ai_credits: "AI structuring", used_today: "Used today", quota_monthly: "This month",
@@ -139,7 +139,7 @@ en: {
   no_payments: "No payments yet.", revoke: "Revoke", revoked_l: "revoked", last_seen: "Last seen",
   rotate_panel: "Rotate panel link", panel_rotated: "New link minted — save it now. The old one is dead.",
   admin_security_note: "Panel link + owner code + device binding + rate lockout — all active.",
-  admin_link_title: "Owner panel access", admin_link_sub: "This device does not hold your private panel link yet. Paste it once — this browser will remember it forever. The link is the one minted at setup or after a rotation.",
+  admin_link_title: "Owner panel access", admin_link_sub: "Admin access is only possible through your secret panel link — even with the correct email and code on the main site. Paste it once for this session.",
   admin_link_paste: "Your private panel link", admin_link_save: "Bind this device", admin_link_bad: "This link is not valid — check it exactly as saved (starts with /panel/).",
   amount_dzd: "Amount (DZD)",
   errs: {
@@ -287,7 +287,7 @@ ar: {
   setup_name: "اسم المالك", setup_email: "بريد المالك", setup_pass: "الرمز السري (16+ محرفاً مختلطاً)",
   setup_pass_hint: "استخدم رمزاً طويلاً مختلطاً — أحرف كبيرة وصغيرة وأرقام", setup_go: "أنشئ حساب المالك واشتق رابط اللوحة",
   panel_warn_title: "⚠ احفظ هذا الرابط الآن — يُعرض مرة واحدة فقط",
-  panel_warn: "هذا عنوان لوحتك الخاصة. أضفه للمفضلة في متصفحك الآن. هو مع رمزك السري الطريق الوحيد للدخول.",
+  panel_warn: "هذا عنوان لوحتك الخاصة. أضفه للمفضلة الآن — إنه الباب الوحيد. بدونه، بريدك ورمزك لن يفتحا لوحة المدير من الموقع الرئيسي إطلاقاً.",
   panel_copy: "انسخ الرابط", panel_open: "افتح لوحتي",
   remember_me: "أبقني مسجلاً على هذا الجهاز",
   ai_credits: "الهيكلة الذكية", used_today: "استُخدم اليوم", quota_monthly: "هذا الشهر",
@@ -299,7 +299,7 @@ ar: {
   no_payments: "لا مدفوعات بعد.", revoke: "إبطال", revoked_l: "مُبطل", last_seen: "آخر ظهور",
   rotate_panel: "تدوير رابط اللوحة", panel_rotated: "رابط جديد اشتُق — احفظه الآن. القديم مات.",
   admin_security_note: "رابط اللوحة + رمز المالك + ربط الجهاز + قفل المحاولات — كلها نشطة.",
-  admin_link_title: "دخول لوحة المالك", admin_link_sub: "هذا الجهاز لا يحمل رابط لوحتك الخاصة بعد. الصقه مرة واحدة — ويتذكره هذا المتصفح للأبد. الرابط هو الذي اشتُق عند الإعداد أو بعد التدوير.",
+  admin_link_title: "دخول لوحة المالك", admin_link_sub: "الدخول للإدارة لا يكون إلا عبر رابط لوحتك السري — حتى مع البريد والرمز الصحيحين من الموقع الرئيسي. الصقه مرة واحدة لهذه الجلسة.",
   admin_link_paste: "رابط لوحتك الخاصة", admin_link_save: "اربط هذا الجهاز", admin_link_bad: "هذا الرابط غير صالح — انسخه تماماً كما حُفظ (يبدأ بـ/panel/).",
   amount_dzd: "المبلغ (دج)",
   errs: {
@@ -1237,7 +1237,6 @@ async function viewAdmin() {
   if (!S.panel) return adminBindScreen();
   const st = await api("/api/admin/stats");
   if (!st.ok) return adminBindScreen();
-  try { localStorage.setItem("nk_panel", "/panel/" + S.panel); } catch {}
   const d = st.data;
   shell(`<div class="wrap page-head"><h1>${T.admin}</h1><p>${T.admin_sub} · <span class="tiny" style="color:var(--ok)">${T.admin_security_note}</span></p></div>
   <div class="wrap">
@@ -1381,7 +1380,6 @@ function showPanelLink(url, isRotate = false) {
       <button class="btn primary sm" id="pl-copy">${T.panel_copy}</button>
       <a class="btn sm" id="pl-open" href="${esc(abs)}">${isRotate ? T.panel_open : ""}</a>
     </div></div>`;
-  try { localStorage.setItem("nk_panel", url); } catch {}
   $("#pl-copy").onclick = async () => { try { await navigator.clipboard.writeText(abs); toast("✓"); } catch {} };
   $("#pl-open").onclick = () => { sessionStorage.removeItem("nk_setup"); };
 }
@@ -1439,9 +1437,7 @@ async function viewPricing() {
 async function boot() {
   document.documentElement.lang = S.lang;
   document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
-  let _savedPanel = ""; try { _savedPanel = localStorage.getItem("nk_panel") || ""; } catch {}
-  if (location.pathname.startsWith("/panel/")) S.panel = location.pathname.slice("/panel/".length).replace(/\/+$/, "");
-  else if (_savedPanel.startsWith("/panel/")) S.panel = _savedPanel.slice("/panel/".length);
+  // رابط اللوحة من المسار حصراً — قرار المالك: الإدارة لا تُفتح إلا من رابطه السري، الذاكرة لا تكفي
   if (location.pathname === "/setup") location.hash = "#/setup";
   const me = await api("/api/me");
   S.user = me.data.user; S.csrf = me.data.csrf || null;
