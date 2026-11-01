@@ -12,23 +12,23 @@
 | 5 | تفعيل Telegram كواجهة الفريق (A1) بعد ختم أسئلتها الأربعة | ⏳ معلّق على قرار المالك | من أسئلة الختم الاستراتيجية |
 
 
-## مسار NAKSAB (مواصفة v1.1 — بانتظار اعتماد المالك، لا تنفيذ قبل الأمر)
+## مسار NAKSAB (مواصفة v1.1 — Stage 1+2 منفذة ولايف؛ N11 مشروط بموافقة المالك)
 
 الوثيقة المرجعية: `NAKSAB-SPEC.md` — Worker مستقل `naksab` + D1/KV مستقلة، عزل كامل عن nexus-hub.
 
 | # | المهمة | الحالة | ملاحظة |
 |---|--------|--------|--------|
-| N1 | هيكلة Worker `naksab`: wrangler.toml + D1 مستقلة + migrations الأساس (Users/Roles/Sessions/Profiles/Services/Portfolio/Categories/Skills) | ✅ بانتظار اعتماد المواصفة | Stage 1 |
-| N2 | المصادقة والجلسات (أنماط المصنع) + RBAC + CSRF + Rate limits + Admin bootstrap آمن | ✅ بانتظار الاعتماد | §16/§17 |
-| N3 | الملفات + Personal Pages + الخدمات + Portfolio (عرض عام للزوار، English-first + i18n جاهز) | ✅ بانتظار الاعتماد | §3/§4/§5 |
-| N4 | Project Requests + هيكلة AI (Gemini) + نموذج يدوي بديل عند تعطل المزودين | ✅ بانتظار الاعتماد | §6/قرار هـ |
-| N5 | SQL Weighted Matching + Proposals + Project Management الأساسي (Milestones/Messages/Deliverables) | ✅ بانتظار الاعتماد | §6/§8 |
-| N6 | Reviews: تأكيد متبادل + دليل تسليم + ضوابط النشر + قوائم المراجعة الإدارية | ✅ بانتظار الاعتماد | قرار ج |
-| N7 | Discover foundations + روابط فيديو خارجية (ممنوعات الفيديو صارمة) | ✅ بانتظار الاعتماد | §9/§10 |
-| N8 | NAKSAB ADS foundations (بلا دفع) + وسم Sponsored | ✅ بانتظار الاعتماد | §10 |
-| N9 | Admin Dashboard + Audit Logs + Moderation | ✅ بانتظار الاعتماد | §17 |
-| N10 | عدّة فحص E2E (harness + متصفح حقيقي) + نشر workers.dev + probes بعد النشر | ✅ بانتظار الاعتماد | §20 |
-| N11 | BOOST: أول دخل — مشروط بمزود دفع مُتحقق (Chargily قيد التقييم) + موافقة المالك | ⏳ Stage 2 — قرار أ | §11 |
+| N1 | هيكلة Worker `naksab`: wrangler.toml + D1 مستقلة + migrations الأساس (Users/Roles/Sessions/Profiles/Services/Portfolio/Categories/Skills) | ✅ لايف | Stage 1 — #86 |
+| N2 | المصادقة والجلسات (أنماط المصنع) + RBAC + CSRF + Rate limits + Admin bootstrap آمن | ✅ لايف + قفل المدير المطلق #95 | §16/§17 |
+| N3 | الملفات + Personal Pages + الخدمات + Portfolio (عرض عام للزوار، English-first + i18n جاهز) | ✅ لايف | §3/§4/§5 |
+| N4 | Project Requests + هيكلة AI (Gemini) + نموذج يدوي بديل عند تعطل المزودين | ✅ لايف | §6/قرار هـ |
+| N5 | SQL Weighted Matching + Proposals + Project Management الأساسي (Milestones/Messages/Deliverables) | ✅ لايف + تبويب «عروضي» #98 | §6/§8 |
+| N6 | Reviews: تأكيد متبادل + دليل تسليم + ضوابط النشر + قوائم المراجعة الإدارية | ✅ لايف | قرار ج |
+| N7 | Discover foundations + روابط فيديو خارجية (ممنوعات الفيديو صارمة) | ✅ لايف | §9/§10 |
+| N8 | NAKSAB ADS foundations (بلا دفع) + وسم Sponsored | ✅ لايف | §10 |
+| N9 | Admin Dashboard + Audit Logs + Moderation | ✅ لايف — بوابة اللوحة السرية + تدقيق مالي | §17 |
+| N10 | عدّة فحص E2E (harness 86/86 + adversary 45/45 + ui-boot) + نشر workers.dev + probes بعد النشر | ✅ لايف | §20 |
+| N11 | BOOST: أول دخل — مشروط بمزود دفع مُتحقق (Chargily قيد التقييم) + موافقة المالك | ⏳ البنية الدفعية جاهزة خامِلة (payments_enabled=0) — لا تفعيل دون موافقة | §11 |
 
 
 > قاعدة الطابور: لا مهمة تُبنى قبل دورتها — والوكيل يُحدّث هذا الجدول بعد كل دمج.
