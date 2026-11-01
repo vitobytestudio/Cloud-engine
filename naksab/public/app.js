@@ -123,6 +123,9 @@ en: {
   pricing: "Pricing", pricing_sub: "Start free. Paid tiers arrive soon — prices in Algerian Dinar.",
   free_forever: "Free forever", per_month: "/month", coming_soon: "Coming soon",
   choose_free: "Start free", current_plan: "Your plan",
+  cta_free_freelancer: "Complete your profile & offer services", cta_free_client: "Post a project",
+  req_clients_t: "This page is for clients posting projects", req_clients_d: "As a freelancer, your flow is the opposite: browse open requests ranked for your skills and send a proposal.",
+  browse_open: "Browse open requests", client_only_err: "Only client accounts can post project requests.",
   setup_title: "Owner setup — one time", setup_sub: "Create the administrator account and set your secret code. Your private panel link is minted once and shown a single time.",
   setup_name: "Owner name", setup_email: "Owner email", setup_pass: "Secret code (16+ chars, mixed)",
   setup_pass_hint: "Use a long mixed code — upper, lower, digits", setup_go: "Create owner account & mint panel link",
@@ -153,6 +156,7 @@ en: {
     already_reviewed: "You already reviewed this project.", already_proposed: "You already sent a proposal here.",
     invalid_url: "Enter a valid https:// link.", forbidden: "Not allowed.",
     payments_disabled: "Payments are not open yet — coming soon.",
+    client_only: "Only client accounts can post project requests.",
     invalid_setup: "Check the fields — code must be 16+ mixed characters.",
     not_buyable: "This plan is not open for purchase yet.",
     duplicate_transaction: "This transaction was already processed.",
@@ -283,6 +287,9 @@ ar: {
   pricing: "الأسعار", pricing_sub: "ابدأ مجاناً. الباقات المدفوعة قريباً — الأسعار بالدينار الجزائري.",
   free_forever: "مجاني للأبد", per_month: "/شهر", coming_soon: "قريباً",
   choose_free: "ابدأ مجاناً", current_plan: "باقتك",
+  cta_free_freelancer: "أكمل ملفك واعرض خدماتك", cta_free_client: "اعرض مشروعك",
+  req_clients_t: "هذه الصفحة للعملاء لنشر المشاريع", req_clients_d: "بوصفك مستقلاً، مسارك معاكس: تصفح الطلبات المفتوحة المرتبة لمهاراتك وأرسل عرضاً.",
+  browse_open: "تصفح الطلبات المفتوحة", client_only_err: "نشر طلبات المشاريع لحسابات العملاء فقط.",
   setup_title: "إعداد المالك — مرة واحدة", setup_sub: "أنشئ حساب المدير وضع رمزك السري. رابط لوحتك الخاصة يُشتق مرة واحدة ويُعرض مرة واحدة فقط.",
   setup_name: "اسم المالك", setup_email: "بريد المالك", setup_pass: "الرمز السري (16+ محرفاً مختلطاً)",
   setup_pass_hint: "استخدم رمزاً طويلاً مختلطاً — أحرف كبيرة وصغيرة وأرقام", setup_go: "أنشئ حساب المالك واشتق رابط اللوحة",
@@ -313,6 +320,7 @@ ar: {
     already_reviewed: "قيّمت هذا المشروع مسبقاً.", already_proposed: "أرسلت عرضاً هنا مسبقاً.",
     invalid_url: "أدخل رابط https صالحاً.", forbidden: "غير مسموح.",
     payments_disabled: "الدفع غير مفتوح بعد — قريباً.",
+    client_only: "نشر طلبات المشاريع لحسابات العملاء فقط.",
     invalid_setup: "تحقق من الحقول — الرمز يجب أن يكون 16+ مختلطاً.",
     not_buyable: "هذه الباقة غير مفتوحة للشراء بعد.",
     duplicate_transaction: "هذه العملية عولجت مسبقاً.",
@@ -979,6 +987,15 @@ function serviceModal() {
 // ═══════════ طلب جديد (هيكلة ذكية + يدوي) ═══════════
 async function viewRequestNew() {
   if (!S.user) return authModal("register");
+  if (S.user.role === "freelancer") {
+    return shell(`<div class="wrap" style="max-width:560px;padding-top:70px">
+      <div class="panel center">
+        <div style="font-size:34px;margin-bottom:10px">↔</div>
+        <h2 style="font-size:18px;margin-bottom:8px">${T.req_clients_t}</h2>
+        <p class="muted" style="font-size:14px;margin-bottom:18px">${T.req_clients_d}</p>
+        <a class="btn primary" style="justify-content:center" href="#/dashboard">${T.browse_open}</a>
+      </div></div>`, "dashboard");
+  }
   shell(`<div class="wrap page-head"><h1>${T.post_project}</h1><p>${T.post_sub}</p></div>
   <div class="wrap" style="max-width:760px">
     <div class="panel" style="margin-bottom:14px">
@@ -1425,12 +1442,13 @@ async function viewPricing() {
     <div class="spread"><b style="font-family:var(--display);font-size:18px">${esc(pl.name)}</b>${pl.active ? `<span class="chip ok">●</span>` : `<span class="chip warn">${T.coming_soon}</span>`}</div>
     <div><span class="price" style="font-size:28px">${pl.price_dzd ? money(pl.price_dzd) : T.free_forever}</span><span class="tiny muted">${pl.price_dzd ? " " + T.per_month : ""}</span></div>
     <div style="font-size:13px;color:var(--dim);line-height:2">${(() => { try { return JSON.parse(pl.features || "[]").map((f) => `<div>✓ ${esc(f)}</div>`).join(""); } catch { return ""; } })()}</div>
-    ${pl.active ? `<a class="btn primary" style="justify-content:center" href="#/request/new">${T.choose_free}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
+    ${pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "freelancer" ? "#/dashboard" : "#/request/new"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "freelancer" ? T.cta_free_freelancer : T.cta_free_client}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
   </div>`;
   shell(`<div class="wrap page-head"><h1>${T.pricing}</h1><p>${T.pricing_sub}</p></div>
   <div class="wrap"><div class="t-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
     ${plans.map(card).join("") || `<div class="skel"></div>`}
   </div></div>`, "");
+  $("#free-go")?.addEventListener("click", (e) => { e.preventDefault(); authModal("register"); });
 }
 
 // ═══════════ الموجّه ═══════════
