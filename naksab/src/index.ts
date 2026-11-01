@@ -58,6 +58,12 @@ route("POST", "/api/auth/login", async (req, env) => {
   const legacy = !String(u.pass_hash).startsWith("pbkdf2$");
   if (legacy) return json({ error: "legacy" }, 409);
   if (!(await verifyHash(k0, u.pass_hash))) return bad("invalid_credentials", 401);
+  // بوابة المالك: حساب الإدارة لا يُسجَّل دخله إلا من رابط اللوحة السري — من الموقع الرئيسي: 401 صامت
+  if (u.role === "admin") {
+    const xp = req.headers.get("x-panel") ?? "";
+    const ph = await getAdminMeta(env, "panel_hash");
+    if (!ph || !xp || (await sha256hex(xp)) !== ph) return bad("invalid_credentials", 401);
+  }
   const { token, csrf } = await createSession(env, u.id);
   const https = new URL(req.url).protocol === "https:";
   const days = u.role === "admin" || b.remember !== false ? 365 : 30;
