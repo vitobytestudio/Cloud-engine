@@ -139,6 +139,8 @@ en: {
   no_payments: "No payments yet.", revoke: "Revoke", revoked_l: "revoked", last_seen: "Last seen",
   rotate_panel: "Rotate panel link", panel_rotated: "New link minted — save it now. The old one is dead.",
   admin_security_note: "Panel link + owner code + device binding + rate lockout — all active.",
+  admin_link_title: "Owner panel access", admin_link_sub: "This device does not hold your private panel link yet. Paste it once — this browser will remember it forever. The link is the one minted at setup or after a rotation.",
+  admin_link_paste: "Your private panel link", admin_link_save: "Bind this device", admin_link_bad: "This link is not valid — check it exactly as saved (starts with /panel/).",
   amount_dzd: "Amount (DZD)",
   errs: {
     invalid_email: "Enter a valid email.", invalid_k0: "Password must be 8+ chars with a digit.",
@@ -297,6 +299,8 @@ ar: {
   no_payments: "لا مدفوعات بعد.", revoke: "إبطال", revoked_l: "مُبطل", last_seen: "آخر ظهور",
   rotate_panel: "تدوير رابط اللوحة", panel_rotated: "رابط جديد اشتُق — احفظه الآن. القديم مات.",
   admin_security_note: "رابط اللوحة + رمز المالك + ربط الجهاز + قفل المحاولات — كلها نشطة.",
+  admin_link_title: "دخول لوحة المالك", admin_link_sub: "هذا الجهاز لا يحمل رابط لوحتك الخاصة بعد. الصقه مرة واحدة — ويتذكره هذا المتصفح للأبد. الرابط هو الذي اشتُق عند الإعداد أو بعد التدوير.",
+  admin_link_paste: "رابط لوحتك الخاصة", admin_link_save: "اربط هذا الجهاز", admin_link_bad: "هذا الرابط غير صالح — انسخه تماماً كما حُفظ (يبدأ بـ/panel/).",
   amount_dzd: "المبلغ (دج)",
   errs: {
     invalid_email: "أدخل بريداً إلكترونياً صالحاً.", invalid_k0: "كلمة المرور: 8 أحرف فأكثر وتضم رقماً.",
@@ -412,7 +416,7 @@ function shell(content, active = "") {
     <div class="nav-links ${active === "home" ? "" : ""}" id="navlinks">
       ${navLinks.map(([h, l, k]) => `<a href="${h}" class="${active === k ? "on" : ""}">${l}</a>`).join("")}
       ${S.user ? `<a href="#/dashboard" class="${active === "dashboard" ? "on" : ""}">${T.dashboard}</a>` : ""}
-      ${S.user?.role === "admin" && S.panel ? `<a href="#/admin" class="${active === "admin" ? "on" : ""}">${T.admin}</a>` : ""}
+      ${S.user?.role === "admin" ? `<a href="#/admin" class="${active === "admin" ? "on" : ""}">${T.admin}</a>` : ""}
     </div>
     <div class="nav-cta">
       ${S.user ? `
@@ -1227,11 +1231,12 @@ function viewAbout() {
 
 // ═══════════ Admin ═══════════
 async function viewAdmin() {
-  // بلا رابط اللوحة: 404 صامت — لا معلومة للمتطفل
-  if (!S.panel) return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
-  if (!S.user || S.user.role !== "admin") return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
+  // زائر أو غير مدير: عودة صامتة — لا شاشة 404 معلقة ولا أي معلومة
+  if (!S.user || S.user.role !== "admin") { location.hash = "#/"; return; }
+  // مالك بلا رابط في هذا الجهاز (أو الرابط تدوّر): شاشة ربط الجهاز بلصق الرابط مرة واحدة
+  if (!S.panel) return adminBindScreen();
   const st = await api("/api/admin/stats");
-  if (!st.ok) return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
+  if (!st.ok) return adminBindScreen();
   try { localStorage.setItem("nk_panel", "/panel/" + S.panel); } catch {}
   const d = st.data;
   shell(`<div class="wrap page-head"><h1>${T.admin}</h1><p>${T.admin_sub} · <span class="tiny" style="color:var(--ok)">${T.admin_security_note}</span></p></div>
@@ -1338,6 +1343,28 @@ async function viewAdmin() {
     }
   }
   await render("reviews");
+}
+
+function adminBindScreen() {
+  shell(`<div class="wrap" style="max-width:520px;padding-top:80px">
+    <div class="panel">
+      <h2 style="font-size:19px;margin-bottom:8px">${T.admin_link_title}</h2>
+      <p class="tiny muted" style="margin-bottom:16px">${T.admin_link_sub}</p>
+      <div class="field"><label>${T.admin_link_paste}</label><input id="pn-in" dir="ltr" placeholder="/panel/…" /></div>
+      <button class="btn primary" id="pn-go" style="width:100%;justify-content:center">${T.admin_link_save}</button>
+      <div class="msg" id="pn-msg" hidden></div>
+    </div></div>`, "admin");
+  $("#pn-go").onclick = async () => {
+    const raw = $("#pn-in").value.trim();
+    const m = raw.match(/panel\/([A-Za-z0-9]+)/);
+    const msg = $("#pn-msg");
+    if (!m) { msg.className = "msg bad"; msg.hidden = false; msg.textContent = T.admin_link_bad; return; }
+    const prev = S.panel; S.panel = m[1];
+    const st = await api("/api/admin/stats");
+    if (!st.ok) { S.panel = prev; msg.className = "msg bad"; msg.hidden = false; msg.textContent = T.admin_link_bad; return; }
+    try { localStorage.setItem("nk_panel", "/panel/" + S.panel); } catch {}
+    toast("✓"); viewAdmin();
+  };
 }
 
 // ═══ الإعداد لمرة واحدة + عرض رابط اللوحة ═══
