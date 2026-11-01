@@ -412,7 +412,7 @@ function shell(content, active = "") {
     <div class="nav-links ${active === "home" ? "" : ""}" id="navlinks">
       ${navLinks.map(([h, l, k]) => `<a href="${h}" class="${active === k ? "on" : ""}">${l}</a>`).join("")}
       ${S.user ? `<a href="#/dashboard" class="${active === "dashboard" ? "on" : ""}">${T.dashboard}</a>` : ""}
-      ${S.user?.role === "admin" ? `<a href="#/admin" class="${active === "admin" ? "on" : ""}">${T.admin}</a>` : ""}
+      ${S.user?.role === "admin" && S.panel ? `<a href="#/admin" class="${active === "admin" ? "on" : ""}">${T.admin}</a>` : ""}
     </div>
     <div class="nav-cta">
       ${S.user ? `
@@ -1232,6 +1232,7 @@ async function viewAdmin() {
   if (!S.user || S.user.role !== "admin") return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
   const st = await api("/api/admin/stats");
   if (!st.ok) return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
+  try { localStorage.setItem("nk_panel", "/panel/" + S.panel); } catch {}
   const d = st.data;
   shell(`<div class="wrap page-head"><h1>${T.admin}</h1><p>${T.admin_sub} · <span class="tiny" style="color:var(--ok)">${T.admin_security_note}</span></p></div>
   <div class="wrap">
@@ -1353,6 +1354,7 @@ function showPanelLink(url, isRotate = false) {
       <button class="btn primary sm" id="pl-copy">${T.panel_copy}</button>
       <a class="btn sm" id="pl-open" href="${esc(abs)}">${isRotate ? T.panel_open : ""}</a>
     </div></div>`;
+  try { localStorage.setItem("nk_panel", url); } catch {}
   $("#pl-copy").onclick = async () => { try { await navigator.clipboard.writeText(abs); toast("✓"); } catch {} };
   $("#pl-open").onclick = () => { sessionStorage.removeItem("nk_setup"); };
 }
@@ -1410,7 +1412,9 @@ async function viewPricing() {
 async function boot() {
   document.documentElement.lang = S.lang;
   document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
+  let _savedPanel = ""; try { _savedPanel = localStorage.getItem("nk_panel") || ""; } catch {}
   if (location.pathname.startsWith("/panel/")) S.panel = location.pathname.slice("/panel/".length).replace(/\/+$/, "");
+  else if (_savedPanel.startsWith("/panel/")) S.panel = _savedPanel.slice("/panel/".length);
   if (location.pathname === "/setup") location.hash = "#/setup";
   const me = await api("/api/me");
   S.user = me.data.user; S.csrf = me.data.csrf || null;
