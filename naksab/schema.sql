@@ -216,3 +216,67 @@ CREATE TABLE IF NOT EXISTS audit (
   detail TEXT DEFAULT '',
   created_at INTEGER NOT NULL
 );
+
+-- ملاحظة ترحيل: قواعد قائمة تحتاج: ALTER TABLE users ADD COLUMN plan_id TEXT NOT NULL DEFAULT 'free' (يُطبَّق بترحيل متسامح في workflow النشر)
+
+-- ═══ Stage 2 Foundation: الدفع + AI Credits + حماية الإدارة (خامِلة حتى تفعيل المالك) ═══
+CREATE TABLE IF NOT EXISTS plans (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  price_dzd INTEGER NOT NULL DEFAULT 0,
+  period TEXT DEFAULT 'monthly',
+  ai_quota_daily INTEGER NOT NULL DEFAULT 0,
+  ai_quota_monthly INTEGER NOT NULL DEFAULT 0,
+  features TEXT DEFAULT '[]',
+  active INTEGER NOT NULL DEFAULT 0,
+  buyable INTEGER NOT NULL DEFAULT 0,
+  sort INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS payments (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  plan_id TEXT,
+  credits INTEGER NOT NULL DEFAULT 0,
+  amount_dzd INTEGER NOT NULL,
+  reference TEXT UNIQUE NOT NULL,
+  provider TEXT DEFAULT '',
+  provider_ref TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  idempotency_key TEXT UNIQUE,
+  risk_flags TEXT DEFAULT '[]',
+  meta TEXT DEFAULT '{}',
+  created_at INTEGER NOT NULL,
+  confirmed_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_pay_user ON payments(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_pay_status ON payments(status, created_at);
+CREATE TABLE IF NOT EXISTS credit_ledger (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  delta INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  ref_id TEXT DEFAULT '',
+  balance_after INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ledger_user ON credit_ledger(user_id, created_at);
+CREATE TABLE IF NOT EXISTS financial_audit (
+  id TEXT PRIMARY KEY,
+  at INTEGER NOT NULL,
+  actor TEXT NOT NULL,
+  action TEXT NOT NULL,
+  payment_id TEXT DEFAULT '',
+  detail TEXT DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS admin_devices (
+  id TEXT PRIMARY KEY,
+  admin_id TEXT NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  label TEXT DEFAULT '',
+  created_at INTEGER NOT NULL,
+  last_seen INTEGER NOT NULL DEFAULT 0,
+  revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS admin_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL, updated_at INTEGER, updated_by TEXT DEFAULT '');

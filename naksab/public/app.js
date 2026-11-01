@@ -83,7 +83,7 @@ en: {
   accept_open: "Accept & open project", open_room: "Open project room →", close_request: "Close this request",
   project_created: "Project created", your_proposal_is: "Your proposal is", send_proposal: "Send a proposal",
   owner_only: "Sign in as the owner to manage this request.",
-  your_proposal: "Your proposal", amount: "Amount (USD)", cover_letter: "Cover letter — why you, specifically",
+  your_proposal: "Your proposal", amount: "Amount (DZD)", cover_letter: "Cover letter — why you, specifically",
   cover_hint: "30+ characters of substance…", send_proposal_go: "Send proposal", proposal_sent: "Proposal sent",
   projects_back: "← Projects", confirm_completion: "Confirm completion", confirmed_waiting: "✓ You confirmed — waiting other side",
   completed: "Completed ✓", leave_review: "Leave a review",
@@ -119,6 +119,27 @@ en: {
   admins_only: "Admins only.",
   broke: "Something broke — try again.",
   ago_now: "just now", ago_m: "m ago", ago_h: "h ago", ago_d: "d ago",
+  // pricing + setup + admin v2
+  pricing: "Pricing", pricing_sub: "Start free. Paid tiers arrive soon — prices in Algerian Dinar.",
+  free_forever: "Free forever", per_month: "/month", coming_soon: "Coming soon",
+  choose_free: "Start free", current_plan: "Your plan",
+  setup_title: "Owner setup — one time", setup_sub: "Create the administrator account and set your secret code. Your private panel link is minted once and shown a single time.",
+  setup_name: "Owner name", setup_email: "Owner email", setup_pass: "Secret code (16+ chars, mixed)",
+  setup_pass_hint: "Use a long mixed code — upper, lower, digits", setup_go: "Create owner account & mint panel link",
+  panel_warn_title: "⚠ Save this link now — it is shown only once",
+  panel_warn: "This is your private panel address. Bookmark it in your browser now. Combined with your secret code it is the only way in.",
+  panel_copy: "Copy link", panel_open: "Open my panel",
+  remember_me: "Keep me signed in on this device",
+  ai_credits: "AI structuring", used_today: "Used today", quota_monthly: "This month",
+  topup_soon: "Top-up in DZD — coming soon", plan_l: "Plan",
+  admin_settings: "Settings", payments_tab: "Payments", devices_tab: "Devices", fin_audit: "Financial audit",
+  payments_enabled_l: "Enable payments (charges real money)", ai_daily_l: "FREE daily AI limit",
+  ai_monthly_l: "FREE monthly AI limit", credits_price_l: "Credits price (DZD / 100 calls)",
+  webhook_secret_l: "Webhook secret", save_settings: "Save settings", settings_saved: "Settings saved.",
+  no_payments: "No payments yet.", revoke: "Revoke", revoked_l: "revoked", last_seen: "Last seen",
+  rotate_panel: "Rotate panel link", panel_rotated: "New link minted — save it now. The old one is dead.",
+  admin_security_note: "Panel link + owner code + device binding + rate lockout — all active.",
+  amount_dzd: "Amount (DZD)",
   errs: {
     invalid_email: "Enter a valid email.", invalid_k0: "Password must be 8+ chars with a digit.",
     email_taken: "This email is already registered.", username_taken: "This username is taken.",
@@ -129,6 +150,12 @@ en: {
     project_not_completed: "You can review after both sides confirm completion.",
     already_reviewed: "You already reviewed this project.", already_proposed: "You already sent a proposal here.",
     invalid_url: "Enter a valid https:// link.", forbidden: "Not allowed.",
+    payments_disabled: "Payments are not open yet — coming soon.",
+    invalid_setup: "Check the fields — code must be 16+ mixed characters.",
+    not_buyable: "This plan is not open for purchase yet.",
+    duplicate_transaction: "This transaction was already processed.",
+    amount_mismatch: "Amount does not match the reference exactly.",
+    invalid_transition: "This status change is not allowed.",
   },
 },
 ar: {
@@ -214,7 +241,7 @@ ar: {
   accept_open: "اقبل وافتح مشروعاً", open_room: "افتح غرفة المشروع →", close_request: "أغلق هذا الطلب",
   project_created: "أُنشئ المشروع", your_proposal_is: "عرضك", send_proposal: "أرسل عرضاً",
   owner_only: "سجّل دخولك كصاحب الطلب لإدارته.",
-  your_proposal: "عرضك", amount: "المبلغ (USD)", cover_letter: "رسالة العرض — لماذا أنت تحديداً",
+  your_proposal: "عرضك", amount: "المبلغ (دج)", cover_letter: "رسالة العرض — لماذا أنت تحديداً",
   cover_hint: "30+ حرفاً من الجوهر…", send_proposal_go: "أرسل العرض", proposal_sent: "أُرسل العرض",
   projects_back: "← المشاريع", confirm_completion: "أكّد الاكتمال", confirmed_waiting: "✓ أكّدت — بانتظار الطرف الآخر",
   completed: "مكتمل ✓", leave_review: "اكتب تقييماً",
@@ -250,6 +277,27 @@ ar: {
   admins_only: "للمديرين فقط.",
   broke: "حدث خلل — حاول مجدداً.",
   ago_now: "الآن", ago_m: " د قبل", ago_h: " س قبل", ago_d: " ي قبل",
+  // pricing + setup + admin v2
+  pricing: "الأسعار", pricing_sub: "ابدأ مجاناً. الباقات المدفوعة قريباً — الأسعار بالدينار الجزائري.",
+  free_forever: "مجاني للأبد", per_month: "/شهر", coming_soon: "قريباً",
+  choose_free: "ابدأ مجاناً", current_plan: "باقتك",
+  setup_title: "إعداد المالك — مرة واحدة", setup_sub: "أنشئ حساب المدير وضع رمزك السري. رابط لوحتك الخاصة يُشتق مرة واحدة ويُعرض مرة واحدة فقط.",
+  setup_name: "اسم المالك", setup_email: "بريد المالك", setup_pass: "الرمز السري (16+ محرفاً مختلطاً)",
+  setup_pass_hint: "استخدم رمزاً طويلاً مختلطاً — أحرف كبيرة وصغيرة وأرقام", setup_go: "أنشئ حساب المالك واشتق رابط اللوحة",
+  panel_warn_title: "⚠ احفظ هذا الرابط الآن — يُعرض مرة واحدة فقط",
+  panel_warn: "هذا عنوان لوحتك الخاصة. أضفه للمفضلة في متصفحك الآن. هو مع رمزك السري الطريق الوحيد للدخول.",
+  panel_copy: "انسخ الرابط", panel_open: "افتح لوحتي",
+  remember_me: "أبقني مسجلاً على هذا الجهاز",
+  ai_credits: "الهيكلة الذكية", used_today: "استُخدم اليوم", quota_monthly: "هذا الشهر",
+  topup_soon: "شحن بالدينار — قريباً", plan_l: "الباقة",
+  admin_settings: "الإعدادات", payments_tab: "المدفوعات", devices_tab: "الأجهزة", fin_audit: "التدقيق المالي",
+  payments_enabled_l: "تفعيل الدفع (يحصّل أموالاً حقيقية)", ai_daily_l: "حد الذكاء اليومي لـFREE",
+  ai_monthly_l: "حد الذكاء الشهري لـFREE", credits_price_l: "سعر الرصيد (دج / 100 عملية)",
+  webhook_secret_l: "سر الـWebhook", save_settings: "حفظ الإعدادات", settings_saved: "حُفظت الإعدادات.",
+  no_payments: "لا مدفوعات بعد.", revoke: "إبطال", revoked_l: "مُبطل", last_seen: "آخر ظهور",
+  rotate_panel: "تدوير رابط اللوحة", panel_rotated: "رابط جديد اشتُق — احفظه الآن. القديم مات.",
+  admin_security_note: "رابط اللوحة + رمز المالك + ربط الجهاز + قفل المحاولات — كلها نشطة.",
+  amount_dzd: "المبلغ (دج)",
   errs: {
     invalid_email: "أدخل بريداً إلكترونياً صالحاً.", invalid_k0: "كلمة المرور: 8 أحرف فأكثر وتضم رقماً.",
     email_taken: "هذا البريد مسجل مسبقاً.", username_taken: "اسم المستخدم محجوز.",
@@ -260,13 +308,19 @@ ar: {
     project_not_completed: "التقييم بعد تأكيد الطرفين للاكتمال.",
     already_reviewed: "قيّمت هذا المشروع مسبقاً.", already_proposed: "أرسلت عرضاً هنا مسبقاً.",
     invalid_url: "أدخل رابط https صالحاً.", forbidden: "غير مسموح.",
+    payments_disabled: "الدفع غير مفتوح بعد — قريباً.",
+    invalid_setup: "تحقق من الحقول — الرمز يجب أن يكون 16+ مختلطاً.",
+    not_buyable: "هذه الباقة غير مفتوحة للشراء بعد.",
+    duplicate_transaction: "هذه العملية عولجت مسبقاً.",
+    amount_mismatch: "المبلغ لا يطابق المرجع تماماً.",
+    invalid_transition: "تغيير الحالة هذا غير مسموح.",
   },
 },
 };
 
 // ─── حالة ───
 let _savedLang = "en"; try { _savedLang = localStorage.getItem("nk_lang") || "en"; } catch {}
-const S = { user: null, csrf: null, cats: [], lang: L[_savedLang] ? _savedLang : "en" };
+const S = { user: null, csrf: null, cats: [], lang: L[_savedLang] ? _savedLang : "en", panel: "", plan: null, ai: null };
 // T: وكيل يقرأ من لغة الجلسة — كل الواجهات القائمة تظل تعمل بلا تغيير
 const T = new Proxy({}, { get: (_, k) => (L[S.lang] && L[S.lang][k] !== undefined ? L[S.lang][k] : L.en[k] ?? "") });
 function setLang(l) {
@@ -282,7 +336,7 @@ const enc = new TextEncoder();
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
-const money = (n, c = "USD") => `$${Number(n || 0).toLocaleString("en-US")}`;
+const money = (n) => `${Number(n || 0).toLocaleString(S.lang === "ar" ? "ar-DZ" : "en-US")} ${S.lang === "ar" ? "دج" : "DZD"}`;
 const ago = (ts) => { const d = Date.now() - ts; const m = 6e4, h = 36e5, day = 864e5; if (d < m) return T.ago_now; if (d < h) return `${Math.floor(d / m)}${T.ago_m}`; if (d < day) return `${Math.floor(d / h)}${T.ago_h}`; return `${Math.floor(d / day)}${T.ago_d}`; };
 const stars = (r) => "★".repeat(Math.round(r || 0)) + "☆".repeat(5 - Math.round(r || 0));
 
@@ -298,7 +352,7 @@ function toast(msg) {
 async function api(path, method = "GET", body) {
   const res = await fetch(path, {
     method,
-    headers: { "content-type": "application/json", ...(S.csrf && method !== "GET" ? { "x-csrf": S.csrf } : {}) },
+    headers: { "content-type": "application/json", ...(S.csrf && method !== "GET" ? { "x-csrf": S.csrf } : {}), ...(S.panel ? { "x-panel": S.panel } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let data = {};
@@ -350,6 +404,7 @@ function shell(content, active = "") {
     ["#/talent", T.browse_talent, "talent"],
     ["#/services", T.services, "services"],
     ["#/discover", T.discover, "discover"],
+    ["#/pricing", T.pricing, "pricing"],
   ];
   $app.innerHTML = `
   <nav class="nav"><div class="wrap nav-in">
@@ -403,7 +458,7 @@ function footerHtml() {
         <a href="#/dashboard">${T.f_dash}</a><a href="#" data-auth="register">${T.f_join}</a><a href="#" data-auth="register">${T.f_hire}</a>
       </div>
       <div class="foot-col"><h4>${T.foot_platform}</h4>
-        <a href="#/ads">${T.f_ads}</a><a href="#/about">${T.f_about}</a><a href="#/about">${T.f_trust}</a>
+        <a href="#/ads">${T.f_ads}</a><a href="#/pricing">${T.pricing}</a><a href="#/about">${T.f_about}</a><a href="#/about">${T.f_trust}</a>
       </div>
     </div>
     <div class="foot-bottom">
@@ -428,6 +483,7 @@ function authModal(mode) {
     </div>
     <div class="field"><label>${T.role}</label><select id="a-role"><option value="freelancer">${T.freelancer}</option><option value="client">${T.client}</option></select></div>` : ""}
     <button class="btn primary" id="a-go" style="width:100%;justify-content:center;margin-top:6px">${mode === "login" ? T.sign_in : T.get_started}</button>
+    ${mode === "login" ? `<label class="tiny muted" style="display:flex;gap:8px;align-items:center;margin-top:10px;cursor:pointer"><input type="checkbox" id="a-rem" checked style="width:auto" /> ${T.remember_me}</label>` : ""}
     <div class="msg" id="a-msg" hidden></div>
     <p class="tiny muted center" style="margin-top:14px">${mode === "login" ? `${T.no_account} <a href="#" id="m-swap" style="color:var(--brand2)">${T.create_account}</a>` : `${T.have_account} <a href="#" id="m-swap" style="color:var(--brand2)">${T.sign_in}</a>`}</p>
   </div>`;
@@ -442,7 +498,7 @@ function authModal(mode) {
       if (!pass || pass.length < 8 || !/\d/.test(pass)) throw "invalid_k0";
       const k0 = await k0Of(email, pass);
       let r;
-      if (mode === "login") r = await api("/api/auth/login", "POST", { email, k0 });
+      if (mode === "login") r = await api("/api/auth/login", "POST", { email, k0, remember: $("#a-rem") ? $("#a-rem").checked : true });
       else {
         const name = $("#a-name").value.trim(), username = $("#a-user").value.trim().toLowerCase(), role = $("#a-role").value;
         if (name.length < 2) throw "invalid_name";
@@ -772,8 +828,16 @@ function portfolioModal() {
 async function viewDashboard() {
   if (!S.user) return authModal("register");
   const isFreelancer = S.user.role === "freelancer";
+  const aiCard = S.ai ? `<div class="panel" style="margin-bottom:16px"><div class="spread" style="flex-wrap:wrap;gap:10px">
+    <div><b style="font-size:14px">${T.ai_credits}</b><div class="tiny muted">${T.plan_l}: <span class="chip brand">${S.plan?.name ?? "FREE"}</span></div></div>
+    <div class="row" style="gap:18px">
+      <div class="tiny muted">${T.used_today}: <b style="color:var(--fg)">${S.ai.used_daily}/${S.ai.limit_daily}</b></div>
+      <div class="tiny muted">${T.quota_monthly}: <b style="color:var(--fg)">${S.ai.used_monthly}/${S.ai.limit_monthly}</b></div>
+      <span class="chip">${T.topup_soon}</span>
+    </div></div></div>` : "";
   shell(`<div class="wrap page-head"><h1>${T.dashboard}</h1><p>${S.user.role === "admin" ? T.dash_sub_admin : isFreelancer ? T.dash_sub_freelancer : T.dash_sub_client}</p></div>
   <div class="wrap">
+    ${aiCard}
     <div class="tabs" id="d-tabs">
       <button data-t="profile" class="on">${T.tab_profile}</button>
       ${isFreelancer ? `<button data-t="services">${T.tab_services}</button><button data-t="open">${T.tab_open}</button><button data-t="proposals">${T.tab_proposals}</button>` : `<button data-t="requests">${T.tab_requests}</button>`}
@@ -880,7 +944,7 @@ function serviceModal() {
     <div class="field"><label>${T.description}</label><textarea id="sv-desc" placeholder="What's included, your process, what the buyer receives…"></textarea></div>
     <div class="form-2">
       <div class="field"><label>${T.category}</label><select id="sv-cat">${S.cats.map((c) => `<option value="${c.slug}">${esc(c.name)}</option>`).join("")}</select></div>
-      <div class="field"><label>${T.currency}</label><select id="sv-cur"><option>USD</option><option>EUR</option><option>DZD</option></select></div>
+      <div class="field"><label>${T.currency}</label><select id="sv-cur"><option selected>DZD</option></select></div>
     </div>
     <div class="form-2">
       <div class="field"><label>${T.price_from}</label><input id="sv-min" type="number" min="0" /></div>
@@ -923,7 +987,7 @@ async function viewRequestNew() {
       <div class="field"><label>${T.full_description}</label><textarea id="r-desc" rows="5"></textarea></div>
       <div class="form-2">
         <div class="field"><label>${T.category}</label><select id="r-cat"><option value="">—</option>${S.cats.map((c) => `<option value="${c.slug}">${esc(c.name)}</option>`).join("")}</select></div>
-        <div class="field"><label>${T.currency}</label><select id="r-cur"><option>USD</option><option>EUR</option><option>DZD</option></select></div>
+        <div class="field"><label>${T.currency}</label><select id="r-cur"><option selected>DZD</option></select></div>
       </div>
       <div class="form-2">
         <div class="field"><label>${T.budget_from}</label><input id="r-min" type="number" min="0" /></div>
@@ -1163,10 +1227,13 @@ function viewAbout() {
 
 // ═══════════ Admin ═══════════
 async function viewAdmin() {
-  if (!S.user || S.user.role !== "admin") return shell(`<div class="empty">${T.admins_only}</div>`);
+  // بلا رابط اللوحة: 404 صامت — لا معلومة للمتطفل
+  if (!S.panel) return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
+  if (!S.user || S.user.role !== "admin") return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
   const st = await api("/api/admin/stats");
+  if (!st.ok) return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
   const d = st.data;
-  shell(`<div class="wrap page-head"><h1>${T.admin}</h1><p>${T.admin_sub}</p></div>
+  shell(`<div class="wrap page-head"><h1>${T.admin}</h1><p>${T.admin_sub} · <span class="tiny" style="color:var(--ok)">${T.admin_security_note}</span></p></div>
   <div class="wrap">
     <div class="stat-grid" style="margin-bottom:20px">
       <div class="card stat-card"><b>${d.users ?? "—"}</b><span>${T.users}</span></div>
@@ -1177,12 +1244,17 @@ async function viewAdmin() {
       <div class="card stat-card"><b>${d.completed ?? "—"}</b><span>${T.completed}</span></div>
       <div class="card stat-card"><b>${d.flagged_reviews ?? "—"}</b><span>${T.flagged}</span></div>
     </div>
-    <div class="tabs"><button class="on" data-t="reviews">${T.tab_flagged}</button><button data-t="ads">${T.tab_campaigns}</button><button data-t="users">${T.tab_users}</button><button data-t="audit">${T.tab_audit}</button></div>
+    <div class="tabs">
+      <button class="on" data-t="reviews">${T.tab_flagged}</button><button data-t="ads">${T.tab_campaigns}</button>
+      <button data-t="users">${T.tab_users}</button><button data-t="audit">${T.tab_audit}</button>
+      <button data-t="settings">${T.admin_settings}</button><button data-t="payments">${T.payments_tab}</button>
+      <button data-t="devices">${T.devices_tab}</button><button data-t="finaudit">${T.fin_audit}</button>
+    </div>
     <div id="a-body"><div class="skel"></div></div>
   </div>`, "admin");
   const body = $("#a-body");
-  $$(".tabs button").forEach((b) => b.addEventListener("click", async () => {
-    $$(".tabs button").forEach((x) => x.classList.remove("on")); b.classList.add("on"); render(b.dataset.t);
+  $$(".tabs button").forEach((b2) => b2.addEventListener("click", async () => {
+    $$(".tabs button").forEach((x) => x.classList.remove("on")); b2.classList.add("on"); render(b2.dataset.t);
   }));
   async function render(t) {
     body.innerHTML = `<div class="skel"></div>`;
@@ -1192,15 +1264,15 @@ async function viewAdmin() {
         <span><b class="tiny">@${esc(rv.author_username)}</b> → <span class="tiny">@${esc(rv.target_username)}</span> <span class="stars">${stars(rv.rating)}</span></span>
         <span class="row"><button class="btn sm" data-rv="${rv.id}" data-s="published">${T.keep}</button><button class="btn danger sm" data-rv="${rv.id}" data-s="hidden">${T.hide}</button></span></div>
         <p class="tiny muted" style="margin-top:6px">${esc(rv.body)}</p></div>`).join("") || `<div class="empty">${T.no_flagged}</div>`;
-      $$("[data-rv]", body).forEach((b) => b.addEventListener("click", async () => { await api(`/api/admin/reviews/${b.dataset.rv}/moderate`, "POST", { status: b.dataset.s }); render("reviews"); }));
+      $$("[data-rv]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/reviews/${b2.dataset.rv}/moderate`, "POST", { status: b2.dataset.s }); render("reviews"); }));
     }
     if (t === "ads") {
       const r = await api("/api/admin/ads");
-      body.innerHTML = (r.data.ads || []).map((a) => `<div class="card card-pad" style="margin-bottom:10px"><div class="spread">
-        <span><b class="tiny">@${esc(a.advertiser_username)}</b> — ${esc(a.title)} <span class="chip ${a.status === "approved" ? "ok" : a.status === "rejected" ? "bad" : "warn"}">${a.status}</span></span>
-        <span class="row">${a.status !== "approved" ? `<button class="btn sm" data-ad="${a.id}" data-s="approved">${T.approve}</button>` : ""}
-        ${a.status !== "rejected" ? `<button class="btn danger sm" data-ad="${a.id}" data-s="rejected">${T.reject}</button>` : ""}</span></div></div>`).join("") || `<div class="empty">${T.no_campaigns2}</div>`;
-      $$("[data-ad]", body).forEach((b) => b.addEventListener("click", async () => { await api(`/api/admin/ads/${b.dataset.ad}/moderate`, "POST", { status: b.dataset.s }); render("ads"); }));
+      body.innerHTML = (r.data.ads || []).map((a2) => `<div class="card card-pad" style="margin-bottom:10px"><div class="spread">
+        <span><b class="tiny">@${esc(a2.advertiser_username)}</b> — ${esc(a2.title)} <span class="chip ${a2.status === "approved" ? "ok" : a2.status === "rejected" ? "bad" : "warn"}">${a2.status}</span></span>
+        <span class="row">${a2.status !== "approved" ? `<button class="btn sm" data-ad="${a2.id}" data-s="approved">${T.approve}</button>` : ""}
+        ${a2.status !== "rejected" ? `<button class="btn danger sm" data-ad="${a2.id}" data-s="rejected">${T.reject}</button>` : ""}</span></div></div>`).join("") || `<div class="empty">${T.no_campaigns2}</div>`;
+      $$("[data-ad]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/ads/${b2.dataset.ad}/moderate`, "POST", { status: b2.dataset.s }); render("ads"); }));
     }
     if (t === "users") {
       const r = await api("/api/admin/users");
@@ -1209,23 +1281,140 @@ async function viewAdmin() {
           <td style="padding:10px">@${esc(u.username)}</td><td class="muted">${esc(u.email)}</td><td><span class="chip">${u.role}</span></td>
           <td><button class="btn ghost sm" data-uv="${u.id}" data-v="${u.verified ? 0 : 1}">${u.verified ? T.verified : T.verify}</button></td>
           <td><button class="btn ghost sm ${u.banned ? "danger" : ""}" data-ub="${u.id}" data-b="${u.banned ? 0 : 1}">${u.banned ? T.unban : T.ban}</button></td></tr>`).join("")}</table></div>`;
-      $$("[data-uv]", body).forEach((b) => b.addEventListener("click", async () => { await api(`/api/admin/users/${b.dataset.uv}/flags`, "POST", { verified: b.dataset.v === "1" }); render("users"); }));
-      $$("[data-ub]", body).forEach((b) => b.addEventListener("click", async () => { await api(`/api/admin/users/${b.dataset.ub}/flags`, "POST", { banned: b.dataset.b === "1" }); render("users"); }));
+      $$("[data-uv]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/users/${b2.dataset.uv}/flags`, "POST", { verified: b2.dataset.v === "1" }); render("users"); }));
+      $$("[data-ub]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/users/${b2.dataset.ub}/flags`, "POST", { banned: b2.dataset.b === "1" }); render("users"); }));
     }
     if (t === "audit") {
       const r = await api("/api/admin/audit");
-      body.innerHTML = (r.data.audit || []).map((a) => `<div class="tiny muted" style="padding:6px 0;border-bottom:1px solid var(--line)">${new Date(a.created_at).toLocaleString("en")} — <b style="color:var(--fg)">${esc(a.action)}</b> ${esc(a.detail)}</div>`).join("") || `<div class="empty">${T.no_audit}</div>`;
+      body.innerHTML = (r.data.audit || []).map((a2) => `<div class="tiny muted" style="padding:6px 0;border-bottom:1px solid var(--line)">${new Date(a2.created_at).toLocaleString(S.lang === "ar" ? "ar" : "en")} — <b style="color:var(--fg)">${esc(a2.action)}</b> ${esc(a2.detail)}</div>`).join("") || `<div class="empty">${T.no_audit}</div>`;
+    }
+    if (t === "settings") {
+      const r = await api("/api/admin/settings");
+      const g = (k) => esc((r.data.settings || []).find((x) => x.k === k)?.v ?? "");
+      body.innerHTML = `<div class="panel" style="max-width:680px">
+        <div class="field"><label>${T.payments_enabled_l}</label><select id="st-pay"><option value="0" ${g("payments_enabled") !== "1" ? "selected" : ""}>OFF — ${T.coming_soon}</option><option value="1" ${g("payments_enabled") === "1" ? "selected" : ""}>ON</option></select></div>
+        <div class="form-2">
+          <div class="field"><label>${T.ai_daily_l}</label><input id="st-ad" type="number" min="1" value="${g("ai_free_daily") || "10"}" /></div>
+          <div class="field"><label>${T.ai_monthly_l}</label><input id="st-am" type="number" min="1" value="${g("ai_free_monthly") || "100"}" /></div>
+        </div>
+        <div class="field"><label>${T.credits_price_l}</label><input id="st-cp" type="number" min="100" value="${g("credits_price_dzd_per_100") || "300"}" /></div>
+        <div class="form-2">
+          <div class="field"><label>${T.webhook_secret_l} — Chargily</label><input id="st-wc" dir="ltr" value="${g("webhook_secret_chargily")}" /></div>
+          <div class="field"><label>${T.webhook_secret_l} — SofizPay</label><input id="st-ws" dir="ltr" value="${g("webhook_secret_sofizpay")}" /></div>
+        </div>
+        <div class="spread"><button class="btn primary" id="st-save">${T.save_settings}</button><button class="btn danger sm" id="st-rot">${T.rotate_panel}</button></div>
+        <div class="msg" id="st-msg" hidden></div></div>`;
+      $("#st-save").onclick = async () => {
+        const r2 = await api("/api/admin/settings", "PUT", {
+          payments_enabled: $("#st-pay").value, ai_free_daily: $("#st-ad").value, ai_free_monthly: $("#st-am").value,
+          credits_price_dzd_per_100: $("#st-cp").value, webhook_secret_chargily: $("#st-wc").value.trim(), webhook_secret_sofizpay: $("#st-ws").value.trim(),
+        });
+        const m = $("#st-msg"); m.hidden = false; m.className = `msg ${r2.ok ? "ok" : "bad"}`; m.textContent = r2.ok ? T.settings_saved : errText(r2.data.error);
+      };
+      $("#st-rot").onclick = async () => {
+        const r2 = await api("/api/admin/rotate-panel", "POST", {});
+        if (r2.ok) showPanelLink(r2.data.panel_url, true);
+      };
+    }
+    if (t === "payments") {
+      const r = await api("/api/admin/payments");
+      body.innerHTML = (r.data.payments || []).map((pm) => `<div class="card card-pad" style="margin-bottom:10px"><div class="spread">
+        <span class="tiny"><b>${esc(pm.reference)}</b> — ${esc(pm.name)} · ${money(pm.amount_dzd)} · ${esc(pm.kind)} <span class="chip ${pm.status === "confirmed" ? "ok" : pm.status === "pending" ? "warn" : ""}">${pm.status}</span> ${(pm.risk_flags || "[]") !== "[]" ? `<span class="chip bad">${esc(String(pm.risk_flags))}</span>` : ""}</span>
+        <span class="row">${pm.status === "pending" ? `<button class="btn sm" data-pm="${pm.id}" data-s="confirmed">${T.approve}</button><button class="btn danger sm" data-pm="${pm.id}" data-s="rejected">${T.reject}</button>` : ""}
+        ${pm.status === "confirmed" ? `<button class="btn ghost sm" data-pm="${pm.id}" data-s="refunded">Refund</button>` : ""}</span></div></div>`).join("") || `<div class="empty">${T.no_payments}</div>`;
+      $$("[data-pm]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/payments/${b2.dataset.pm}/status`, "POST", { status: b2.dataset.s }); render("payments"); }));
+    }
+    if (t === "devices") {
+      const r = await api("/api/admin/devices");
+      body.innerHTML = (r.data.devices || []).map((dv) => `<div class="spread" style="padding:10px 0;border-bottom:1px solid var(--line)">
+        <span class="tiny">${esc(dv.label)} <span class="muted">· ${T.last_seen} ${new Date(dv.last_seen).toLocaleString(S.lang === "ar" ? "ar" : "en")}</span> ${dv.revoked ? `<span class="chip bad">${T.revoked_l}</span>` : ""}</span>
+        ${!dv.revoked ? `<button class="btn danger sm" data-dv="${dv.id}">${T.revoke}</button>` : ""}</div>`).join("");
+      $$("[data-dv]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/devices/${b2.dataset.dv}/revoke`, "POST", {}); render("devices"); }));
+    }
+    if (t === "finaudit") {
+      const r = await api("/api/admin/audit-financial");
+      body.innerHTML = (r.data.audit || []).map((a2) => `<div class="tiny muted" style="padding:6px 0;border-bottom:1px solid var(--line)">${new Date(a2.at).toLocaleString(S.lang === "ar" ? "ar" : "en")} — <b style="color:var(--fg)">${esc(a2.action)}</b> ${esc(a2.detail)}</div>`).join("") || `<div class="empty">—</div>`;
     }
   }
   await render("reviews");
+}
+
+// ═══ الإعداد لمرة واحدة + عرض رابط اللوحة ═══
+function showPanelLink(url, isRotate = false) {
+  const m = $("#modal"); m.hidden = false;
+  const abs = location.origin + url;
+  m.innerHTML = `<div class="modal">
+    <b style="color:var(--warn);font-size:15px">${T.panel_warn_title}</b>
+    <p class="tiny muted" style="margin:10px 0">${T.panel_warn}</p>
+    <div class="spread" style="gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:11px;padding:11px 13px">
+      <code class="tiny ltr-force" style="word-break:break-all">${esc(abs)}</code>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary sm" id="pl-copy">${T.panel_copy}</button>
+      <a class="btn sm" id="pl-open" href="${esc(abs)}">${isRotate ? T.panel_open : ""}</a>
+    </div></div>`;
+  $("#pl-copy").onclick = async () => { try { await navigator.clipboard.writeText(abs); toast("✓"); } catch {} };
+  $("#pl-open").onclick = () => { sessionStorage.removeItem("nk_setup"); };
+}
+async function viewSetup() {
+  const st = await api("/api/admin/setup-status");
+  if (st.ok && st.data.done) return shell(`<div class="empty"><div class="big">404</div>Not found.</div>`);
+  shell(`<div class="wrap" style="max-width:520px;padding-top:60px">
+    <div class="panel">
+      <h2 style="font-size:19px;margin-bottom:8px">${T.setup_title}</h2>
+      <p class="tiny muted" style="margin-bottom:18px">${T.setup_sub}</p>
+      <div class="field"><label>${T.setup_name}</label><input id="su-name" /></div>
+      <div class="field"><label>${T.setup_email}</label><input id="su-email" type="email" autocomplete="email" /></div>
+      <div class="field"><label>${T.setup_pass}</label><input id="su-pass" type="password" placeholder="${T.setup_pass_hint}" /></div>
+      <button class="btn primary" id="su-go" style="width:100%;justify-content:center">${T.setup_go}</button>
+      <div class="msg" id="su-msg" hidden></div>
+    </div></div>`, "");
+  $("#su-go").onclick = async () => {
+    const btn = $("#su-go"), msg = $("#su-msg");
+    const name = $("#su-name").value.trim(), email = $("#su-email").value.trim(), pass = $("#su-pass").value;
+    if (pass.length < 16 || !/[a-z]/.test(pass) || !/[A-Z]/.test(pass) || !/\d/.test(pass)) { msg.className = "msg bad"; msg.hidden = false; msg.textContent = errText("invalid_setup"); return; }
+    btn.disabled = true; btn.textContent = T.securing; msg.hidden = true;
+    try {
+      const k0 = await k0Of(email, pass);
+      const r = await api("/api/admin/setup", "POST", { email, k0, name });
+      if (!r.ok) throw r.data.error || "error";
+      S.user = r.data.user; S.csrf = r.data.csrf;
+      btn.disabled = false; btn.textContent = T.setup_go;
+      showPanelLink(r.data.panel_url);
+      $("#pl-open").textContent = T.panel_open;
+      $("#pl-open").addEventListener("click", () => setTimeout(() => location.reload(), 100));
+    } catch (e2) {
+      msg.className = "msg bad"; msg.hidden = false; msg.textContent = errText(String(e2));
+      btn.disabled = false; btn.textContent = T.setup_go;
+    }
+  };
+}
+
+// ═══ الأسعار ═══
+async function viewPricing() {
+  const r = await api("/api/plans");
+  const plans = r.data.plans || [];
+  const card = (pl) => `<div class="card card-pad" style="display:flex;flex-direction:column;gap:14px;${pl.id === "vip" ? "border-color:rgba(124,108,255,.45)" : ""}">
+    <div class="spread"><b style="font-family:var(--display);font-size:18px">${esc(pl.name)}</b>${pl.active ? `<span class="chip ok">●</span>` : `<span class="chip warn">${T.coming_soon}</span>`}</div>
+    <div><span class="price" style="font-size:28px">${pl.price_dzd ? money(pl.price_dzd) : T.free_forever}</span><span class="tiny muted">${pl.price_dzd ? " " + T.per_month : ""}</span></div>
+    <div style="font-size:13px;color:var(--dim);line-height:2">${(() => { try { return JSON.parse(pl.features || "[]").map((f) => `<div>✓ ${esc(f)}</div>`).join(""); } catch { return ""; } })()}</div>
+    ${pl.active ? `<a class="btn primary" style="justify-content:center" href="#/request/new">${T.choose_free}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
+  </div>`;
+  shell(`<div class="wrap page-head"><h1>${T.pricing}</h1><p>${T.pricing_sub}</p></div>
+  <div class="wrap"><div class="t-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
+    ${plans.map(card).join("") || `<div class="skel"></div>`}
+  </div></div>`, "");
 }
 
 // ═══════════ الموجّه ═══════════
 async function boot() {
   document.documentElement.lang = S.lang;
   document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
+  if (location.pathname.startsWith("/panel/")) S.panel = location.pathname.slice("/panel/".length).replace(/\/+$/, "");
+  if (location.pathname === "/setup") location.hash = "#/setup";
   const me = await api("/api/me");
   S.user = me.data.user; S.csrf = me.data.csrf || null;
+  S.plan = me.data.plan || null; S.ai = me.data.ai || null;
   const cats = await api("/api/categories");
   S.cats = cats.data.categories || [];
   route();
@@ -1248,6 +1437,8 @@ async function route() {
     if (parts[0] === "request") return parts[1] === "new" ? viewRequestNew() : viewRequest(parts[1]);
     if (parts[0] === "projects") return parts[1] ? viewProject(parts[1]) : viewDashboard();
     if (parts[0] === "ads") return viewAds();
+    if (parts[0] === "pricing") return viewPricing();
+    if (parts[0] === "setup") return viewSetup();
     if (parts[0] === "about") return viewAbout();
     if (parts[0] === "admin") return viewAdmin();
     return viewHome();

@@ -4,8 +4,10 @@ import type { Env, Session } from "./env";
 import {
   json, id, now, esc, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
   hex, serverHash, verifyHash, rl, isEmail, isUsername, isK0, isHttpsUrl, jsonArr, notify, audit,
+  sha256hex, hmacHex, b62Of, timingSafeEq, getSetting, setSetting, getAdminMeta, adminDeviceCookie, verifyAdminDevice,
 } from "./lib";
 import { runTask, STRUCTURE_SYSTEM } from "./ai";
+import { paymentsEnabled, canTransit, genReference, REF_RE, amountExact, verifyWebhookSig, finAudit, idemKeyOf, riskFlags, type PayState } from "./payments";
 
 type Route = { m: string; pat: string; h: (r: Request, e: Env, s: Session, p: Record<string, string>) => Promise<Response>; auth?: boolean; admin?: boolean; csrf?: boolean };
 const R: Route[] = [];
@@ -36,12 +38,12 @@ route("POST", "/api/auth/register", async (req, env) => {
   const salt = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
   const hash = await serverHash(k0, salt);
   const uid = id("u");
-  const bootstrap = env.ADMIN_BOOTSTRAP_EMAIL && email === env.ADMIN_BOOTSTRAP_EMAIL.toLowerCase();
+  const bootstrap = false; // الإدارة تُنشأ حصراً عبر /api/admin/setup (لمرة واحدة) — لا منح عبر متغيرات
   await env.DB.prepare("INSERT INTO users (id, email, username, name, role, pass_hash, created_at) VALUES (?,?,?,?,?,?,?)")
-    .bind(uid, email, username, name, bootstrap ? "admin" : role, hash, now()).run();
+    .bind(uid, email, username, name, role, hash, now()).run();
   const { token, csrf } = await createSession(env, uid);
-  const cookie = sessionCookie(token, new URL(req.url).protocol === "https:");
-  return new Response(JSON.stringify({ ok: true, user: { id: uid, email, username, name, role: bootstrap ? "admin" : role }, csrf }), { status: 201, headers: { "content-type": "application/json; charset=utf-8", "set-cookie": cookie } });
+  const cookie = sessionCookie(token, new URL(req.url).protocol === "https:", b.remember === false ? 30 : 365);
+  return new Response(JSON.stringify({ ok: true, user: { id: uid, email, username, name, role }, csrf }), { status: 201, headers: { "content-type": "application/json; charset=utf-8", "set-cookie": cookie } });
 }, { csrf: false });
 
 route("POST", "/api/auth/login", async (req, env) => {
@@ -57,7 +59,19 @@ route("POST", "/api/auth/login", async (req, env) => {
   if (legacy) return json({ error: "legacy" }, 409);
   if (!(await verifyHash(k0, u.pass_hash))) return bad("invalid_credentials", 401);
   const { token, csrf } = await createSession(env, u.id);
-  return new Response(JSON.stringify({ ok: true, user: { id: u.id, email, username: u.username, name: u.name, role: u.role }, csrf }), { status: 200, headers: { "content-type": "application/json; charset=utf-8", "set-cookie": sessionCookie(token, new URL(req.url).protocol === "https:") } });
+  const https = new URL(req.url).protocol === "https:";
+  const days = u.role === "admin" || b.remember !== false ? 365 : 30;
+  const extra: Record<string, string> = {};
+  // جهاز المدير: يُسجَّل آلياً عند دخول ناجح بكلمة السر (ويُبطل من اللوحة عند الحاجة)
+  if (u.role === "admin") {
+    const dev = hex(32);
+    await env.DB.prepare("INSERT INTO admin_devices (id, admin_id, token_hash, label, created_at, last_seen) VALUES (?,?,?,?,?,?)")
+      .bind(id("d"), u.id, await sha256hex(dev), `login ${ip} ${new Date().toISOString().slice(0, 10)}`, now(), now()).run();
+    extra["set-cookie2"] = adminDeviceCookie(dev, https);
+  }
+  await notify(env, u.id, "admin_login", `Admin sign-in from ${ip}. If this was not you, rotate the panel URL immediately.`);
+  const h2: Record<string, string> = { "content-type": "application/json; charset=utf-8", "set-cookie": sessionCookie(token, https, days), ...extra };
+  return new Response(JSON.stringify({ ok: true, user: { id: u.id, email, username: u.username, name: u.name, role: u.role }, csrf }), { status: 200, headers: h2 });
 }, { csrf: false });
 
 route("POST", "/api/auth/logout", async (req, env) => {
@@ -69,7 +83,12 @@ route("POST", "/api/auth/logout", async (req, env) => {
 route("GET", "/api/me", async (_r, env, s) => {
   if (!s) return json({ user: null });
   const u = await env.DB.prepare("SELECT id, email, username, name, role, headline, bio, avatar_url, country, langs, categories, skills, links, available, verified, reputation, reviews_count, completed FROM users WHERE id = ?").bind(s.userId).first<any>();
-  return json({ user: u, csrf: s.csrf });
+  // الباقة وحدود الذكاء (كلها من إعدادات الإدارة)
+  const plan = await env.DB.prepare("SELECT id, name, ai_quota_daily, ai_quota_monthly FROM plans WHERE id = ?").bind(String((u as any)?.plan_id || "free")).first<any>()
+    || await env.DB.prepare("SELECT id, name, ai_quota_daily, ai_quota_monthly FROM plans WHERE id = 'free'").first<any>();
+  const daily = Number(plan?.ai_quota_daily ?? 10), monthly = Number(plan?.ai_quota_monthly ?? 100);
+  const kv = await env.CACHE_KV.get(`rl:ai:${s.userId}`); const kvm = await env.CACHE_KV.get(`rl:aim:${s.userId}`);
+  return json({ user: u, csrf: s.csrf, plan: { id: plan?.id ?? "free", name: plan?.name ?? "FREE" }, ai: { used_daily: Number(kv ?? 0), limit_daily: daily, used_monthly: Number(kvm ?? 0), limit_monthly: monthly, price_dzd_per_100: Number(await getSetting(env, "credits_price_dzd_per_100", "300")) } });
 });
 
 // ═══ التصنيفات العامة ═══
@@ -227,7 +246,10 @@ route("POST", "/api/requests", async (req, env, s) => {
 route("POST", "/api/requests/structure", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
-  if (!(await rl(env, `ai:${s.userId}`, 30, 86400))) return bad("too_many", 429);
+  const aiDaily = Number(await getSetting(env, "ai_free_daily", "10"));
+  const aiMonthly = Number(await getSetting(env, "ai_free_monthly", "100"));
+  if (!(await rl(env, `ai:${s.userId}`, aiDaily, 86400))) return bad("too_many", 429);
+  if (!(await rl(env, `aim:${s.userId}`, aiMonthly, 2592000))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
   const text = clip(String(b.text ?? "").trim(), 4000);
   if (text.length < 15) return bad("invalid_input");
@@ -662,6 +684,211 @@ function matchPath(pat: string, path: string): Record<string, string> | null {
   return params;
 }
 
+
+// ═══ الإدارة: الإعداد لمرة واحدة + الرابط المشتق المختلط ═══
+route("GET", "/api/admin/setup-status", async (_r, env) => json({ done: (await getAdminMeta(env, "setup_done")) === "1" }));
+
+route("POST", "/api/admin/setup", async (req, env) => {
+  if ((await getAdminMeta(env, "setup_done")) === "1") return bad("not_found", 404);
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rl(env, `setup:${ip}`, 3, 3600))) return bad("too_many", 429);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const email = clip(String(b.email ?? "").toLowerCase().trim(), 190);
+  const name = clip(String(b.name ?? "").trim(), 60);
+  const k0 = String(b.k0 ?? "");
+  if (!isEmail(email) || !isK0(k0) || name.length < 2) return bad("invalid_setup");
+  const dup = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first<any>();
+  if (dup) return bad("email_taken", 409);
+  const uid = id("u");
+  const hash = await serverHash(k0, hex(16));
+  const uname = (email.split("@")[0].replace(/[^a-z0-9-]/g, "") || "owner").slice(0, 20);
+  await env.DB.prepare("INSERT INTO users (id, email, username, name, role, pass_hash, created_at) VALUES (?,?,?,?,?,?,?)")
+    .bind(uid, email, uname, name, "admin", hash, now()).run();
+  const dev = hex(32);
+  await env.DB.prepare("INSERT INTO admin_devices (id, admin_id, token_hash, label, created_at, last_seen) VALUES (?,?,?,?,?,?)")
+    .bind(id("d"), uid, await sha256hex(dev), "setup device", now(), now()).run();
+  let secret = await getAdminMeta(env, "path_secret");
+  if (!secret) { secret = hex(32); await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('path_secret', ?)").bind(secret).run(); }
+  if (env.ADMIN_PATH_SECRET) secret = env.ADMIN_PATH_SECRET;
+  const tok = b62Of(await hmacHex(secret, uid + hex(16))).slice(0, 28);
+  await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('panel_hash', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v")
+    .bind(await sha256hex(tok)).run();
+  await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('setup_done', '1') ON CONFLICT(k) DO UPDATE SET v = '1'").run();
+  await finAudit(env, uid, "admin_setup", "", `panel minted, ip=${ip}`);
+  const { token, csrf } = await createSession(env, uid);
+  const https = new URL(req.url).protocol === "https:";
+  const h = new Headers({ "content-type": "application/json; charset=utf-8" });
+  h.append("set-cookie", sessionCookie(token, https, 365));
+  h.append("set-cookie", adminDeviceCookie(dev, https));
+  return new Response(JSON.stringify({ ok: true, csrf, panel_url: `/panel/${tok}`, user: { id: uid, role: "admin" } }), { status: 201, headers: h });
+}, { csrf: false });
+
+// ═══ الباقات العامة (FREE نشط — PRO/VIP Coming Soon بلا أي شراء) ═══
+route("GET", "/api/plans", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT id, name, price_dzd, period, ai_quota_daily, ai_quota_monthly, features, active, buyable FROM plans ORDER BY sort").all<any>();
+  return json({ plans: results ?? [], payments_enabled: (await paymentsEnabled(env)) ? 1 : 0 });
+});
+
+// ═══ الدفع: كل المسارات مغلقة حتى payments_enabled=1 (خامِلة بحكم التصميم) ═══
+route("POST", "/api/payments/checkout", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const kind = b.kind === "credits" ? "credits" : "plan";
+  const planId = String(b.plan_id ?? "");
+  const plan = await env.DB.prepare("SELECT * FROM plans WHERE id = ? AND active = 1 AND buyable = 1").bind(planId).first<any>();
+  if (kind === "plan" && !plan) return bad("not_buyable", 400);
+  const amount = kind === "plan" ? Number(plan.price_dzd) : Math.ceil(Number(b.credits ?? 0) / 100) * Number(await getSetting(env, "credits_price_dzd_per_100", "300"));
+  if (kind !== "plan" && (!amount || amount < 100)) return bad("invalid_amount");
+  const ikey = idemKeyOf(s.userId, kind, kind === "plan" ? planId : String(b.credits ?? 0));
+  const exist = await env.DB.prepare("SELECT id, reference, amount_dzd FROM payments WHERE idempotency_key = ? AND status = 'pending'").bind(ikey).first<any>();
+  if (exist) return json({ ok: true, payment_id: exist.id, reference: exist.reference, amount_dzd: exist.amount_dzd, pay_url: null });
+  const ref = genReference(hex(16));
+  if (!REF_RE.test(ref)) return bad("server_error", 500);
+  const pid = id("pay");
+  await env.DB.prepare("INSERT INTO payments (id, user_id, kind, plan_id, credits, amount_dzd, reference, status, idempotency_key, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+    .bind(pid, s.userId, kind, kind === "plan" ? planId : null, kind === "credits" ? Number(b.credits ?? 0) : 0, amount, ref, "pending", ikey, now()).run();
+  await finAudit(env, s.userId, "checkout_created", pid, `${kind} amount=${amount}`);
+  return json({ ok: true, payment_id: pid, reference: ref, amount_dzd: amount, pay_url: null });
+}, { auth: true, csrf: true });
+
+// Webhook: موقّع HMAC — بلا توقيع صحيح: رفض 401 + سطر تدقيق مالي
+route("POST", "/api/payments/webhook/:provider", async (req, env, _s, p) => {
+  if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
+  const raw = await req.text();
+  const secret = await getSetting(env, `webhook_secret_${p.provider}`, "");
+  const sig = req.headers.get("x-signature") ?? "";
+  if (!(await verifyWebhookSig(raw, sig, secret))) {
+    await finAudit(env, `webhook:${p.provider}`, "webhook_rejected", "", `bad signature (${sig.length} chars)`);
+    return bad("invalid_signature", 401);
+  }
+  let b: any = {};
+  try { b = JSON.parse(raw); } catch { return bad("invalid_payload", 400); }
+  const ref = String(b.reference ?? "");
+  if (!REF_RE.test(ref)) return bad("invalid_reference");
+  const pay = await env.DB.prepare("SELECT * FROM payments WHERE reference = ?").bind(ref).first<any>();
+  if (!pay) { await finAudit(env, `webhook:${p.provider}`, "unknown_reference", "", ref); return bad("invalid_reference", 404); }
+  // المكرر: مرجع مزود سبق استخدامه
+  const provRef = String(b.provider_ref ?? "");
+  if (provRef) {
+    const dupl = await env.DB.prepare("SELECT id FROM payments WHERE provider_ref = ? AND id != ?").bind(provRef, pay.id).first<any>();
+    if (dupl) { await finAudit(env, `webhook:${p.provider}`, "duplicate_provider_ref", pay.id, provRef); return bad("duplicate_transaction", 409); }
+  }
+  if (pay.status !== "pending") return json({ ok: true, already: pay.status }); // idempotency الردود المتكررة
+  const amount = Number(b.amount_dzd ?? 0);
+  const to: PayState = String(b.status) === "paid" ? "confirmed" : "rejected";
+  // المبلغ المضبوط + القواعد الحتمية
+  if (to === "confirmed" && !amountExact(amount, pay.amount_dzd)) {
+    await finAudit(env, `webhook:${p.provider}`, "amount_mismatch", pay.id, `got=${amount} want=${pay.amount_dzd}`);
+    await env.DB.prepare("UPDATE payments SET risk_flags = ?, provider = ?, provider_ref = ? WHERE id = ?")
+      .bind(JSON.stringify(["amount_mismatch"]), p.provider, provRef, pay.id).run();
+    return bad("amount_mismatch", 409);
+  }
+  if (!canTransit(pay.status, to)) return bad("invalid_transition", 409);
+  const ageH = Math.max(0, (now() - Number(pay.created_at)) / 36e5);
+  const v24 = await env.DB.prepare("SELECT COUNT(*) AS c FROM payments WHERE user_id = ? AND created_at > ?").bind(pay.user_id, now() - 864e5).first<any>();
+  const flags = riskFlags({ userPayments24h: Number(v24?.c ?? 0), userConfirmedTotal: 0, amount: pay.amount_dzd, accountAgeH: ageH });
+  if (to === "confirmed" && flags.length >= 2) {
+    await env.DB.prepare("UPDATE payments SET status = 'pending', provider = ?, provider_ref = ?, risk_flags = ? WHERE id = ?")
+      .bind(p.provider, provRef, JSON.stringify(flags), pay.id).run();
+    await finAudit(env, `webhook:${p.provider}`, "held_for_review", pay.id, flags.join(","));
+    return json({ ok: true, held: true, flags });
+  }
+  await env.DB.prepare("UPDATE payments SET status = ?, provider = ?, provider_ref = ?, confirmed_at = ? WHERE id = ?")
+    .bind(to, p.provider, provRef, to === "confirmed" ? now() : null, pay.id).run();
+  if (to === "confirmed") {
+    if (pay.kind === "plan") await env.DB.prepare("UPDATE users SET plan_id = ? WHERE id = ?").bind(pay.plan_id, pay.user_id).run();
+    else {
+      const bal = await env.DB.prepare("SELECT COALESCE(SUM(delta),0) AS b FROM credit_ledger WHERE user_id = ?").bind(pay.user_id).first<any>();
+      const nb = Number(bal?.b ?? 0) + Number(pay.credits);
+      await env.DB.prepare("INSERT INTO credit_ledger (id, user_id, delta, reason, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,?,?)")
+        .bind(id("cl"), pay.user_id, Number(pay.credits), "topup", pay.id, nb, now()).run();
+    }
+  }
+  await finAudit(env, `webhook:${p.provider}`, to, pay.id, `ref=${ref} amount=${pay.amount_dzd}`);
+  return json({ ok: true, status: to });
+});
+
+// ═══ مسارات إدارة الدفع والإعدادات (خلف بوابة اللوحة المركزية) ═══
+route("GET", "/api/admin/settings", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT k, v, updated_at, updated_by FROM settings ORDER BY k").all<any>();
+  return json({ settings: results ?? [] });
+});
+route("PUT", "/api/admin/settings", async (req, env, s) => {
+  if (!s) return bad("not_found", 404);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const allow = ["payments_enabled", "ai_free_daily", "ai_free_monthly", "credits_price_dzd_per_100", "webhook_secret_chargily", "webhook_secret_sofizpay"];
+  let n = 0;
+  for (const [k, v] of Object.entries(b)) {
+    if (!allow.includes(k)) continue;
+    await setSetting(env, k, String(v).slice(0, 200), s.userId); n++;
+  }
+  await audit(env, s.userId, "settings_update", `${n} keys`);
+  return json({ ok: true, updated: n });
+});
+route("GET", "/api/admin/plans", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT * FROM plans ORDER BY sort").all<any>();
+  return json({ plans: results ?? [] });
+});
+route("PUT", "/api/admin/plans/:id", async (req, env, s, p) => {
+  if (!s) return bad("not_found", 404);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const price = Math.max(0, Math.min(9999999, Number(b.price_dzd ?? 0)));
+  await env.DB.prepare("UPDATE plans SET price_dzd = ?, active = ?, buyable = ? WHERE id = ?")
+    .bind(price, b.active ? 1 : 0, b.buyable ? 1 : 0, p.id).run();
+  await audit(env, s.userId, "plan_update", `${p.id} price=${price} active=${b.active ? 1 : 0} buyable=${b.buyable ? 1 : 0}`);
+  return json({ ok: true });
+});
+route("GET", "/api/admin/payments", async (req, env) => {
+  const st = new URL(req.url).searchParams.get("status");
+  const rows = st
+    ? await env.DB.prepare("SELECT p.*, u.email, u.name FROM payments p JOIN users u ON u.id = p.user_id WHERE p.status = ? ORDER BY p.created_at DESC LIMIT 100").bind(st).all<any>()
+    : await env.DB.prepare("SELECT p.*, u.email, u.name FROM payments p JOIN users u ON u.id = p.user_id ORDER BY p.created_at DESC LIMIT 100").all<any>();
+  return json({ payments: rows.results ?? [] });
+});
+route("POST", "/api/admin/payments/:id/status", async (req, env, s, p) => {
+  if (!s) return bad("not_found", 404);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const to = String(b.status ?? "");
+  if (!canTransit("pending", to as PayState) && to !== "refunded") return bad("invalid_transition", 400);
+  const pay = await env.DB.prepare("SELECT * FROM payments WHERE id = ?").bind(p.id).first<any>();
+  if (!pay) return bad("not_found", 404);
+  if (!canTransit(pay.status, to as PayState)) return bad("invalid_transition", 409);
+  await env.DB.prepare("UPDATE payments SET status = ?, confirmed_at = ? WHERE id = ?").bind(to, to === "confirmed" || to === "refunded" ? now() : pay.confirmed_at, p.id).run();
+  await finAudit(env, s.userId, `manual_${to}`, p.id, `was=${pay.status}`);
+  return json({ ok: true });
+});
+route("GET", "/api/admin/devices", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT id, label, created_at, last_seen, revoked FROM admin_devices ORDER BY created_at DESC LIMIT 50").all<any>();
+  return json({ devices: results ?? [] });
+});
+route("POST", "/api/admin/devices/:id/revoke", async (req, env, s, p) => {
+  if (!s) return bad("not_found", 404);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  await env.DB.prepare("UPDATE admin_devices SET revoked = 1 WHERE id = ?").bind(p.id).run();
+  await audit(env, s.userId, "device_revoke", p.id);
+  return json({ ok: true });
+});
+route("GET", "/api/admin/audit-financial", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT * FROM financial_audit ORDER BY at DESC LIMIT 200").all<any>();
+  return json({ audit: results ?? [] });
+});
+// تدوير رابط اللوحة: القديم يموت فوراً — الجديد يُعرض مرة واحدة
+route("POST", "/api/admin/rotate-panel", async (_r, env, s) => {
+  if (!s) return bad("not_found", 404);
+  let secret = await getAdminMeta(env, "path_secret");
+  if (!secret) { secret = hex(32); await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('path_secret', ?)").bind(secret).run(); }
+  const tok = b62Of(await hmacHex(secret, s.userId + hex(16))).slice(0, 28);
+  await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('panel_hash', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v")
+    .bind(await sha256hex(tok)).run();
+  await audit(env, s.userId, "panel_rotated", "");
+  return json({ ok: true, panel_url: `/panel/${tok}` });
+});
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
@@ -672,6 +899,14 @@ export default {
         if (r.m !== req.method) continue;
         const params = matchPath(r.pat, path);
         if (!params) continue;
+        // بوابة الإدارة المركزية: مسار اللوحة السري + جهاز مدير صالح + جلسة مدير — وإلا 404 صامت
+        if (r.pat.startsWith("/api/admin") && r.pat !== "/api/admin/setup" && r.pat !== "/api/admin/setup-status") {
+          if (!s || s.role !== "admin") return bad("not_found", 404);
+          const ph = await getAdminMeta(env, "panel_hash");
+          const xp = req.headers.get("x-panel") ?? "";
+          if (!ph || !xp || (await sha256hex(xp)) !== ph) return bad("not_found", 404);
+          if (!(await verifyAdminDevice(env, req))) return bad("not_found", 404);
+        }
         try {
           return await r.h(req, env, s, params);
         } catch (err: any) {
@@ -679,6 +914,18 @@ export default {
         }
       }
       return bad("not_found", 404);
+    }
+    // الإعداد لمرة واحدة: يختفي تماماً بعد إنشاء المالك
+    if (path === "/setup") {
+      if ((await getAdminMeta(env, "setup_done")) === "1") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
+      return env.ASSETS.fetch(new Request(new URL("/", req.url).toString(), { headers: req.headers, method: "GET" }));
+    }
+    // لوحة الإدارة: العنوان الحقيقي مشتق مختلط — /admin الوهمية وكل مسار آخر 404
+    if (path.startsWith("/panel/")) {
+      const tok = path.slice("/panel/".length).replace(/\/+$/, "");
+      const ph = await getAdminMeta(env, "panel_hash");
+      if (!tok || !ph || (await sha256hex(tok)) !== ph) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
+      return env.ASSETS.fetch(new Request(new URL("/", req.url).toString(), { headers: req.headers, method: "GET" }));
     }
     return env.ASSETS.fetch(req);
   },

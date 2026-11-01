@@ -38,9 +38,9 @@ export async function createSession(env: Env, userId: string): Promise<{ token: 
   return { token, csrf };
 }
 
-export function sessionCookie(token: string, secureHttps: boolean): string {
+export function sessionCookie(token: string, secureHttps: boolean, days = 30): string {
   const secure = secureHttps ? " Secure;" : "";
-  return `nk_s=${token}; Path=/; HttpOnly; SameSite=Lax;${secure} Max-Age=${30 * 86400}`;
+  return `nk_s=${token}; Path=/; HttpOnly; SameSite=Lax;${secure} Max-Age=${days * 86400}`;
 }
 export const clearCookie = `nk_s=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 
@@ -113,4 +113,51 @@ export async function notify(env: Env, userId: string, type: string, body: strin
 export async function audit(env: Env, adminId: string, action: string, detail = ""): Promise<void> {
   await env.DB.prepare("INSERT INTO audit (id, admin_id, action, detail, created_at) VALUES (?,?,?,?,?)")
     .bind(id("a"), adminId, action, clip(detail, 300), now()).run();
+}
+
+// ═══ Stage 2: أدوات الحماية المالية والإدارة ═══
+export async function sha256hex(s: string): Promise<string> {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+export async function hmacHex(secret: string, msg: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
+  return [...new Uint8Array(sig)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+export function timingSafeEq(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+const B62 = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+export function b62Of(hexs: string): string {
+  let out = "";
+  for (let i = 0; i + 3 < hexs.length; i += 4) out += B62[parseInt(hexs.slice(i, i + 4), 16) % B62.length];
+  return out;
+}
+export async function getSetting(env: Env, k: string, dflt = ""): Promise<string> {
+  const r = await env.DB.prepare("SELECT v FROM settings WHERE k = ?").bind(k).first<any>();
+  return r?.v ?? dflt;
+}
+export async function setSetting(env: Env, k: string, v: string, by: string): Promise<void> {
+  await env.DB.prepare("INSERT INTO settings (k, v, updated_at, updated_by) VALUES (?,?,?,?) ON CONFLICT(k) DO UPDATE SET v = excluded.v, updated_at = excluded.updated_at, updated_by = excluded.updated_by")
+    .bind(k, v, now(), by).run();
+}
+export async function getAdminMeta(env: Env, k: string): Promise<string> {
+  const r = await env.DB.prepare("SELECT v FROM admin_meta WHERE k = ?").bind(k).first<any>();
+  return r?.v ?? "";
+}
+export function adminDeviceCookie(token: string, https: boolean): string {
+  const secure = https ? " Secure;" : "";
+  return `nk_ad=${token}; Path=/; HttpOnly; SameSite=Strict;${secure} Max-Age=${365 * 86400}`;
+}
+export async function verifyAdminDevice(env: Env, req: Request): Promise<boolean> {
+  const tok = parseCookies(req)["nk_ad"];
+  if (!tok || tok.length < 40) return false;
+  const h = await sha256hex(tok);
+  const row = await env.DB.prepare("SELECT id FROM admin_devices WHERE token_hash = ? AND revoked = 0").bind(h).first<any>();
+  if (row) await env.DB.prepare("UPDATE admin_devices SET last_seen = ? WHERE id = ?").bind(now(), row.id).run();
+  return !!row;
 }

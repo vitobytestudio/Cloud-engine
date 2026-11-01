@@ -67,6 +67,12 @@ jobs:
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV لـNAKSAB جاهزان"
 
+      - name: ترحيلات متسامحة (أعمدة Stage 2 على قاعدة قائمة)
+        working-directory: naksab
+        run: |
+          npx wrangler d1 execute DB --remote -y --command "ALTER TABLE users ADD COLUMN plan_id TEXT NOT NULL DEFAULT 'free'" >/dev/null 2>&1 || true
+          echo "::notice::الترحيلات المتسامحة انتهت"
+
       - name: المخطط (idempotent — CREATE IF NOT EXISTS) + تصنيفات البذور
         working-directory: naksab
         run: |
