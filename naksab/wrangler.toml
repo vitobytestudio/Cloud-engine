@@ -1,0 +1,21 @@
+name = "naksab"
+main = "src/index.ts"
+compatibility_date = "2026-01-15"
+workers_dev = true
+
+[assets]
+directory = "public"
+binding = "ASSETS"
+
+[vars]
+ENVIRONMENT = "production"
+ADMIN_BOOTSTRAP_EMAIL = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "naksab-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "00000000000000000000000000000000"

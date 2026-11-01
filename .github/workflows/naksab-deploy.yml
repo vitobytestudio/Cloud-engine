@@ -1,0 +1,224 @@
+name: "NAKSAB — نشر على workers.dev"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "naksab/**"
+      - ".github/workflows/naksab-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: naksab-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: تثبيت الحزم
+        working-directory: naksab
+        run: npm install --no-audit --no-fund
+
+      - name: تجهيز قاعدة D1 ومساحة KV (إنشاء إن لم يوجدا — برمجياً فقط)
+        working-directory: naksab
+        run: |
+          ACC="$CLOUDFLARE_ACCOUNT_ID"
+          RESP=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database?per_page=100")
+          OKF=$(echo "$RESP" | jq -r '.success')
+          [ "$OKF" = "True" ] || [ "$OKF" = "true" ] || echo "::warning::D1-list: $(echo "$RESP" | jq -c '.errors')"
+          D1_ID=$(echo "$RESP" | jq -r '.result[] | select(.name=="naksab-db") | .uuid' | head -1)
+          if [ -z "$D1_ID" ]; then
+            CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
+              -d '{"name":"naksab-db"}')
+            D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
+            echo "::notice::أُنشئت قاعدة naksab-db لأول مرة"
+          else
+            echo "::notice::naksab-db القائمة قيد الاستخدام — بيانات NAKSAB محفوظة"
+          fi
+          [ -n "$D1_ID" ] || { echo "::error::تعذر تأمين قاعدة naksab-db"; exit 1; }
+          KR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
+          KV_ID=$(echo "$KR" | jq -r '.result[] | select(.title=="naksab-cache") | .id' | head -1)
+          if [ -z "$KV_ID" ]; then
+            CK=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
+              "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces" \
+              -d '{"title":"naksab-cache"}')
+            KV_ID=$(echo "$CK" | jq -r '.result.id // empty')
+            [ -n "$KV_ID" ] || echo "::warning::KV-create: $(echo "$CK" | jq -c '.errors')"
+          fi
+          [ -n "$KV_ID" ] || { echo "::error::تعذر تجهيز مساحة KV"; exit 1; }
+          sed -i "s/00000000-0000-0000-0000-000000000000/$D1_ID/" wrangler.toml
+          sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
+          echo "::notice::D1 وKV لـNAKSAB جاهزان"
+
+      - name: المخطط (idempotent — CREATE IF NOT EXISTS) + تصنيفات البذور
+        working-directory: naksab
+        run: |
+          npx wrangler d1 execute DB --remote -y --file schema.sql
+          npx wrangler d1 execute DB --remote -y --file seed.sql
+          TABLES=$(npx wrangler d1 execute DB --remote -y --json --command "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table'" 2>/dev/null | grep -oE '"n":[0-9]+' | head -1)
+          echo "::notice::قاعدة naksab-db جاهزة — $TABLES"
+
+      - name: بريد المدير الأولي (من متغيرات GitHub إن عُرِّف)
+        working-directory: naksab
+        env:
+          BOOTSTRAP_EMAIL: ${{ vars.NAKSAB_ADMIN_BOOTSTRAP_EMAIL || secrets.NAKSAB_ADMIN_BOOTSTRAP_EMAIL }}
+        run: |
+          if [ -n "$BOOTSTRAP_EMAIL" ]; then
+            ESC=$(printf '%s' "$BOOTSTRAP_EMAIL" | sed 's/[&|]/\\&/g')
+            sed -i "s/^ADMIN_BOOTSTRAP_EMAIL = \"\"/ADMIN_BOOTSTRAP_EMAIL = \"$ESC\"/" wrangler.toml
+            LEN=${#BOOTSTRAP_EMAIL}
+            echo "::notice::ADMIN_BOOTSTRAP_EMAIL مثبَّت (طول $LEN — القيمة لا تُطبع)"
+          else
+            echo "::notice::لا بريد مدير أولي — الترقية تتم يدوياً عبر D1 لاحقاً"
+          fi
+
+      - name: تشخيص AI_KEYS (الطول وأسماء المفاتيح فقط — لا قيم أبداً)
+        env:
+          SEC_AI_KEYS: ${{ secrets.AI_KEYS }}
+          VAR_AI_KEYS: ${{ vars.AI_KEYS }}
+        run: |
+          echo "::notice::الطول secrets.AI_KEYS = ${#SEC_AI_KEYS} | الطول vars.AI_KEYS = ${#VAR_AI_KEYS}"
+          SRC="$SEC_AI_KEYS"
+          [ -n "$SRC" ] || SRC="$VAR_AI_KEYS"
+          if [ -z "$SRC" ]; then echo "::warning::الحزمة فارغة في الخانتين"; exit 0; fi
+          NAMES=""
+          case "$SRC" in
+            '{'*)
+              echo "::notice::التنسيق: JSON"
+              NAMES="$(printf '%s' "$SRC" | grep -oE '"[A-Za-z0-9_]+"[[:space:]]*:' | tr -d '" :' | sort -u)"
+              ;;
+            *)
+              NAMES="$(printf '%s' "$SRC" | grep -oE '(^|[[:space:]])(exports?[[:space:]]+)?[A-Za-z0-9_]+[[:space:]]*[=:]' | sed -E "s/^([[:space:]]+)?(exports?[[:space:]]+)?//; s/[[:space:]]*[=:]$//" | sort -u)"
+              if [ -z "$NAMES" ]; then NAMES="$(printf '%s' "$SRC" | grep -oE '^[A-Za-z0-9_]+' | sort -u)"; echo "::notice::التنسيق: أسطر بلا فاصل = أو : (إظهار أول كلمة)"; fi
+              ;;
+          esac
+          printf '%s\n' "$NAMES" | while read -r K; do [ -n "$K" ] && echo "::notice::اسم داخل الحزمة: $K"; done
+
+      - name: مفاتيح مزودي الذكاء (من أسرار GitHub إلى أسرار Worker — لا تُطبع أبداً)
+        working-directory: naksab
+        env:
+          AI_KEYS: ${{ secrets.AI_KEYS || vars.AI_KEYS }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.GOOGLE_AI_API_KEY || secrets.GEMINI_KEY || secrets.GOOGLE_API_KEY || secrets.GOOGLE_API_TOKEN || secrets.GEMINI }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || secrets.GROQ_KEY || secrets.GROQ }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || secrets.OPENROUTER_KEY || secrets.OPENROUTER_API_TOKEN || secrets.OPENROUTER_TOKEN || secrets.OPENROUTER }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY || secrets.HF_TOKEN || secrets.HUGGINGFACE }}
+        run: |
+          N=0
+          INSTALLED=" "
+          put_key () {
+            CANON="$1"; VAL="$2"
+            if [ -z "$VAL" ]; then return 0; fi
+            case "$INSTALLED" in *" $CANON "*) return 0;; esac
+            printf '%s' "$VAL" | npx wrangler secret put "$CANON" >/dev/null 2>&1
+            echo "::notice::مفتاح ${CANON%%_API_KEY} مُثبَّت"
+            INSTALLED="$INSTALLED$CANON "
+            N=$((N+1))
+          }
+          canon_for () {
+            case "$1" in
+              GEMINI_API_KEY|GOOGLE_AI_API_KEY|GEMINI_KEY|GOOGLE_API_KEY|GOOGLE_API_TOKEN|GOOGLE_TOKEN|GEMINI) printf 'GEMINI_API_KEY';;
+              GROQ_API_KEY|GROQ_API_TOKEN|GROQ_KEY|GROQ) printf 'GROQ_API_KEY';;
+              OPENROUTER_API_KEY|OPENROUTER_KEY|OPENROUTER_API_TOKEN|OPENROUTER_TOKEN|OPENROUTER) printf 'OPENROUTER_API_KEY';;
+              HUGGINGFACE_API_KEY|HF_TOKEN|HF_API_TOKEN|HUGGINGFACE) printf 'HUGGINGFACE_API_KEY';;
+              *) printf '';;
+            esac
+          }
+          if [ -n "$AI_KEYS" ]; then
+            case "$AI_KEYS" in '{'*) AI_KEYS="$(printf '%s' "$AI_KEYS" | python3 -c 'import sys,json;o=json.load(sys.stdin);print("\n".join(k+"="+v for k,v in o.items() if isinstance(v,str)))')" ;; esac
+            while IFS= read -r LINE; do
+              LINE="$(printf '%s' "$LINE" | tr -d '\r')"
+              LINE="${LINE#"${LINE%%[![:space:]]*}"}"; LINE="${LINE%"${LINE##*[![:space:]]}"}"
+              if [ -z "$LINE" ]; then continue; fi
+              case "$LINE" in "#"*) continue;; esac
+              case "$LINE" in
+                *=*) RAW_NAME="${LINE%%=*}"; VAL="${LINE#*=}";;
+                *:*) RAW_NAME="${LINE%%:*}"; VAL="${LINE#*:}";;
+                *)
+                  set -- $LINE
+                  if [ "$#" -eq 2 ]; then RAW_NAME="$1"; VAL="$2"; else continue; fi;;
+              esac
+              RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d '"' | tr -d "'" | tr '[:lower:]' '[:upper:]')"
+              RAW_NAME="${RAW_NAME#EXPORT}"; RAW_NAME="${RAW_NAME#_}"
+              RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d ' ')"
+              RAW_NAME="${RAW_NAME%:}"
+              VAL="${VAL#"${VAL%%[![:space:]]*}"}"; VAL="${VAL%"${VAL##*[![:space:]]}"}"
+              VAL="${VAL%,}"; VAL="${VAL%\"}"; VAL="${VAL#\"}"; VAL="${VAL%'}"; VAL="${VAL#'}"
+              if [ -z "$RAW_NAME" ]; then continue; fi
+              CANON="$(canon_for "$RAW_NAME")"
+              if [ -z "$CANON" ]; then
+                echo "::notice::AI_KEYS يحوي اسماً غير مستخدم في NAKSAB: $RAW_NAME — متجاوز"
+                continue
+              fi
+              put_key "$CANON" "$VAL"
+            done <<< "$AI_KEYS"
+          fi
+          for NAME in GEMINI_API_KEY GROQ_API_KEY OPENROUTER_API_KEY HUGGINGFACE_API_KEY; do
+            put_key "$NAME" "${!NAME}"
+          done
+          echo "::notice::انتهى تثبيت مفاتيح NAKSAB — $N مزوداً (سلسلة الراوتر: Gemini → Groq → OpenRouter)"
+
+      - name: النشر
+        working-directory: naksab
+        run: |
+          npx wrangler deploy 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
+          if [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; else echo "::notice::تم النشر — راجع عنوان workers.dev في السجل"; fi
+
+      - name: فحص ما بعد النشر (ثابت + مصادقة كاملة بكوكي وCSRF)
+        working-directory: naksab
+        run: |
+          URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
+          [ -n "$URL" ] || { echo "::warning::لم يُستخرج العنوان — تجاوز"; exit 0; }
+          sleep 5
+          H=$(curl -s "$URL/api/health")
+          echo "health: $H"
+          echo "$H" | grep -q '"ok":true' || { echo "::error::فحص /api/health فشل"; exit 1; }
+          C=$(curl -s "$URL/api/categories")
+          echo "$C" | grep -q '"categories"' || { echo "::error::فحص /api/categories فشل"; exit 1; }
+          echo "::notice::المنصة حية على $URL — التصنيفات تعمل"
+          export PURL="$URL"
+          node <<'NODE' || { echo "::error::فحص المصادقة على الإنتاج فشل"; exit 1; }
+          const enc = new TextEncoder();
+          const k0Of = async (email, password) => {
+            const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
+            const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode("naksab:a1:" + email.toLowerCase()), iterations: 200000 }, key, 256);
+            return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
+          };
+          const em = "deploy-check-" + Date.now() + "@nk.test";
+          const k0 = await k0Of(em, "StrongPass9x");
+          const reg = await fetch(process.env.PURL + "/api/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: em, name: "Deploy Check", username: "chk" + Date.now().toString(36), k0, role: "client" }) });
+          const regD = await reg.json().catch(() => ({}));
+          console.log("::notice::probe-register: " + reg.status + " " + JSON.stringify(regD).slice(0, 120));
+          const log = await fetch(process.env.PURL + "/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: em, k0 }) });
+          const logD = await log.json().catch(() => ({}));
+          console.log("::notice::probe-login: " + log.status);
+          if (reg.status !== 201 || log.status !== 200 || !logD.csrf) process.exit(1);
+          const sc = (log.headers.getSetCookie ? log.headers.getSetCookie() : [log.headers.get("set-cookie")]).map(c => c.split(";")[0]).join("; ");
+          const me = await fetch(process.env.PURL + "/api/me", { headers: { cookie: sc } });
+          const meD = await me.json().catch(() => ({}));
+          console.log("::notice::probe-me: " + me.status + " role=" + (meD.user?.role ?? "none"));
+          const svc = await fetch(process.env.PURL + "/api/services?q=web");
+          console.log("::notice::probe-services: " + svc.status);
+          if (me.status !== 200 || meD.user?.role !== "client") process.exit(1);
+          console.log("::notice::المصادقة والجلسة وCSRF على الإنتاج سليمة ✓");
+          NODE
+          npx wrangler d1 execute DB --remote -y --command "DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'deploy-check-%')" >/dev/null 2>&1 || true
+          npx wrangler d1 execute DB --remote -y --command "DELETE FROM users WHERE email LIKE 'deploy-check-%'" >/dev/null 2>&1 || true
+          echo "::notice::حساب الفحص التجريبي نُظّف"
