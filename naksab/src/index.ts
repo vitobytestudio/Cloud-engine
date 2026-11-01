@@ -94,7 +94,8 @@ route("GET", "/api/me", async (_r, env, s) => {
     || await env.DB.prepare("SELECT id, name, ai_quota_daily, ai_quota_monthly FROM plans WHERE id = 'free'").first<any>();
   const daily = Number(plan?.ai_quota_daily ?? 10), monthly = Number(plan?.ai_quota_monthly ?? 100);
   const kv = await env.CACHE_KV.get(`rl:ai:${s.userId}`); const kvm = await env.CACHE_KV.get(`rl:aim:${s.userId}`);
-  return json({ user: u, csrf: s.csrf, plan: { id: plan?.id ?? "free", name: plan?.name ?? "FREE" }, ai: { used_daily: Number(kv ?? 0), limit_daily: daily, used_monthly: Number(kvm ?? 0), limit_monthly: monthly, price_dzd_per_100: Number(await getSetting(env, "credits_price_dzd_per_100", "300")) } });
+  const bal = await env.DB.prepare("SELECT COALESCE(SUM(delta),0) AS b FROM credit_ledger WHERE user_id = ?").bind(s.userId).first<any>();
+  return json({ user: u, csrf: s.csrf, plan: { id: plan?.id ?? "free", name: plan?.name ?? "FREE" }, ai: { used_daily: Number(kv ?? 0), limit_daily: daily, used_monthly: Number(kvm ?? 0), limit_monthly: monthly, balance: Number(bal?.b ?? 0), price_dzd_per_100: Number(await getSetting(env, "credits_price_dzd_per_100", "300")) } });
 });
 
 // ═══ التصنيفات العامة ═══
@@ -730,6 +731,13 @@ route("POST", "/api/admin/setup", async (req, env) => {
   return new Response(JSON.stringify({ ok: true, csrf, panel_url: `/panel/${tok}`, user: { id: uid, role: "admin" } }), { status: 201, headers: h });
 }, { csrf: false });
 
+// عروضي: كل عروض المستقل مع الطلب وحالته
+route("GET", "/api/proposals/mine", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const { results } = await env.DB.prepare("SELECT pr.id, pr.amount, pr.days, pr.status, pr.created_at, rq.title AS request_title, rq.id AS request_id FROM proposals pr JOIN requests rq ON rq.id = pr.request_id WHERE pr.freelancer_id = ? ORDER BY pr.created_at DESC LIMIT 50").bind(s.userId).all<any>();
+  return json({ proposals: results ?? [] });
+});
+
 // ═══ الباقات العامة (FREE نشط — PRO/VIP Coming Soon بلا أي شراء) ═══
 route("GET", "/api/plans", async (_r, env) => {
   const { results } = await env.DB.prepare("SELECT id, name, price_dzd, period, ai_quota_daily, ai_quota_monthly, features, active, buyable FROM plans ORDER BY sort").all<any>();
@@ -746,21 +754,35 @@ route("POST", "/api/payments/checkout", async (req, env, s) => {
   const planId = String(b.plan_id ?? "");
   const plan = await env.DB.prepare("SELECT * FROM plans WHERE id = ? AND active = 1 AND buyable = 1").bind(planId).first<any>();
   if (kind === "plan" && !plan) return bad("not_buyable", 400);
-  const amount = kind === "plan" ? Number(plan.price_dzd) : Math.ceil(Number(b.credits ?? 0) / 100) * Number(await getSetting(env, "credits_price_dzd_per_100", "300"));
-  if (kind !== "plan" && (!amount || amount < 100)) return bad("invalid_amount");
-  const ikey = idemKeyOf(s.userId, kind, kind === "plan" ? planId : String(b.credits ?? 0));
+  const credits = Math.floor(Number(b.credits ?? 0));
+  if (kind !== "plan" && (!credits || credits < 100 || credits > 5000)) return bad("invalid_amount");
+  const amount = kind === "plan" ? Number(plan.price_dzd) : Math.ceil(credits / 100) * Number(await getSetting(env, "credits_price_dzd_per_100", "300"));
+  if (!amount || amount < 100 || amount > 10000000) return bad("invalid_amount");
+  const ikey = idemKeyOf(s.userId, kind, kind === "plan" ? planId : String(credits));
   const exist = await env.DB.prepare("SELECT id, reference, amount_dzd FROM payments WHERE idempotency_key = ? AND status = 'pending'").bind(ikey).first<any>();
   if (exist) return json({ ok: true, payment_id: exist.id, reference: exist.reference, amount_dzd: exist.amount_dzd, pay_url: null });
   const ref = genReference(hex(16));
   if (!REF_RE.test(ref)) return bad("server_error", 500);
   const pid = id("pay");
   await env.DB.prepare("INSERT INTO payments (id, user_id, kind, plan_id, credits, amount_dzd, reference, status, idempotency_key, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
-    .bind(pid, s.userId, kind, kind === "plan" ? planId : null, kind === "credits" ? Number(b.credits ?? 0) : 0, amount, ref, "pending", ikey, now()).run();
+    .bind(pid, s.userId, kind, kind === "plan" ? planId : null, kind === "credits" ? credits : 0, amount, ref, "pending", ikey, now()).run();
   await finAudit(env, s.userId, "checkout_created", pid, `${kind} amount=${amount}`);
   return json({ ok: true, payment_id: pid, reference: ref, amount_dzd: amount, pay_url: null });
 }, { auth: true, csrf: true });
 
 // Webhook: موقّع HMAC — بلا توقيع صحيح: رفض 401 + سطر تدقيق مالي
+// تطبيق عملية مؤكدة: باقة → plan_id، أو رصيد → credit_ledger — يستخدمه الـwebhook والتأكيد اليدوي معاً
+async function applyConfirmedPay(env: Env, pay: any): Promise<void> {
+  if (pay.kind === "plan") {
+    await env.DB.prepare("UPDATE users SET plan_id = ? WHERE id = ?").bind(pay.plan_id, pay.user_id).run();
+  } else {
+    const bal = await env.DB.prepare("SELECT COALESCE(SUM(delta),0) AS b FROM credit_ledger WHERE user_id = ?").bind(pay.user_id).first<any>();
+    const nb = Number(bal?.b ?? 0) + Number(pay.credits);
+    await env.DB.prepare("INSERT INTO credit_ledger (id, user_id, delta, reason, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,?,?)")
+      .bind(id("cl"), pay.user_id, Number(pay.credits), "topup", pay.id, nb, now()).run();
+  }
+}
+
 route("POST", "/api/payments/webhook/:provider", async (req, env, _s, p) => {
   if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
   const raw = await req.text();
@@ -793,7 +815,9 @@ route("POST", "/api/payments/webhook/:provider", async (req, env, _s, p) => {
     return bad("amount_mismatch", 409);
   }
   if (!canTransit(pay.status, to)) return bad("invalid_transition", 409);
-  const ageH = Math.max(0, (now() - Number(pay.created_at)) / 36e5);
+  // عمر الحساب من users.created_at (وليس عمر العملية!) — العلم account_fresh يعني حساباً حديث الإنشاء
+  const u0 = await env.DB.prepare("SELECT created_at FROM users WHERE id = ?").bind(pay.user_id).first<any>();
+  const ageH = Math.max(0, (now() - Number(u0?.created_at ?? pay.created_at)) / 36e5);
   const v24 = await env.DB.prepare("SELECT COUNT(*) AS c FROM payments WHERE user_id = ? AND created_at > ?").bind(pay.user_id, now() - 864e5).first<any>();
   const flags = riskFlags({ userPayments24h: Number(v24?.c ?? 0), userConfirmedTotal: 0, amount: pay.amount_dzd, accountAgeH: ageH });
   if (to === "confirmed" && flags.length >= 2) {
@@ -804,15 +828,7 @@ route("POST", "/api/payments/webhook/:provider", async (req, env, _s, p) => {
   }
   await env.DB.prepare("UPDATE payments SET status = ?, provider = ?, provider_ref = ?, confirmed_at = ? WHERE id = ?")
     .bind(to, p.provider, provRef, to === "confirmed" ? now() : null, pay.id).run();
-  if (to === "confirmed") {
-    if (pay.kind === "plan") await env.DB.prepare("UPDATE users SET plan_id = ? WHERE id = ?").bind(pay.plan_id, pay.user_id).run();
-    else {
-      const bal = await env.DB.prepare("SELECT COALESCE(SUM(delta),0) AS b FROM credit_ledger WHERE user_id = ?").bind(pay.user_id).first<any>();
-      const nb = Number(bal?.b ?? 0) + Number(pay.credits);
-      await env.DB.prepare("INSERT INTO credit_ledger (id, user_id, delta, reason, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,?,?)")
-        .bind(id("cl"), pay.user_id, Number(pay.credits), "topup", pay.id, nb, now()).run();
-    }
-  }
+  if (to === "confirmed") await applyConfirmedPay(env, pay);
   await finAudit(env, `webhook:${p.provider}`, to, pay.id, `ref=${ref} amount=${pay.amount_dzd}`);
   return json({ ok: true, status: to });
 });
@@ -866,6 +882,7 @@ route("POST", "/api/admin/payments/:id/status", async (req, env, s, p) => {
   if (!pay) return bad("not_found", 404);
   if (!canTransit(pay.status, to as PayState)) return bad("invalid_transition", 409);
   await env.DB.prepare("UPDATE payments SET status = ?, confirmed_at = ? WHERE id = ?").bind(to, to === "confirmed" || to === "refunded" ? now() : pay.confirmed_at, p.id).run();
+  if (to === "confirmed") await applyConfirmedPay(env, pay); // المراجعة اليدوية المؤكدة تُطبق الأثر المالي فعلياً
   await finAudit(env, s.userId, `manual_${to}`, p.id, `was=${pay.status}`);
   return json({ ok: true });
 });

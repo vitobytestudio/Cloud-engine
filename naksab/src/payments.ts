@@ -47,11 +47,12 @@ export async function finAudit(env: Env, actor: string, action: string, paymentI
 export const idemKeyOf = (userId: string, kind: string, plan: string): string => `${userId}:${kind}:${plan}:${new Date().toISOString().slice(0, 10)}`;
 
 // قواعد مخاطرة حتمية — تُرجع أعلاماً؛ 2+ أعلام = تعليق يدوي للمراجعة (لا تأكيد آلي)
+// ملاحظة العتبة: سقف الشحن 5,000 رصيد = 15,000دج كحد أقصى، فـ"العملية الكبيرة" هنا = 10,000دج+ (وليس 50k غير القابلة للتحقيق)
 export type RiskCtx = { userPayments24h: number; userConfirmedTotal: number; amount: number; accountAgeH: number };
 export function riskFlags(c: RiskCtx): string[] {
   const f: string[] = [];
   if (c.userPayments24h >= 5) f.push("velocity_high");
-  if (c.userConfirmedTotal === 0 && c.amount > 50000) f.push("first_large");
+  if (c.userConfirmedTotal === 0 && c.amount >= 10000) f.push("first_large");
   if (c.accountAgeH < 1) f.push("account_fresh");
   return f;
 }
