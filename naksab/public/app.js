@@ -135,6 +135,7 @@ en: {
   remember_me: "Keep me signed in on this device",
   ai_credits: "AI structuring", used_today: "Used today", quota_monthly: "This month",
   topup_soon: "Top-up in DZD — coming soon", plan_l: "Plan",
+  balance_l: "Credits balance",
   admin_settings: "Settings", payments_tab: "Payments", devices_tab: "Devices", fin_audit: "Financial audit",
   payments_enabled_l: "Enable payments (charges real money)", ai_daily_l: "FREE daily AI limit",
   ai_monthly_l: "FREE monthly AI limit", credits_price_l: "Credits price (DZD / 100 calls)",
@@ -299,6 +300,7 @@ ar: {
   remember_me: "أبقني مسجلاً على هذا الجهاز",
   ai_credits: "الهيكلة الذكية", used_today: "استُخدم اليوم", quota_monthly: "هذا الشهر",
   topup_soon: "شحن بالدينار — قريباً", plan_l: "الباقة",
+  balance_l: "رصيد العمليات",
   admin_settings: "الإعدادات", payments_tab: "المدفوعات", devices_tab: "الأجهزة", fin_audit: "التدقيق المالي",
   payments_enabled_l: "تفعيل الدفع (يحصّل أموالاً حقيقية)", ai_daily_l: "حد الذكاء اليومي لـFREE",
   ai_monthly_l: "حد الذكاء الشهري لـFREE", credits_price_l: "سعر الرصيد (دج / 100 عملية)",
@@ -845,6 +847,7 @@ async function viewDashboard() {
     <div class="row" style="gap:18px">
       <div class="tiny muted">${T.used_today}: <b style="color:var(--fg)">${S.ai.used_daily}/${S.ai.limit_daily}</b></div>
       <div class="tiny muted">${T.quota_monthly}: <b style="color:var(--fg)">${S.ai.used_monthly}/${S.ai.limit_monthly}</b></div>
+      <span class="chip brand">${T.balance_l}: ${S.ai.balance ?? 0}</span>
       <span class="chip">${T.topup_soon}</span>
     </div></div></div>` : "";
   shell(`<div class="wrap page-head"><h1>${T.dashboard}</h1><p>${S.user.role === "admin" ? T.dash_sub_admin : isFreelancer ? T.dash_sub_freelancer : T.dash_sub_client}</p></div>
@@ -930,7 +933,10 @@ async function viewDashboard() {
       $$("[data-propose]", body).forEach((b) => b.addEventListener("click", () => proposalModal(b.dataset.propose)));
     }
     if (tab === "proposals") {
-      body.innerHTML = `<div class="empty">${T.proposals_hint}</div>`;
+      const r = await api("/api/proposals/mine");
+      body.innerHTML = (r.data.proposals || []).map((pp) => `<a class="card hover card-pad" href="#/request/${pp.request_id}" style="display:block;margin-bottom:10px">
+        <div class="spread"><b style="font-size:14.5px">${esc(pp.request_title)}</b><span class="chip ${pp.status === "accepted" ? "ok" : pp.status === "pending" ? "warn" : ""}">${pp.status}</span></div>
+        <div class="tiny muted" style="margin-top:6px">${money(pp.amount)} · ${pp.days}d · ${ago(pp.created_at)}</div></a>`).join("") || `<div class="empty">${T.proposals_hint}</div>`;
     }
     if (tab === "projects") {
       const r = await api("/api/projects");
