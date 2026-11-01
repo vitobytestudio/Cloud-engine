@@ -71,7 +71,7 @@ en: {
   post_sub: "Describe it in plain words — our AI turns it into a structured request. Manual form always available.",
   describe: "Describe your project",
   raw_hint: "I need a landing page for my SaaS with pricing section and contact form. Budget around $300, need it in 2 weeks…",
-  ai_structure: "✦ Structure it with AI", write_first: "Write at least a sentence first.", analyzing: "Analyzing…",
+  ai_structure: "✦ Structure it with Vito AI", write_first: "Write at least a sentence first.", analyzing: "Analyzing…",
   ai_down: "AI is unavailable right now — fill the form manually below, everything works.",
   structured_via: "Structured via", clarify: "Clarify:", review_publish: "Review and publish.",
   full_description: "Full description", budget_from: "Budget from", budget_to: "Budget to", skills_needed: "Skills needed (comma-separated)",
@@ -108,7 +108,7 @@ en: {
   about_trust_h: "Trust & Safety",
   about_trust_p: "Completion requires confirmation from both sides. Reviews can carry delivery evidence, suspicious patterns get flagged for human moderation, and everyone can appeal. Sponsored content is always labeled. Your private conversations never leave the platform.",
   about_tech_h: "Technology",
-  about_tech_p: "Runs on Cloudflare Workers with D1 as the source of truth and KV for caching. AI features (request structuring) use official provider APIs with graceful fallback — the marketplace works even when AI is down.",
+  about_tech_p: "NAKSAB runs on Cloudflare's global edge network, with continuous delivery through GitHub. Smart structuring is powered by Vito AI Hub — the in-house AI of Vito Byte Studio — with graceful fallback, so the marketplace keeps working even when smart features are busy.",
   designed_by: "Designed, built and operated by",
   admin_sub: "Platform health and moderation.",
   users: "Users", freelancers: "Freelancers", requests: "Requests", projects: "Projects", completed: "Completed", flagged: "Flagged reviews",
@@ -125,7 +125,7 @@ en: {
     invalid_username: "Username: 3-24 lowercase letters, numbers or dashes.",
     invalid_credentials: "Wrong email or password.", csrf: "Session expired — try again.",
     auth_required: "Please sign in first.", freelancer_only: "Only freelancer accounts can do this.",
-    too_many: "Too many attempts — wait a moment.", ai_unavailable: "AI is busy — use the manual form below.",
+    too_many: "Too many attempts — wait a moment.", ai_unavailable: "Vito AI is busy right now — use the manual form below.",
     project_not_completed: "You can review after both sides confirm completion.",
     already_reviewed: "You already reviewed this project.", already_proposed: "You already sent a proposal here.",
     invalid_url: "Enter a valid https:// link.", forbidden: "Not allowed.",
@@ -202,7 +202,7 @@ ar: {
   post_sub: "صِفه بكلمات بسيطة — يحوّله ذكاؤنا إلى طلب مهيكل. النموذج اليدوي متاح دائماً.",
   describe: "صِف مشروعك",
   raw_hint: "أحتاج صفحة هبوط لمنصتي مع قسم أسعار ونموذج تواصل. الميزانية حوالي 300$، خلال أسبوعين…",
-  ai_structure: "✦ هيكله بالذكاء الاصطناعي", write_first: "اكتب جملة واحدة على الأقل أولاً.", analyzing: "جارٍ التحليل…",
+  ai_structure: "✦ هيكله بـVito AI", write_first: "اكتب جملة واحدة على الأقل أولاً.", analyzing: "جارٍ التحليل…",
   ai_down: "الذكاء غير متاح الآن — املأ النموذج يدوياً أدناه، كل شيء يعمل.",
   structured_via: "هُيكل عبر", clarify: "وضّح:", review_publish: "راجع وانشر.",
   full_description: "الوصف الكامل", budget_from: "الميزانية من", budget_to: "إلى", skills_needed: "المهارات المطلوبة (مفصولة بفواصل)",
@@ -239,7 +239,7 @@ ar: {
   about_trust_h: "الثقة والسلامة",
   about_trust_p: "الاكتمال يتطلب تأكيد الطرفين. التقييمات قد تحمل دليل تسليم، والأنماط المشبوهة تُعلَّم لمراجعة بشرية، ولكل طرف حق الاعتراض. المحتوى الممول موسوم دائماً. محادثاتك الخاصة لا تغادر المنصة.",
   about_tech_h: "التقنية",
-  about_tech_p: "يعمل على Cloudflare Workers مع D1 كمصدر الحقيقة وKV للتخزين المؤقت. ميزات الذكاء (هيكلة الطلبات) تستخدم واجهات رسمية مع بدائل تلقائية — السوق يعمل حتى عند تعطل الذكاء.",
+  about_tech_p: "يعمل NAKSAB على شبكة Cloudflare الحافية عالمياً، مع نشر متصل عبر GitHub. الهيكلة الذكية مدعومة بـVito AI Hub — الذكاء الخاص من VITO BYTE STUDIO — مع بدائل تلقائية، ليبقى السوق عاملاً حتى عند انشغال الميزات الذكية.",
   designed_by: "تصميم وبناء وتشغيل",
   admin_sub: "صحة المنصة والمراجعة.",
   users: "مستخدمون", freelancers: "مستقلون", requests: "طلبات", projects: "مشاريع", completed: "مكتملة", flagged: "تقييمات معلَّمة",
@@ -256,7 +256,7 @@ ar: {
     invalid_username: "اسم المستخدم: 3–24 حرفاً صغيراً أو أرقاماً أو شرطات.",
     invalid_credentials: "بريد أو كلمة مرور خاطئة.", csrf: "انتهت الجلسة — حاول مجدداً.",
     auth_required: "سجّل دخولك أولاً.", freelancer_only: "هذا الإجراء لحسابات المستقلين فقط.",
-    too_many: "محاولات كثيرة — انتظر قليلاً.", ai_unavailable: "الذكاء مشغول — استخدم النموذج اليدوي أدناه.",
+    too_many: "محاولات كثيرة — انتظر قليلاً.", ai_unavailable: "Vito AI مشغول الآن — استخدم النموذج اليدوي أدناه.",
     project_not_completed: "التقييم بعد تأكيد الطرفين للاكتمال.",
     already_reviewed: "قيّمت هذا المشروع مسبقاً.", already_proposed: "أرسلت عرضاً هنا مسبقاً.",
     invalid_url: "أدخل رابط https صالحاً.", forbidden: "غير مسموح.",
@@ -472,8 +472,7 @@ async function showNotifications() {
 
 // ═══════════ الصفحة الرئيسية ═══════════
 const TECHS = [
-  ["Cloudflare Workers", "#f38020", "W"], ["Cloudflare D1", "#f38020", "D"], ["Cloudflare KV", "#f38020", "KV"],
-  ["Workers AI", "#f38020", "AI"], ["Gemini", "#4285f4", "✦"], ["Groq", "#f55036", "Gq"], ["OpenRouter", "#8b5cf6", "O/R"], ["GitHub Actions", "#e6edf3", "GH"],
+  ["Cloudflare", "#f38020", "CF"], ["GitHub", "#e6edf3", "GH"], ["Vito AI Hub", "#7c6cff", "V"],
 ];
 
 async function viewHome() {
@@ -952,7 +951,7 @@ async function viewRequestNew() {
     $("#r-min").value = d.budget_min || ""; $("#r-max").value = d.budget_max || "";
     $("#r-skills").value = (d.skills || []).join(", ");
     msg.hidden = false; msg.className = "msg ok";
-    msg.textContent = `${T.structured_via} ${r.data.via}.` + ((d.questions || []).length ? ` ${T.clarify} ${d.questions.join(" ")}` : ` ${T.review_publish}`);
+    msg.textContent = `${T.structured_via} Vito AI Hub.` + ((d.questions || []).length ? ` ${T.clarify} ${d.questions.join(" ")}` : ` ${T.review_publish}`);
   });
   $("#r-go").addEventListener("click", async () => {
     const r = await api("/api/requests", "POST", {

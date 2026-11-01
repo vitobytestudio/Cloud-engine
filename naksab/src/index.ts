@@ -237,7 +237,7 @@ route("POST", "/api/requests/structure", async (req, env, s) => {
     const m = r.text.match(/\{[\s\S]*\}/);
     const j = JSON.parse(m ? m[0] : "");
     return json({
-      ok: true, via: r.via,
+      ok: true, via: "vito-ai",
       data: {
         title: clip(String(j.title ?? ""), 120),
         category: clip(String(j.category ?? ""), 40),
