@@ -3,13 +3,15 @@ const L = {
 en: {
   tagline: "Hire the right talent, with confidence",
   h1a: "Hire the right talent,", h1b: "with confidence.",
-  lead: "Describe your project in plain words. NAKSAB structures it, matches you with the right professionals, and keeps the whole engagement — proposals, milestones, deliverables, reviews — in one honest workspace.",
-  hero_badge: "Stage 1 live — early access",
+  lead: "One simple idea: you say what you need, trusted professionals send you their offers, and you get it done together in one safe place.",
+  hero_badge: "Free during launch — everything priced in DZD",
+  door_c_h: "I need something done", door_c_s: "Post it free — offers come to you",
+  door_f_h: "I'm a professional", door_f_s: "Join free — clients are looking for you",
   built_on: "Built on production-grade technology",
   how_eyebrow: "How it works", how_title: "From idea to delivery, in three steps",
-  step1_t: "Describe your project", step1_d: "Plain language is enough. Our AI structures it into a clear, professional request — budgets and requirements stay yours.",
-  step2_t: "Get matched, not spammed", step2_d: "A weighted matching engine ranks the right professionals by skills, availability and reputation. You choose who sees your project.",
-  step3_t: "Ship with proof", step3_d: "Milestones, messages and deliverables in one room. Completion needs mutual confirmation — reviews stay honest.",
+  step1_t: "Say what you need", step1_d: "Write your project in plain words — a couple of lines is enough.",
+  step2_t: "Offers come to you", step2_d: "The right professionals send their offers, best matches first. You compare and choose.",
+  step3_t: "Get it done, safely", step3_d: "Chat, agree on milestones, confirm the delivery together — then rate each other.",
   cats_eyebrow: "Categories", cats_title: "Every craft, one marketplace",
   talent_eyebrow: "Featured professionals", talent_title: "Talent that ships", browse_all: "Browse all talent →",
   cta_title: "Ready when you are.", cta_sub: "Join the first wave of professionals and clients building on NAKSAB.",
@@ -172,13 +174,15 @@ en: {
 ar: {
   tagline: "وظِّف الموهبة المناسبة، بثقة",
   h1a: "وظِّف الموهبة المناسبة،", h1b: "بثقة.",
-  lead: "صِف مشروعك بكلمات بسيطة. يتولى NAKSAB هيكلته، ويوصلك بالمحترفين المناسبين، ويدير التعاون كله — العروض والمراحل والتسليمات والتقييمات — في مساحة عمل واحدة صادقة.",
-  hero_badge: "المرحلة الأولى لايف — وصول مبكر",
+  lead: "فكرة واحدة بسيطة: تقول ما تحتاجه، فيرسل لك المحترفون الموثوقون عروضهم، وتنجزون العمل معاً في مكان واحد آمن.",
+  hero_badge: "مجاني خلال الإطلاق — كل الأسعار بالدينار",
+  door_c_h: "عندي عمل أريد إنجازه", door_c_s: "انشره مجاناً — وتأتيك العروض",
+  door_f_h: "أنا محترف أبحث عن عمل", door_f_s: "انضم مجاناً — العملاء في انتظارك",
   built_on: "مبني على تقنيات بدرجة إنتاج",
   how_eyebrow: "كيف يعمل", how_title: "من فكرة إلى تسليم، في ثلاث خطوات",
-  step1_t: "صِف مشروعك", step1_d: "اللغة البسيطة كافية. يهيكل ذكاؤنا الطلب إلى طلب واضح واحترافي — الميزانية والمتطلبات تبقى بيدك.",
-  step2_t: "مطابقة مدروسة لا إزعاج", step2_d: "محرك مطابقة موزون يرتّب المحترفين الأنسب حسب المهارات والتوفر والسمعة. أنت تختار من يرى مشروعك.",
-  step3_t: "تنفيذ بدليل", step3_d: "مراحل ورسائل وتسليمات في غرفة واحدة. الاكتمال يتطلب تأكيد الطرفين — لتبقى التقييمات صادقة.",
+  step1_t: "قل ماذا تحتاج", step1_d: "اكتب مشروعك بكلمات عادية — سطران تكفيان.",
+  step2_t: "تأتيك العروض", step2_d: "المحترفون الأنسب يرسلون عروضهم ومرتبين الأفضل أولاً — قارن واختر.",
+  step3_t: "أنجز بسلام", step3_d: "محادثة ومراحل متفق عليها وتسليم تؤكده معاً — ثم يقيّم كل طرف الآخر.",
   cats_eyebrow: "التصنيفات", cats_title: "كل حرفة، في سوق واحد",
   talent_eyebrow: "محترفون مختارون", talent_title: "مواهب تُنجز", browse_all: "تصفح كل المواهب →",
   cta_title: "جاهزون حين تكون جاهزاً.", cta_sub: "انضم إلى الموجة الأولى من المحترفين والعملاء الذين يبنون على NAKSAB.",
@@ -491,7 +495,7 @@ function footerHtml() {
 }
 
 // ═══════════ المصادقة ═══════════
-function authModal(mode) {
+function authModal(mode, presetRole) {
   const m = $("#modal");
   m.hidden = false;
   m.innerHTML = `<div class="modal">
@@ -503,7 +507,7 @@ function authModal(mode) {
       <div class="field"><label>${T.full_name}</label><input id="a-name" /></div>
       <div class="field"><label>${T.username}</label><input id="a-user" placeholder="lowercase-username" dir="ltr" /></div>
     </div>
-    <div class="field"><label>${T.role}</label><select id="a-role"><option value="freelancer">${T.freelancer}</option><option value="client">${T.client}</option></select></div>` : ""}
+    <div class="field"><label>${T.role}</label><select id="a-role"><option value="freelancer" ${presetRole === "freelancer" ? "selected" : ""}>${T.freelancer}</option><option value="client" ${presetRole === "client" ? "selected" : ""}>${T.client}</option></select></div>` : ""}
     <button class="btn primary" id="a-go" style="width:100%;justify-content:center;margin-top:6px">${mode === "login" ? T.sign_in : T.get_started}</button>
     ${mode === "login" ? `<label class="tiny muted" style="display:flex;gap:8px;align-items:center;margin-top:10px;cursor:pointer"><input type="checkbox" id="a-rem" checked style="width:auto" /> ${T.remember_me}</label>` : ""}
     <div class="msg" id="a-msg" hidden></div>
@@ -566,6 +570,10 @@ async function viewHome() {
           <a class="btn primary" href="#/request/new">${T.post_project} →</a>
           <a class="btn" href="#/talent">${T.explore}</a>
         </div>
+        ${!S.user ? `<div class="doors reveal" aria-label="Choose your path">
+          <button class="door" id="door-c"><span class="d-ic">◆</span><span class="d-tx"><b>${T.door_c_h}</b><span>${T.door_c_s}</span></span><span class="d-ar">→</span></button>
+          <button class="door" id="door-f"><span class="d-ic">✦</span><span class="d-tx"><b>${T.door_f_h}</b><span>${T.door_f_s}</span></span><span class="d-ar">→</span></button>
+        </div>` : ""}
         <div class="hero-stats reveal">
           <div class="stat"><b data-count="${Math.max(6, (S._stats?.freelancers ?? 6))}">0</b><span>${T.st_freelancers}</span></div>
           <div class="stat"><b data-count="${Math.max(4, (S._stats?.services ?? 4))}">0</b><span>${T.st_services}</span></div>
@@ -647,6 +655,8 @@ async function viewHome() {
   });
   api("/api/services").then((r) => { S._stats = S._stats || {}; S._stats.services = (r.data.services || []).length; });
   $("#cta-up")?.addEventListener("click", () => S.user ? (location.hash = "#/dashboard") : authModal("register"));
+  $("#door-c")?.addEventListener("click", () => authModal("register", "client"));
+  $("#door-f")?.addEventListener("click", () => authModal("register", "freelancer"));
   animateCounts();
 }
 
