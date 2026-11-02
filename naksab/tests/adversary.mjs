@@ -176,7 +176,7 @@ const xss = await call(victim, "/api/services", "POST", { title: `<img src=x one
 const xssGet = await call(victim, `/api/services/${xss.data.id}`);
 check("XSS يُخزن نصاً فقط (لا تنفيذ خادمي)", xss.status === 201 && xssGet.data.service?.title.includes("<img"), JSON.stringify(xssGet.data).slice(0, 80));
 const fs2 = await import("node:fs");
-const uiSrc = fs2.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+const uiSrc = fs2.readFileSync(new URL("../ui/app.js", import.meta.url), "utf8");
 check("الواجهة تُهرِّب عنوان الخدمة (esc)", uiSrc.includes("esc(sv.title)") || uiSrc.includes("${esc(sv.title)}"));
 
 // ═══ 9) حدود المعدل: آخر شيء (تستنزف عدادات IP) ═══

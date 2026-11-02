@@ -180,6 +180,10 @@ jobs:
           done
           echo "::notice::انتهى تثبيت مفاتيح NAKSAB — $N مزوداً (سلسلة الراوتر: Gemini → Groq → OpenRouter)"
 
+      - name: بناء الواجهة (esbuild minify — المصدر المقروء في المستودع فقط)
+        working-directory: naksab
+        run: npm run build
+
       - name: النشر
         working-directory: naksab
         run: |
