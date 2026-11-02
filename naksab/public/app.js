@@ -25,6 +25,10 @@ en: {
   freelancer: "Freelancer", client: "Client",
   save: "Save", cancel: "Cancel", send: "Send", loading: "Loading…", search: "Search…",
   all_categories: "All categories", no_results: "Nothing here yet.",
+  guide_new_h: "Be the first here.", guide_new_p: "This space fills with real work from the community. Post your project today and get proposals from vetted freelancers — free during launch.", guide_new_cta: "Post a project — it's free",
+  guide_new_f: "Be the first to offer here.", guide_newf_p: "Create your free profile, publish your first service, and let clients find you while the marketplace is young.", guide_newf_cta: "Create your free profile",
+  guide_disc_h: "The gallery is warming up.", guide_disc_p: "Freelancers are publishing their best work right now. While the gallery fills, you can already post a project and get matched.", guide_disc_cta: "Post your project",
+  guide_tal_h: "Talent is arriving.", guide_tal_p: "Algeria's freelancers are claiming their profiles these days. Clients post free; freelancers join free.", guide_tal_cta: "Join free",
   foot_desc: "The professional marketplace where talent meets opportunity — matching, project management and reputation in one honest workspace.",
   foot_market: "Marketplace", foot_account: "Account", foot_platform: "Platform",
   f_talent: "Browse talent", f_post: "Post a project", f_join: "Join as freelancer", f_hire: "Hire talent",
@@ -190,6 +194,10 @@ ar: {
   freelancer: "مستقل", client: "عميل",
   save: "حفظ", cancel: "إلغاء", send: "إرسال", loading: "جارٍ التحميل…", search: "ابحث…",
   all_categories: "كل التصنيفات", no_results: "لا شيء هنا بعد.",
+  guide_new_h: "كن الأول هنا.", guide_new_p: "هذه المساحة تمتلئ بأعمال حقيقية من المجتمع. انشر طلبك اليوم واستلم عروضاً من مستقلين موثوقين — مجاناً خلال الإطلاق.", guide_new_cta: "انشر مشروعك — مجاناً",
+  guide_new_f: "كن أول من يعرض هنا.", guide_newf_p: "أنشئ ملفك المجاني، انشر خدمتك الأولى، ودع العملاء يجدونك والسوق في بدايته.", guide_newf_cta: "أنشئ ملفك المجاني",
+  guide_disc_h: "المعرض يشتعل الآن.", guide_disc_p: "المستقلون ينشرون أفضل أعمالهم هذه الأيام. وبينما يمتلئ المعرض، يمكنك نشر طلبك ومطابقة المواهب فوراً.", guide_disc_cta: "انشر طلبك",
+  guide_tal_h: "المواهب تصل الآن.", guide_tal_p: "مستقلو الجزائر يحجزون صفحاتهم هذه الأيام. العملاء ينشرون مجاناً، والمستقلون ينضمون مجاناً.", guide_tal_cta: "انضم مجاناً",
   foot_desc: "السوق الاحترافي الذي تلتقي فيه الموهبة بالفرصة — مطابقة وإدارة مشاريع وسمعة في مساحة عمل واحدة صادقة.",
   foot_market: "السوق", foot_account: "الحساب", foot_platform: "المنصة",
   f_talent: "تصفح المواهب", f_post: "اعرض مشروعك", f_join: "انضم كمستقل", f_hire: "وظّف موهبة",
@@ -665,6 +673,12 @@ function talentCard(u) {
   </a>`;
 }
 const jsonChips = (s, n) => { try { return (JSON.parse(s || "[]") || []).slice(0, n).map((x) => `<span class="chip">${esc(x)}</span>`).join(""); } catch { return ""; } };
+// حالة فارغة إرشادية: السوق الجديد لا يقول «فارغ» بل يدعو لأول خطوة
+const guideEmpty = (k) => `<div class="empty" style="max-width:560px;margin:24px auto;padding:28px 22px">
+    <div style="font-weight:700;font-size:17px;margin-bottom:8px">${T["guide_" + k + "_h"]}</div>
+    <p class="muted" style="font-size:13.5px;line-height:1.9;margin-bottom:16px">${T["guide_" + k + "_p"]}</p>
+    ${S.user ? `<a class="btn primary sm" href="${S.user.role === "client" ? "#/request/new" : "#/dashboard"}">${S.user.role === "client" ? T.new_request : T.dashboard}</a>` : `<button class="btn primary sm" id="guide-go">${T["guide_" + k + "_cta"]}</button>`}
+  </div>`;
 
 // ═══════════ استكشاف المواهب ═══════════
 async function viewTalent(params) {
@@ -676,7 +690,8 @@ async function viewTalent(params) {
   const load = async () => {
     const q = $("#q").value.trim(), cat = $("#cat").value;
     const r = await api(`/api/freelancers?q=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`);
-    $("#list").innerHTML = (r.data.freelancers || []).map(talentCard).join("") || `<div class="empty">${T.no_results}</div>`;
+    $("#list").innerHTML = (r.data.freelancers || []).map(talentCard).join("") || guideEmpty("tal");
+    $("#guide-go")?.addEventListener("click", () => authModal("register"));
   };
   let h; $("#q").addEventListener("input", () => { clearTimeout(h); h = setTimeout(load, 300); });
   $("#cat").addEventListener("change", load);
@@ -701,7 +716,8 @@ async function viewServices(params) {
         <div style="font-size:13px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(sv.description)}</div>
         <div class="chips"><span class="chip brand">${esc(sv.category || "general")}</span><span class="chip">${sv.delivery_days} ${T.d_delivery}</span></div>
         <div class="svc-price"><span class="price">${money(sv.price_min, sv.currency)}${sv.price_max > sv.price_min ? `–${money(sv.price_max, sv.currency)}` : ""}</span><span class="stars">${stars(sv.reputation)}</span></div>
-      </a>`).join("") || `<div class="empty">${T.no_results}</div>`;
+      </a>`).join("") || guideEmpty("fre");
+    $("#guide-go")?.addEventListener("click", () => authModal("register"));
   };
   let h; $("#q").addEventListener("input", () => { clearTimeout(h); h = setTimeout(load, 300); });
   $("#cat").addEventListener("change", load);
@@ -802,7 +818,8 @@ async function viewDiscover() {
   const load = async () => {
     const kind = $("#kind").value;
     const r = await api(`/api/discover${kind ? `?kind=${kind}` : ""}`);
-    $("#feed").innerHTML = (r.data.posts || []).map(workCard).join("") || `<div class="empty">${T.no_results}</div>`;
+    $("#feed").innerHTML = (r.data.posts || []).map(workCard).join("") || guideEmpty("disc");
+    $("#guide-go")?.addEventListener("click", () => authModal("register"));
     $$(".like-btn", $("#feed")).forEach((b) => b.addEventListener("click", async () => {
       if (!S.user) return authModal("login");
       const r2 = await api(`/api/portfolio/${b.dataset.id}/like`, "POST", {});
