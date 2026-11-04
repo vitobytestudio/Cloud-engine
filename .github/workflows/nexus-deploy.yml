@@ -22,6 +22,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+      WORKERS_URL: https://nexus.vitobytestudio.workers.dev
     steps:
       - uses: actions/checkout@v4
 
@@ -81,8 +82,7 @@ jobs:
           npx wrangler deploy 2>&1 | tee deploy.log
           RC=${PIPESTATUS[0]}
           set -e
-          URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
-          if [ "$RC" -eq 0 ] && [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; exit 0; fi
+          if [ "$RC" -eq 0 ]; then echo "::notice::LIVE=$WORKERS_URL"; exit 0; fi
           echo "::error::فشل النشر (rc=$RC) — نهاية سجل النشر:"
           grep -aE "ERROR|✘|failed" deploy.log | tail -n 8 | while IFS= read -r line; do echo "::error::${line:0:900}"; done
           tail -n 30 deploy.log | grep -av '^\s*$' | tail -n 9 | while IFS= read -r line; do echo "::notice::${line:0:900}"; done
@@ -91,8 +91,7 @@ jobs:
       - name: فحص ما بعد النشر
         working-directory: nexus
         run: |
-          URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
-          [ -n "$URL" ] || { echo "::error::لا عنوان — فشل النشر"; exit 1; }
+          URL="$WORKERS_URL"
           sleep 5
           H=$(curl -s "$URL/api/health")
           echo "health: $H"
