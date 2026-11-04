@@ -280,3 +280,39 @@ CREATE TABLE IF NOT EXISTS admin_devices (
 );
 CREATE TABLE IF NOT EXISTS admin_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL, updated_at INTEGER, updated_by TEXT DEFAULT '');
+-- العقود والفواتير: أدوات المقاول الذاتي — Devis/Facture بالدينار (طبقة SaaS للفريلانسر)
+CREATE TABLE IF NOT EXISTS docs (
+  id TEXT PRIMARY KEY,
+  owner_id TEXT NOT NULL,
+  kind TEXT NOT NULL,             -- devis (عرض سعر) | facture (فاتورة)
+  seq INTEGER NOT NULL,
+  year TEXT NOT NULL,
+  number TEXT NOT NULL,           -- DEV-2026-001 / FAC-2026-001
+  project_id TEXT DEFAULT '',
+  client_name TEXT NOT NULL,
+  client_info TEXT DEFAULT '',
+  seller_info TEXT DEFAULT '',
+  items TEXT NOT NULL,            -- JSON [{d,q,p}]
+  subtotal REAL NOT NULL,
+  tva_rate REAL NOT NULL DEFAULT 0,
+  tva_amount REAL NOT NULL DEFAULT 0,
+  total REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  notes TEXT DEFAULT '',
+  share_token TEXT NOT NULL,
+  issued_date TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_token ON docs(share_token);
+CREATE INDEX IF NOT EXISTS idx_docs_owner ON docs(owner_id, kind, year, seq);
+-- عملاء الموقع الشخصي: زوار /w/:username يتركون طلباتهم (باب دخول الزبائن)
+CREATE TABLE IF NOT EXISTS site_leads (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  name TEXT NOT NULL,
+  contact TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_leads_user ON site_leads(username, created_at);

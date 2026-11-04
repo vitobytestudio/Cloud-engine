@@ -269,6 +269,62 @@ check("المحتوى الخبيث يُقبل كنص (الإخراج مُهرَ�
 const csrfBad = await fetch(`${BASE}/api/services`, { method: "POST", headers: { "content-type": "application/json", cookie: jar.fre }, body: JSON.stringify({ title: "csrf probe attempt here", description: "no csrf header at all in this request" }) });
 check("بدون CSRF مرفوض (403)", csrfBad.status === 403);
 
+// ═══ المواقع الشخصية (3 قوالب حسب الباقة) + دخول الزبائن + شارة التوثيق ═══
+const nd_siteRes = await fetch(`${BASE}/w/amine-${suffix}`);
+const nd_siteHtml = await nd_siteRes.text();
+check("الموقع الشخصي يُخدم (200 HTML)", nd_siteRes.status === 200 && nd_siteRes.headers.get("content-type")?.includes("text/html"));
+check("القالب الافتراضي Aurora للمجاني", !nd_siteHtml.includes("badge-vip"));
+check("بيانات المستقل تظهر بالموقع", nd_siteHtml.includes("Amine Dev"));
+check("نموذج دخول الزبائن موجود", nd_siteHtml.includes("leadform"));
+const nd_leadRes = await fetch(`${BASE}/api/site/amine-${suffix}/lead`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "زبون الموقع", contact: "0770112233", body: "أحتاج تصميم متجر إلكتروني كامل بصفحة دفع" }) });
+check("زبون الموقع يترك طلباً (عام بلا جلسة)", nd_leadRes.status === 200);
+const nd_leadBad = await fetch(`${BASE}/api/site/amine-${suffix}/lead`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "x", contact: "y", body: "z" }) });
+check("طلب زبون ناقص مرفوض (400)", nd_leadBad.status === 400);
+const nd_leadsList = await call("fre", "/api/site/leads");
+check("صاحب الموقع يرى طلبات زبائنه", (nd_leadsList.data.leads || []).some((l) => l.name === "زبون الموقع"));
+const nd_tplLock = await call("fre", "/api/profile", "PUT", { site_template: "prime" });
+check("قالب VIP مقفل على FREE (403)", nd_tplLock.status === 403);
+const nd_tplAur = await call("fre", "/api/profile", "PUT", { site_template: "aurora" });
+check("اختيار القالب المسموح يعمل", nd_tplAur.ok === true);
+
+// ═══ العقود والفواتير (Devis/Facture) — حساب بالخادم وقفل بعد الإرسال ═══
+const nd_docCli = await call("cli", "/api/docs", "POST", { kind: "devis", client_name: "شركة تجربة", items: [{ d: "خدمة", q: 1, p: 100 }] });
+check("العميل لا ينشئ فواتير (403)", nd_docCli.status === 403);
+const nd_dv1 = await call("fre", "/api/docs", "POST", { kind: "devis", client_name: "شركة النور", client_info: "وهران", seller_info: "مقاول ذاتي — NIK 12345", items: [{ d: "تصميم هوية بصرية", q: 1, p: 25000 }, { d: "ساعة استشارة", q: 2, p: 2000 }], tva_rate: 19 });
+check("إنشاء Devis (201) برقم تسلسلي", nd_dv1.status === 201 && nd_dv1.data.number === "DEV-" + new Date().getFullYear() + "-001", JSON.stringify(nd_dv1.data));
+check("المجاميع محسوبة بالخادم (19%)", nd_dv1.data.subtotal === 29000 && nd_dv1.data.tva_amount === 5510 && nd_dv1.data.total === 34510, JSON.stringify(nd_dv1.data));
+const nd_dvEdit = await call("fre", `/api/docs/${nd_dv1.data.id}`, "PUT", { client_name: "شركة النور", items: [{ d: "تصميم هوية بصرية", q: 1, p: 30000 }], tva_rate: 19 });
+check("تعديل المسودة يعيد الحساب", nd_dvEdit.ok === true && nd_dvEdit.data.total === 35700, JSON.stringify(nd_dvEdit.data));
+const nd_dvSend = await call("fre", `/api/docs/${nd_dv1.data.id}/status`, "POST", { status: "sent" });
+check("إرسال Devis يعمل", nd_dvSend.ok === true);
+const nd_dvEdit2 = await call("fre", `/api/docs/${nd_dv1.data.id}`, "PUT", { client_name: "محاولة تعديل بعد الإرسال", items: [{ d: "x", q: 1, p: 1 }] });
+check("المُرسل مقفل على التعديل (409)", nd_dvEdit2.status === 409);
+const nd_dvBad = await call("fre", `/api/docs/${nd_dv1.data.id}/status`, "POST", { status: "paid" });
+check("انتقال غير مشروع مرفوض (409)", nd_dvBad.status === 409);
+const nd_dvPrint = await fetch(`${BASE}/print/${nd_dv1.data.share_token}`);
+check("طباعة الوثيقة بالتوكن السري (200)", nd_dvPrint.status === 200 && (await nd_dvPrint.text()).includes("DEV-"));
+const nd_fac1 = await call("fre", "/api/docs", "POST", { kind: "facture", client_name: "شركة النور", items: [{ d: "تنفيذ المشروع", q: 1, p: 40000 }] });
+check("الفاتورة الأولى برقمها التسلسلي", nd_fac1.status === 201 && nd_fac1.data.number === "FAC-" + new Date().getFullYear() + "-001", JSON.stringify(nd_fac1.data));
+const nd_doc3 = await call("fre", "/api/docs", "POST", { kind: "devis", client_name: "زبون ثالث", items: [{ d: "خدمة تجاوز الحصة", q: 1, p: 1000 }] });
+check("حصة FREE الشهرية (2) تُطبق (403)", nd_doc3.status === 403, JSON.stringify(nd_doc3.data));
+const nd_docDel = await call("fre", `/api/docs/${nd_fac1.data.id}`, "DELETE", {});
+check("حذف المسودة يعمل", nd_docDel.ok === true);
+const nd_docDel2 = await call("fre", `/api/docs/${nd_dv1.data.id}`, "DELETE", {});
+check("حذف المُرسلة مرفوض (409)", nd_docDel2.status === 409);
+
+// ═══ شارة التوثيق من لوحة الإدارة ═══
+const nd_admUsers = await call("str", "/api/admin/users");
+check("قائمة المستخدمين للإدارة", (nd_admUsers.data.users || []).some((x) => x.username === `amine-${suffix}`));
+const nd_freRow = (nd_admUsers.data.users || []).find((x) => x.username === `amine-${suffix}`);
+await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "POST", { verified: true });
+const nd_siteV = await fetch(`${BASE}/w/amine-${suffix}`);
+const nd_siteVHtml = await nd_siteV.text();
+check("شارة التوثيق تظهر بالموقع بعد الاعتماد", nd_siteVHtml.includes('<span class="vbadge">'));
+await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "POST", { verified: false });
+const nd_meBan = await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "POST", { banned: true });
+check("حظر مستخدم من الإدارة يعمل", nd_meBan.ok === true, JSON.stringify({ s: nd_meBan.status, d: nd_meBan.data }).slice(0, 160));
+await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "POST", { banned: false });
+
 // ═══ النتيجة ═══
 const fails = results.filter((r) => !r).length;
 console.log(`\n═══ NAKSAB harness: ${results.length - fails}/${results.length} نجح ═══`);
