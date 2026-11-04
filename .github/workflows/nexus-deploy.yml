@@ -83,8 +83,9 @@ jobs:
           set -e
           URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
           if [ "$RC" -eq 0 ] && [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; exit 0; fi
-          echo "::error::فشل النشر (rc=$RC) — آخر سجل النشر:"
-          tail -n 40 deploy.log | while IFS= read -r line; do echo "::notice::${line:0:900}"; done
+          echo "::error::فشل النشر (rc=$RC) — نهاية سجل النشر:"
+          grep -aE "ERROR|✘|failed" deploy.log | tail -n 8 | while IFS= read -r line; do echo "::error::${line:0:900}"; done
+          tail -n 30 deploy.log | grep -av '^\s*$' | tail -n 9 | while IFS= read -r line; do echo "::notice::${line:0:900}"; done
           exit 1
 
       - name: فحص ما بعد النشر
