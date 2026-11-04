@@ -24,6 +24,11 @@ id = "00000000000000000000000000000000"
 ENVIRONMENT = "development"
 
 # ——— إزالة كائن v0.9 القديم (ChatRoom) — تصفير v1.0 بلا Durable Objects ———
+# v1 أعيد إعلانه كما نُشر في v0.9 (مطبق عن بعد فيتخطاه الخادم)؛ v2 يحذف الفئة نهائياً.
 [[migrations]]
-tag = "v1-reset"
+tag = "v1"
+new_sqlite_classes = ["ChatRoom"]
+
+[[migrations]]
+tag = "v2"
 deleted_classes = ["ChatRoom"]
