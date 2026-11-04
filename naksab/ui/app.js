@@ -121,6 +121,9 @@ en: {
   tab_flagged: "Flagged reviews", tab_campaigns: "Campaigns", tab_users: "Users", tab_audit: "Audit",
   keep: "Keep", hide: "Hide", no_flagged: "No flagged reviews.",
   approve: "Approve", reject: "Reject", no_campaigns2: "No campaigns.",
+  tab_site: "My site", site_link_l: "Your public website", copy_link: "Copy link", copied: "Copied ✓", site_view: "Open site",
+  site_hint: "Share this link in your bio, WhatsApp and Facebook — visitors become leads here automatically.",
+  tpl_locked: "Needs a higher plan — coming soon.", leads_h: "Client requests from your site", no_leads: "No client requests yet — share your site link!",
   verify: "verify", verified: "✓ verified", ban: "ban", unban: "unban", no_audit: "No admin actions yet.",
   admins_only: "Admins only.",
   broke: "Something broke — try again.",
@@ -292,6 +295,9 @@ ar: {
   tab_flagged: "تقييمات معلَّمة", tab_campaigns: "الحملات", tab_users: "المستخدمون", tab_audit: "سجل التدقيق",
   keep: "إبقاء", hide: "إخفاء", no_flagged: "لا تقييمات معلَّمة.",
   approve: "اعتماد", reject: "رفض", no_campaigns2: "لا حملات.",
+  tab_site: "موقعي", site_link_l: "موقعك العام", copy_link: "انسخ الرابط", copied: "نُسخ ✓", site_view: "افتح الموقع",
+  site_hint: "شارك هذا الرابط في بروفيلك وواتساب وفيسبوك — من يزوره يصبح طلباً محتملاً هنا تلقائياً.",
+  tpl_locked: "يتطلب باقة أعلى — قريباً.", leads_h: "طلبات الزبائن من موقعك", no_leads: "لا طلبات بعد — شارك رابط موقعك!",
   verify: "توثيق", verified: "✓ موثّق", ban: "حظر", unban: "رفع الحظر", no_audit: "لا إجراءات إدارية بعد.",
   admins_only: "للمديرين فقط.",
   broke: "حدث خلل — حاول مجدداً.",
@@ -771,6 +777,7 @@ async function viewProfile(username) {
         <div class="stars" style="font-size:16px">${stars(u.reputation)} <span class="tiny muted">${u.reputation || 0} (${u.reviews_count || 0})</span></div>
         <div class="tiny muted" style="margin:6px 0 14px">${u.completed || 0} ${T.completed_projects}</div>
         <div class="row">
+          ${u.role === "freelancer" ? `<a class="btn sm" href="/w/${esc(u.username)}" target="_blank" style="margin-bottom:8px;display:inline-block">${T.site_view}</a>` : ""}
           ${S.user && S.user.username !== u.username ? `<button class="btn sm" id="follow-btn">${T.follow}</button>` : ""}
           <a class="btn primary sm" href="#/request/new">${T.hire_me}</a>
         </div>
@@ -882,7 +889,7 @@ async function viewDashboard() {
     ${aiCard}
     <div class="tabs" id="d-tabs">
       <button data-t="profile" class="on">${T.tab_profile}</button>
-      ${isFreelancer ? `<button data-t="services">${T.tab_services}</button><button data-t="open">${T.tab_open}</button><button data-t="proposals">${T.tab_proposals}</button>` : `<button data-t="requests">${T.tab_requests}</button>`}
+      ${isFreelancer ? `<button data-t="services">${T.tab_services}</button><button data-t="open">${T.tab_open}</button><button data-t="proposals">${T.tab_proposals}</button><button data-t="site">${T.tab_site}</button>` : `<button data-t="requests">${T.tab_requests}</button>`}
       <button data-t="portfolio">${T.tab_portfolio}</button><button data-t="projects">${T.tab_projects}</button>
     </div>
     <div id="d-body"><div class="skel"></div></div>
@@ -964,6 +971,36 @@ async function viewDashboard() {
       body.innerHTML = (r.data.proposals || []).map((pp) => `<a class="card hover card-pad" href="#/request/${pp.request_id}" style="display:block;margin-bottom:10px">
         <div class="spread"><b style="font-size:14.5px">${esc(pp.request_title)}</b><span class="chip ${pp.status === "accepted" ? "ok" : pp.status === "pending" ? "warn" : ""}">${pp.status}</span></div>
         <div class="tiny muted" style="margin-top:6px">${money(pp.amount)} · ${pp.days}d · ${ago(pp.created_at)}</div></a>`).join("") || `<div class="empty">${T.proposals_hint}</div>`;
+    }
+    if (tab === "site") {
+      const [lr] = await Promise.all([api("/api/site/leads")]);
+      const link = `${location.origin}/w/${S.user.username}`;
+      const plan = S.plan?.id || "free";
+      const allowed = plan === "vip" ? ["aurora", "pulse", "prime"] : plan === "pro" ? ["aurora", "pulse"] : ["aurora"];
+      const cur = S.user.site_template || "aurora";
+      const tpls = [["aurora", "Aurora", "FREE", "Clean & calm"], ["pulse", "Pulse", "PRO", "Motion & pro feel"], ["prime", "Prime", "VIP", "Cinematic + counters"]];
+      body.innerHTML = `<div class="panel" style="margin-bottom:16px"><b style="font-size:14px">${T.site_link_l}</b>
+        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><input readonly value="${link}" id="site-link" dir="ltr" style="flex:1;min-width:220px;font-family:var(--mono);font-size:12.5px"/>
+        <button class="btn sm" id="site-copy">${T.copy_link}</button><a class="btn primary sm" href="${link}" target="_blank">${T.site_view}</a></div>
+        <div class="tiny muted" style="margin-top:10px">${T.site_hint}</div></div>
+        <div class="t-grid" style="margin-bottom:16px">${tpls.map(([id2, nm, tier, desc]) => {
+          const lock = !allowed.includes(id2);
+          return `<div class="card hover card-pad ${cur === id2 ? "on" : ""}" data-tpl="${id2}" style="cursor:pointer;position:relative;${cur === id2 ? "border-color:var(--brand2)" : ""}">
+          <b style="font-size:14px">${nm}</b> <span class="chip ${lock ? "" : "brand"}" style="margin-inline-start:6px">${tier}</span>${cur === id2 ? '<span class="chip ok" style="margin-inline-start:6px">✓</span>' : ""}
+          <div class="tiny muted" style="margin-top:8px">${desc}</div>
+          ${lock ? `<div class="tiny" style="margin-top:8px;color:var(--warn)">${T.tpl_locked}</div>` : ""}</div>`;
+        }).join("")}</div>
+        <h3 style="font-size:15px;margin:4px 0 10px">${T.leads_h}</h3>
+        ${(lr.data.leads || []).map((ld) => `<div class="card card-pad" style="margin-bottom:10px"><div class="spread"><b style="font-size:13.5px">${esc(ld.name)}</b><span class="tiny muted">${ago(ld.created_at)}</span></div>
+        <div class="tiny" style="margin-top:4px;color:var(--brand2);direction:ltr;text-align:start">${esc(ld.contact)}</div>
+        <div style="font-size:13px;margin-top:6px">${esc(ld.body)}</div></div>`).join("") || `<div class="empty">${T.no_leads}</div>`}`;
+      $("#site-copy")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText(link); toast(T.copied); } catch { toast(link); } });
+      $$("[data-tpl]", body).forEach((c) => c.addEventListener("click", async () => {
+        const id2 = c.dataset.tpl;
+        if (!allowed.includes(id2)) return toast(T.tpl_locked);
+        const r = await api("/api/profile", "PUT", { site_template: id2 });
+        if (r.ok) { S.user.site_template = id2; toast(T.saved_t); renderTab("site"); }
+      }));
     }
     if (tab === "projects") {
       const r = await api("/api/projects");

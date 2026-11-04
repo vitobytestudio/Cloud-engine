@@ -7,6 +7,7 @@ import {
   sha256hex, hmacHex, b62Of, timingSafeEq, getSetting, setSetting, getAdminMeta, adminDeviceCookie, verifyAdminDevice,
 } from "./lib";
 import { runTask, STRUCTURE_SYSTEM } from "./ai";
+import { renderSite, renderDocPrint, templateAllowed } from "./sites";
 import { paymentsEnabled, canTransit, genReference, REF_RE, amountExact, verifyWebhookSig, finAudit, idemKeyOf, riskFlags, type PayState } from "./payments";
 
 type Route = { m: string; pat: string; h: (r: Request, e: Env, s: Session, p: Record<string, string>) => Promise<Response>; auth?: boolean; admin?: boolean; csrf?: boolean };
@@ -88,7 +89,7 @@ route("POST", "/api/auth/logout", async (req, env) => {
 
 route("GET", "/api/me", async (_r, env, s) => {
   if (!s) return json({ user: null });
-  const u = await env.DB.prepare("SELECT id, email, username, name, role, headline, bio, avatar_url, country, langs, categories, skills, links, available, verified, reputation, reviews_count, completed FROM users WHERE id = ?").bind(s.userId).first<any>();
+  const u = await env.DB.prepare("SELECT id, email, username, name, role, headline, bio, avatar_url, country, langs, categories, skills, links, available, verified, reputation, reviews_count, completed, plan_id, site_template FROM users WHERE id = ?").bind(s.userId).first<any>();
   // الباقة وحدود الذكاء (كلها من إعدادات الإدارة)
   const plan = await env.DB.prepare("SELECT id, name, ai_quota_daily, ai_quota_monthly FROM plans WHERE id = ?").bind(String((u as any)?.plan_id || "free")).first<any>()
     || await env.DB.prepare("SELECT id, name, ai_quota_daily, ai_quota_monthly FROM plans WHERE id = 'free'").first<any>();
@@ -121,8 +122,16 @@ route("PUT", "/api/profile", async (req, env, s) => {
   const skills = b.skills !== undefined ? jsonArr(JSON.stringify(b.skills ?? []), 15) : JSON.parse(cur.skills || "[]");
   const links = b.links !== undefined ? (Array.isArray(b.links) ? b.links : []).slice(0, 5).map((l: any) => ({ label: clip(String(l.label ?? ""), 30), url: isHttpsUrl(String(l.url ?? "")) ? String(l.url) : "" })) : JSON.parse(cur.links || "[]");
   const available = b.available !== undefined ? (b.available ? 1 : 0) : Number(cur.available);
-  await env.DB.prepare("UPDATE users SET headline=?, bio=?, avatar_url=?, country=?, langs=?, categories=?, skills=?, links=?, available=? WHERE id=?")
-    .bind(headline, bio, avatar, country, langs, JSON.stringify(cats), JSON.stringify(skills), JSON.stringify(links), available, s.userId).run();
+  // قالب الموقع: مقيد بالباقة من الخادم — FREE: aurora فقط، PRO: +pulse، VIP: +prime
+  let siteTpl: string | null = null;
+  if (b.site_template !== undefined) {
+    const want = String(b.site_template ?? "");
+    const planRow = await env.DB.prepare("SELECT plan_id FROM users WHERE id = ?").bind(s.userId).first<any>();
+    if (["aurora", "pulse", "prime"].includes(want) && templateAllowed(String(planRow?.plan_id || "free"), want)) siteTpl = want;
+    else return bad("template_locked", 403);
+  }
+  await env.DB.prepare(`UPDATE users SET headline=?, bio=?, avatar_url=?, country=?, langs=?, categories=?, skills=?, links=?, available=?${siteTpl !== null ? ", site_template=?" : ""} WHERE id=?`)
+    .bind(...(siteTpl !== null ? [headline, bio, avatar, country, langs, JSON.stringify(cats), JSON.stringify(skills), JSON.stringify(links), available, siteTpl, s.userId] : [headline, bio, avatar, country, langs, JSON.stringify(cats), JSON.stringify(skills), JSON.stringify(links), available, s.userId])).run();
   return json({ ok: true });
 }, { auth: true, csrf: true });
 
@@ -692,7 +701,6 @@ function matchPath(pat: string, path: string): Record<string, string> | null {
   return params;
 }
 
-
 // ═══ الإدارة: الإعداد لمرة واحدة + الرابط المشتق المختلط ═══
 route("GET", "/api/admin/setup-status", async (_r, env) => json({ done: (await getAdminMeta(env, "setup_done")) === "1" }));
 
@@ -833,6 +841,166 @@ route("POST", "/api/payments/webhook/:provider", async (req, env, _s, p) => {
   return json({ ok: true, status: to });
 });
 
+// ═══ العقود والفواتير: أدوات المقاول الذاتي — Devis/Facture بالدينار (طبقة SaaS للفريلانسر) ═══
+// كل المبالغ تُحسب في الخادم حصراً؛ الحصرة: FREE ‏2 شهرياً (قابلة للضبط من الإدارة)، PRO لاحقاً بلا حد.
+const DOC_KINDS: Record<string, string[]> = {
+  devis: ["sent", "cancelled"],            // من مسودة
+  facture: ["sent", "cancelled"],
+};
+const DOC_TRANSIT: Record<string, Record<string, string[]>> = {
+  devis: { sent: ["accepted", "rejected", "cancelled"], accepted: [], rejected: [], cancelled: [], draft: ["sent", "cancelled"] },
+  facture: { sent: ["paid", "cancelled"], paid: [], cancelled: [], draft: ["sent", "cancelled"] },
+};
+const r2 = (n: number) => Math.round(Number(n) * 100) / 100;
+
+async function docOwnerCheck(env: Env, userId: string): Promise<boolean> {
+  const u = await env.DB.prepare("SELECT role FROM users WHERE id = ?").bind(userId).first<any>();
+  return u?.role === "freelancer";
+}
+
+route("POST", "/api/docs", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  if (!(await docOwnerCheck(env, s.userId))) return bad("freelancer_only", 403);
+  const monthly = Number(await getSetting(env, "docs_free_monthly", "2"));
+  if (!(await rl(env, `docm:${s.userId}`, monthly, 2592000))) return bad("docs_limit", 403);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const kind = String(b.kind ?? "");
+  if (kind !== "devis" && kind !== "facture") return bad("invalid_kind");
+  const clientName = clip(String(b.client_name ?? "").trim(), 120);
+  if (clientName.length < 2) return bad("invalid_client");
+  const rawItems = Array.isArray(b.items) ? b.items.slice(0, 25) : [];
+  const items: Array<{ d: string; q: number; p: number }> = [];
+  let subtotal = 0;
+  for (const it of rawItems) {
+    const d = clip(String(it?.d ?? "").trim(), 200);
+    const q = Number(it?.q), p = Number(it?.p);
+    if (d.length < 2 || !isFinite(q) || q <= 0 || q > 10000 || !isFinite(p) || p < 0 || p > 50000000) return bad("invalid_item");
+    items.push({ d, q: r2(q), p: r2(p) });
+    subtotal += r2(q * p);
+  }
+  if (!items.length) return bad("invalid_items");
+  subtotal = r2(subtotal);
+  const tvaRate = Math.min(100, Math.max(0, Number(b.tva_rate) || 0));
+  const tvaAmount = r2((subtotal * tvaRate) / 100);
+  const total = r2(subtotal + tvaAmount);
+  let projectId = String(b.project_id ?? "");
+  if (projectId) {
+    const pr = await env.DB.prepare("SELECT id FROM projects WHERE id = ? AND (freelancer_id = ? OR client_id = ?)").bind(projectId, s.userId, s.userId).first<any>();
+    if (!pr) projectId = "";
+  }
+  const issued = /^\d{4}-\d{2}-\d{2}$/.test(String(b.issued_date ?? "")) ? String(b.issued_date) : new Date().toISOString().slice(0, 10);
+  const year = issued.slice(0, 4);
+  const prev = await env.DB.prepare("SELECT COALESCE(MAX(seq),0) AS n FROM docs WHERE owner_id = ? AND kind = ? AND year = ?").bind(s.userId, kind, year).first<any>();
+  const seq = Number(prev?.n ?? 0) + 1;
+  const did = id("doc");
+  const share = [...crypto.getRandomValues(new Uint8Array(12))].map((x) => x.toString(16).padStart(2, "0")).join("");
+  await env.DB.prepare("INSERT INTO docs (id, owner_id, kind, seq, year, number, project_id, client_name, client_info, seller_info, items, subtotal, tva_rate, tva_amount, total, status, notes, share_token, issued_date, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+    .bind(did, s.userId, kind, seq, year, `${kind === "devis" ? "DEV" : "FAC"}-${year}-${String(seq).padStart(3, "0")}`, projectId, clientName,
+      clip(String(b.client_info ?? ""), 400), clip(String(b.seller_info ?? ""), 400), JSON.stringify(items), subtotal, tvaRate, tvaAmount, total,
+      "draft", clip(String(b.notes ?? ""), 500), share, issued, now(), now()).run();
+  await audit(env, s.userId, "doc_create", `${kind}:${did}`);
+  return json({ ok: true, id: did, number: `${kind === "devis" ? "DEV" : "FAC"}-${year}-${String(seq).padStart(3, "0")}`, subtotal, tva_amount: tvaAmount, total, share_token: share }, 201);
+}, { csrf: true });
+
+route("GET", "/api/docs", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const { results } = await env.DB.prepare("SELECT id, kind, number, client_name, total, tva_rate, status, issued_date, created_at, project_id FROM docs WHERE owner_id = ? ORDER BY created_at DESC LIMIT 100").bind(s.userId).all<any>();
+  return json({ docs: results ?? [] });
+});
+
+route("GET", "/api/docs/:id", async (_r, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  const d = await env.DB.prepare("SELECT * FROM docs WHERE id = ? AND owner_id = ?").bind(p.id, s.userId).first<any>();
+  if (!d) return bad("not_found", 404);
+  return json({ doc: d });
+});
+
+route("PUT", "/api/docs/:id", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const d = await env.DB.prepare("SELECT * FROM docs WHERE id = ? AND owner_id = ?").bind(p.id, s.userId).first<any>();
+  if (!d) return bad("not_found", 404);
+  if (d.status !== "draft") return bad("locked_sent", 409);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const rawItems = Array.isArray(b.items) ? b.items.slice(0, 25) : [];
+  const items: Array<{ d: string; q: number; p: number }> = [];
+  let subtotal = 0;
+  for (const it of rawItems) {
+    const dd = clip(String(it?.d ?? "").trim(), 200);
+    const q = Number(it?.q), pp = Number(it?.p);
+    if (dd.length < 2 || !isFinite(q) || q <= 0 || q > 10000 || !isFinite(pp) || pp < 0 || pp > 50000000) return bad("invalid_item");
+    items.push({ d: dd, q: r2(q), p: r2(pp) });
+    subtotal += r2(q * pp);
+  }
+  if (!items.length) return bad("invalid_items");
+  subtotal = r2(subtotal);
+  const tvaRate = Math.min(100, Math.max(0, Number(b.tva_rate) || 0));
+  const tvaAmount = r2((subtotal * tvaRate) / 100);
+  const total = r2(subtotal + tvaAmount);
+  await env.DB.prepare("UPDATE docs SET client_name = ?, client_info = ?, seller_info = ?, items = ?, subtotal = ?, tva_rate = ?, tva_amount = ?, total = ?, notes = ?, issued_date = ?, updated_at = ? WHERE id = ?")
+    .bind(clip(String(b.client_name ?? d.client_name).trim(), 120) || d.client_name, clip(String(b.client_info ?? ""), 400), clip(String(b.seller_info ?? ""), 400),
+      JSON.stringify(items), subtotal, tvaRate, tvaAmount, total, clip(String(b.notes ?? ""), 500),
+      /^\d{4}-\d{2}-\d{2}$/.test(String(b.issued_date ?? "")) ? String(b.issued_date) : d.issued_date, now(), p.id).run();
+  await audit(env, s.userId, "doc_update", p.id);
+  return json({ ok: true, subtotal, tva_amount: tvaAmount, total });
+}, { csrf: true });
+
+route("POST", "/api/docs/:id/status", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const d = await env.DB.prepare("SELECT id, kind, status FROM docs WHERE id = ? AND owner_id = ?").bind(p.id, s.userId).first<any>();
+  if (!d) return bad("not_found", 404);
+  const to = String((await req.json().catch(() => ({})) as any).status ?? "");
+  const allowed = (DOC_TRANSIT[d.kind] as any)?.[d.status] ?? [];
+  if (!allowed.includes(to)) return bad("invalid_transition", 409);
+  await env.DB.prepare("UPDATE docs SET status = ?, updated_at = ? WHERE id = ?").bind(to, now(), p.id).run();
+  await audit(env, s.userId, "doc_status", `${p.id}:${to}`);
+  return json({ ok: true, status: to });
+}, { csrf: true });
+
+route("DELETE", "/api/docs/:id", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const d = await env.DB.prepare("SELECT id, status FROM docs WHERE id = ? AND owner_id = ?").bind(p.id, s.userId).first<any>();
+  if (!d) return bad("not_found", 404);
+  if (d.status !== "draft") return bad("locked_sent", 409);
+  await env.DB.prepare("DELETE FROM docs WHERE id = ?").bind(p.id).run();
+  await audit(env, s.userId, "doc_delete", p.id);
+  return json({ ok: true });
+}, { csrf: true });
+
+// ═══ المواقع الشخصية: دخول الزبائن (عام) + عملاؤي (المالك) + اختيار القالب بالمحتوى ═══
+route("POST", "/api/site/:username/lead", async (req, env, _s, p) => {
+  const ip = req.headers.get("cf-connecting-ip") ?? "local";
+  if (!(await rl(env, `lead:${ip}`, 5, 3600))) return bad("too_many", 429);
+  const b = (await req.json().catch(() => ({})) as any);
+  const name = clip(String(b.name ?? "").trim(), 80), contact = clip(String(b.contact ?? "").trim(), 120), body = clip(String(b.body ?? "").trim(), 1200);
+  if (name.length < 2 || contact.length < 5 || body.length < 10) return bad("invalid_input");
+  const owner = await env.DB.prepare("SELECT id FROM users WHERE username = ? AND role = 'freelancer'").bind(p.username).first<any>();
+  if (!owner) return bad("not_found", 404);
+  await env.DB.prepare("INSERT INTO site_leads (id, username, name, contact, body, created_at) VALUES (?,?,?,?,?,?)").bind(id("ld"), p.username, name, contact, body, now()).run();
+  await notify(env, owner.id, "lead", `${name}: ${clip(body, 80)}`, `/w/${p.username}`);
+  return json({ ok: true });
+});
+
+route("GET", "/api/site/leads", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const u = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(s.userId).first<any>();
+  const { results } = await env.DB.prepare("SELECT id, name, contact, body, created_at FROM site_leads WHERE username = ? ORDER BY created_at DESC LIMIT 50").bind(String(u?.username ?? "")).all<any>();
+  return json({ leads: results ?? [] });
+});
+
+route("GET", "/api/admin/users", async (req, env, s) => {
+  if (!s) return bad("not_found", 404);
+  const q = clip(new URL(req.url).searchParams.get("q") ?? "", 40);
+  const rows = q
+    ? await env.DB.prepare("SELECT id, email, name, username, role, verified, plan_id, reputation, completed, created_at FROM users WHERE name LIKE ? OR username LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT 50").bind(`%${q}%`, `%${q}%`, `%${q}%`).all<any>()
+    : await env.DB.prepare("SELECT id, email, name, username, role, verified, plan_id, reputation, completed, created_at FROM users ORDER BY created_at DESC LIMIT 50").all<any>();
+  return json({ users: rows.results ?? [] });
+});
+
+
 // ═══ مسارات إدارة الدفع والإعدادات (خلف بوابة اللوحة المركزية) ═══
 route("GET", "/api/admin/settings", async (_r, env) => {
   const { results } = await env.DB.prepare("SELECT k, v, updated_at, updated_by FROM settings ORDER BY k").all<any>();
@@ -842,7 +1010,7 @@ route("PUT", "/api/admin/settings", async (req, env, s) => {
   if (!s) return bad("not_found", 404);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
   const b = (await req.json().catch(() => ({}))) as any;
-  const allow = ["payments_enabled", "ai_free_daily", "ai_free_monthly", "credits_price_dzd_per_100", "webhook_secret_chargily", "webhook_secret_sofizpay"];
+  const allow = ["payments_enabled", "ai_free_daily", "ai_free_monthly", "credits_price_dzd_per_100", "webhook_secret_chargily", "webhook_secret_sofizpay", "docs_free_monthly"];
   let n = 0;
   for (const [k, v] of Object.entries(b)) {
     if (!allow.includes(k)) continue;
@@ -950,6 +1118,20 @@ export default {
       const ph = await getAdminMeta(env, "panel_hash");
       if (!tok || !ph || (await sha256hex(tok)) !== ph) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
       return env.ASSETS.fetch(new Request(new URL("/", req.url).toString(), { headers: req.headers, method: "GET" }));
+    }
+    // المواقع الشخصية للمستقلين (عام بلا جلسة) + طباعة الوثائق بتوكن المشاركة
+    const mSite = path.match(/^\/w\/([a-z0-9][a-z0-9-]{2,23})\/?$/);
+    if (mSite) {
+      const lang = url.searchParams.get("lang") === "en" ? "en" : "ar";
+      const html = await renderSite(env, mSite[1], lang as "ar" | "en");
+      if (!html) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
+      return html;
+    }
+    const mPrint = path.match(/^\/print\/([a-f0-9]{24})$/);
+    if (mPrint) {
+      const html = await renderDocPrint(env, mPrint[1]);
+      if (!html) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
+      return html;
     }
     return env.ASSETS.fetch(req);
   },
