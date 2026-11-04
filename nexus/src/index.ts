@@ -20,7 +20,8 @@ function matchPath(pat: string, path: string): Record<string, string> | null {
   return out;
 }
 
-const DAY = 86400_000;
+const DAY = 86400_000; // ملّي ثانية — لاستعلامات D1
+const DAY_S = 86400; // ثوانٍ — لنوافذ تحديد المعدل (rl يتوقع ثوانٍ)
 const publicUser = (u: any) => ({ username: u.username, name: u.name, bio: u.bio, avatar_url: u.avatar_url, store_url: u.store_url, category: u.category, verified: u.verified });
 
 // ═══ الصحة ═══
@@ -29,7 +30,7 @@ route("GET", "/api/health", async () => json({ ok: true, v: "1.0.0", app: "nexus
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
-  if (!(await rl(env, `reg:${ip}`, 20, DAY))) return bad("too_many", 429);
+  if (!(await rl(env, `reg:${ip}`, 20, DAY_S))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
   const email = clip(String(b.email ?? "").toLowerCase().trim(), 190);
   const k0 = String(b.k0 ?? "");
@@ -123,7 +124,7 @@ route("GET", "/api/users/:username", async (_r, env, s, p) => {
 route("POST", "/api/posts", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
-  if (!(await rl(env, `post:${s.userId}`, 20, DAY))) return bad("too_many", 429);
+  if (!(await rl(env, `post:${s.userId}`, 20, DAY_S))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
   const image = String(b.image_url ?? "").trim();
   if (!isHttpsUrl(image)) return bad("invalid_image");
@@ -278,7 +279,7 @@ route("DELETE", "/api/users/:username/follow", async (req, env, s, p) => {
 route("POST", "/api/stories", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
-  if (!(await rl(env, `story:${s.userId}`, 10, DAY))) return bad("too_many", 429);
+  if (!(await rl(env, `story:${s.userId}`, 10, DAY_S))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
   const image = String(b.image_url ?? "").trim();
   if (!isHttpsUrl(image)) return bad("invalid_image");

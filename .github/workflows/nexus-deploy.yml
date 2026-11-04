@@ -77,19 +77,25 @@ jobs:
       - name: النشر
         working-directory: nexus
         run: |
+          set -o pipefail
           npx wrangler deploy 2>&1 | tee deploy.log
           URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
-          if [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; else echo "::notice::تم النشر — راجع السجل"; fi
+          if [ -n "$URL" ]; then echo "::notice::LIVE=$URL"
+          else
+            echo "::error::لم يُستخرج عنوان workers.dev — سجل النشر:"
+            tail -n 40 deploy.log | while IFS= read -r line; do echo "::notice::${line:0:900}"; done
+            exit 1
+          fi
 
       - name: فحص ما بعد النشر
         working-directory: nexus
         run: |
           URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
-          [ -n "$URL" ] || { echo "::warning::لم يُستخرج العنوان — تجاوز"; exit 0; }
+          [ -n "$URL" ] || { echo "::error::لا عنوان — فشل النشر"; exit 1; }
           sleep 5
           H=$(curl -s "$URL/api/health")
           echo "health: $H"
-          echo "$H" | grep -q '"ok":true' || { echo "::error::فحص /api/health فشل"; exit 1; }
+          echo "$H" | grep -q '"ok":true' || { echo "::error::فحص /api/health فشل: $H"; exit 1; }
           EX=$(curl -s "$URL/api/explore")
-          echo "$EX" | grep -q '"posts"' || { echo "::error::فحص /api/explore فشل"; exit 1; }
+          echo "$EX" | grep -q '"posts"' || { echo "::error::فحص /api/explore فشل: ${EX:0:300}"; exit 1; }
           echo "::notice::NEXUS v1.0 حي على $URL — الاستكشاف يعمل"
