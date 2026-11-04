@@ -1,10 +1,10 @@
-name: "NEXUS B2B — نشر على workers.dev"
+name: "NEXUS — نشر على workers.dev"
 
 on:
   push:
     branches: [main]
     paths:
-      - "nexus-b2b/**"
+      - "nexus/**"
       - ".github/workflows/nexus-deploy.yml"
   workflow_dispatch:
 
@@ -30,29 +30,30 @@ jobs:
           node-version: 22
 
       - name: تجميع الحزم
-        working-directory: nexus-b2b
+        working-directory: nexus
         run: npm install --no-audit --no-fund
 
-      - name: تجهيز قاعدة D1 ومساحة KV (إنشاء إن لم يوجدا — برمجياً فقط)
-        working-directory: nexus-b2b
+      - name: بناء الواجهة (esbuild minify — المصدر في المستودع فقط)
+        working-directory: nexus
+        run: npm run build
+
+      - name: قاعدة D1 الجديدة (nexus_social_db — تصفير v1.0) ومساحة KV
+        working-directory: nexus
         run: |
           ACC="$CLOUDFLARE_ACCOUNT_ID"
           RESP=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database?per_page=100")
-          OKF=$(echo "$RESP" | jq -r '.success')
-          [ "$OKF" = "True" ] || [ "$OKF" = "true" ] || echo "::warning::D1-list: $(echo "$RESP" | jq -c '.errors')"
-          # المرحلة الحية: نستخدم nexus_db القائمة — بيانات المستخدمين الحقيقيين لا تُمس أبداً
-          D1_ID=$(echo "$RESP" | jq -r '.result[] | select(.name=="nexus_db") | .uuid' | head -1)
+          D1_ID=$(echo "$RESP" | jq -r '.result[] | select(.name=="nexus_social_db") | .uuid' | head -1)
           if [ -z "$D1_ID" ]; then
             CR=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
               "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database" \
-              -d '{"name":"nexus_db"}')
+              -d '{"name":"nexus_social_db"}')
             D1_ID=$(echo "$CR" | jq -r '.result.uuid // empty')
-            echo "::notice::أُنشئت قاعدة nexus_db لأول مرة"
+            echo "::notice::أُنشئت قاعدة nexus_social_db الجديدة (تصفير v1.0 — قاعدة v0.9 القديمة محفوظة ولا تُمس)"
           else
-            echo "::notice::nexus_db القائمة قيد الاستخدام — حسابات المستخدمين محفوظة"
+            echo "::notice::قاعدة nexus_social_db قيد الاستخدام"
           fi
-          [ -n "$D1_ID" ] || { echo "::error::تعذر تأمين قاعدة nexus_db"; exit 1; }
+          [ -n "$D1_ID" ] || { echo "::error::تعذر تأمين قاعدة nexus_social_db"; exit 1; }
           KR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces?per_page=100")
           KV_ID=$(echo "$KR" | jq -r '.result[] | select(.title=="nexus-cache") | .id' | head -1)
@@ -61,124 +62,34 @@ jobs:
               "https://api.cloudflare.com/client/v4/accounts/$ACC/storage/kv/namespaces" \
               -d '{"title":"nexus-cache"}')
             KV_ID=$(echo "$CK" | jq -r '.result.id // empty')
-            [ -n "$KV_ID" ] || echo "::warning::KV-create: $(echo "$CK" | jq -c '.errors')"
           fi
           [ -n "$KV_ID" ] || { echo "::error::تعذر تجهيز مساحة KV"; exit 1; }
           sed -i "s/00000000-0000-0000-0000-000000000000/$D1_ID/" wrangler.toml
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV جاهزان"
 
-      - name: المخطط + البيانات التجريبية + تجديد العرض
-        working-directory: nexus-b2b
+      - name: المخطط (idempotent — CREATE IF NOT EXISTS)
+        working-directory: nexus
         run: |
           npx wrangler d1 execute DB --remote -y --file schema.sql
-          npx wrangler d1 execute DB --remote -y --file seed.sql
-          npx wrangler d1 execute DB --remote -y --file refresh.sql
-          # ترحيلات متسامحة: أعمدة الجولات الأحدث على قاعدة قائمة
-          for M in "ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 1" "ALTER TABLE users ADD COLUMN avatar_data TEXT DEFAULT ''" "ALTER TABLE messages ADD COLUMN deal_delivery_days INTEGER" "ALTER TABLE messages ADD COLUMN deal_revisions INTEGER" "ALTER TABLE messages ADD COLUMN deal_vat TEXT DEFAULT ''" "ALTER TABLE boosts ADD COLUMN target_sector TEXT DEFAULT ''" "ALTER TABLE boosts ADD COLUMN target_country TEXT DEFAULT ''" "ALTER TABLE posts ADD COLUMN media_kind TEXT DEFAULT 'VIDEO'"; do
-            npx wrangler d1 execute DB --remote -y --command "$M" >/dev/null 2>&1 || true
-          done
-          # ترحيل بنية users (قطاع المشتري) — يحفظ كل البيانات
-          npx wrangler d1 execute DB --remote -y --file migrations.sql
-          echo "::notice::الترحيلات مكتملة — بيانات المستخدمين محفوظة"
+          echo "::notice::مخطط NEXUS v1.0 مُطبّق"
 
-      - name: رمز التمليح (سر المخزن إن وجد وإلا توليد لهذه الجولة — لا يُطبع)
-        working-directory: nexus-b2b
-        env:
-          AUTH_PEPPER: ${{ secrets.AUTH_PEPPER }}
+      - name: النشر
+        working-directory: nexus
         run: |
-          if [ -n "$AUTH_PEPPER" ]; then
-            printf '%s' "$AUTH_PEPPER" | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
-          else
-            # التمليح الدائم: يُنشأ مرة واحدة ويُخزَّن في KV — كلمات المرور لا تنكسر بين النشرات (لا يُطبع أبداً)
-            PEPPER=$(npx wrangler kv key get "auth_pepper" --binding CACHE_KV --remote 2>/dev/null || true)
-            if [ -z "$PEPPER" ]; then
-              PEPPER=$(openssl rand -hex 32)
-              printf '%s' "$PEPPER" | npx wrangler kv key put "auth_pepper" --binding CACHE_KV --remote >/dev/null 2>&1
-              echo "::notice::أُنشئ رمز تمليح دائم وخُزِّن في KV"
-            else
-              echo "::notice::رمز التمليح الدائم جُلب من KV — ثابت عبر النشرات"
-            fi
-            printf '%s' "$PEPPER" | npx wrangler secret put AUTH_PEPPER >/dev/null 2>&1
-          fi
+          npx wrangler deploy 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
+          if [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; else echo "::notice::تم النشر — راجع السجل"; fi
 
-      - name: تفعيل دخول المالك (hash يُحسب داخل الـrunner — لا سر يُطبع)
-        working-directory: nexus-b2b
-        env:
-          VITO_OWNER_PASSWORD: ${{ secrets.VITO_OWNER_PASSWORD }}
+      - name: فحص ما بعد النشر
+        working-directory: nexus
         run: |
-          if [ -n "$VITO_OWNER_PASSWORD" ]; then
-            PEP=$(npx wrangler kv key get "auth_pepper" --binding CACHE_KV --remote 2>/dev/null || true)
-            H=$(PEP="$PEP" VITO_OWNER_PASSWORD="$VITO_OWNER_PASSWORD" node -e '
-              const { webcrypto } = require("node:crypto");
-              (async () => {
-                const pw = process.env.VITO_OWNER_PASSWORD ?? "", pep = process.env.PEP ?? "";
-                const salt = Buffer.from(webcrypto.getRandomValues(new Uint8Array(16))).toString("hex");
-                const key = await webcrypto.subtle.importKey("raw", new TextEncoder().encode(pw + "|" + pep), "PBKDF2", false, ["deriveBits"]);
-                const bits = await webcrypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(salt), iterations: 210000 }, key, 256);
-                console.log("pbkdf2$210000$" + salt + "$" + Buffer.from(bits).toString("base64"));
-              })();
-            ')
-            npx wrangler d1 execute DB --remote -y --command "UPDATE users SET password_hash='$H' WHERE id='u-vitobyte'" >/dev/null 2>&1 && echo "::notice::دخول المالك مفعّل — hash مُحدَّث"
-          fi
-
-      - name: النشر على workers.dev
-        working-directory: nexus-b2b
-        run: |
-          npx wrangler deploy --var ENVIRONMENT:production 2>&1 | tee /tmp/deploy.log || { echo "::warning::wrangler: $(tail -8 /tmp/deploy.log | tr '\n' ' · ')"; exit 1; }
-          SUB=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
-            | jq -r '.result.subdomain')
-          echo "NEXUS_URL=https://nexus.$SUB.workers.dev" >> "$GITHUB_ENV"
-          echo "::notice::رابط NEXUS B2B: https://nexus.$SUB.workers.dev"
-          OLDW=$(curl -s -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/nexus-b2b")
-          echo "::notice::العامل القديم nexus-b2b: $(echo "$OLDW" | jq -r 'if .success then "حُذف" else (.errors[0].message // "غير موجود") end')"
-
-      - name: تحقق نهائي عبر الرابط العالمي
-        run: |
+          URL=$(grep -oE 'https://[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
+          [ -n "$URL" ] || { echo "::warning::لم يُستخرج العنوان — تجاوز"; exit 0; }
           sleep 5
-          C=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "$NEXUS_URL/")
-          echo "::notice::استجابة الصفحة=HTTP_$C"
-          [ "$C" = "200" ] || { echo "::error::الرابط لا يستجيب"; exit 1; }
-          curl -s -m 20 "$NEXUS_URL/api/feed" | head -c 60; echo
-          curl -s -m 20 "$NEXUS_URL/p/salma" | grep -o "og:title" | head -1 || { echo "::error::بطاقة OG لا تعمل"; exit 1; }
-          curl -s -m 20 -o /dev/null -w "legal=%{http_code}\n" "$NEXUS_URL/legal.html"
-          curl -s -m 20 -o /dev/null -w "avatar401ok=%{http_code}\n" "$NEXUS_URL/api/avatar/nobody-here"
-
-      - name: تشخيص النطاق + جرد الدومينات + ربط تلقائي إن وجد دومين نشط وحيد
-        run: |
-          ZR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones?per_page=50&account.id=$CLOUDFLARE_ACCOUNT_ID")
-          if [ "$(echo "$ZR" | jq -r '.success')" != "true" ]; then
-            echo "::warning::zones-list: $(echo "$ZR" | jq -c '.errors')"
-          else
-            ACT=$(echo "$ZR" | jq -r '[.result[] | select(.status=="active")] | length')
-            echo "::notice::دومينات نشطة على الحساب: $ACT"
-            echo "$ZR" | jq -r '.result[] | "دومين: \(.name) — \(.status)"' | while read -r L; do echo "::notice::$L"; done
-            if [ "$ACT" = "1" ]; then
-              ZN=$(echo "$ZR" | jq -r '[.result[] | select(.status=="active")][0].name')
-              ZID=$(echo "$ZR" | jq -r '[.result[] | select(.status=="active")][0].id')
-              AT=$(curl -s -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "content-type: application/json" \
-                "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains" \
-                -d "{\"zone_id\":\"$ZID\",\"hostname\":\"nexus.$ZN\",\"service\":\"nexus-b2b\",\"environment\":\"production\"}")
-              echo "::notice::ربط nexus.$ZN: $(echo "$AT" | jq -c 'if .success then "نجح" else .errors end')"
-              sleep 8
-              CC=$(curl -s -o /dev/null -w "%{http_code}" -m 20 "https://nexus.$ZN/")
-              echo "::notice::استجابة الدومين الخاص=HTTP_$CC"
-            fi
-          fi
-          DR=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains")
-          echo "$DR" | jq -r '.result[]? | "نطاق مرتبط: \(.hostname) → \(.service)"' | while read -r L; do echo "::notice::$L"; done
-
-      - name: لوحة النشر
-        run: |
-          {
-            echo "## 🚀 NEXUS B2B منشور"
-            echo ""
-            echo "**الرابط:** $NEXUS_URL"
-            echo ""
-            echo "- كل دمج يغيّر nexus-b2b/** يعيد النشر تلقائياً — نسخة بنسخة."
-            echo "- القاعدة والبيانات التجريبية تُطبَّق تلقائياً (INSERT OR IGNORE — لا تكرار)."
-          } >> "$GITHUB_STEP_SUMMARY"
+          H=$(curl -s "$URL/api/health")
+          echo "health: $H"
+          echo "$H" | grep -q '"ok":true' || { echo "::error::فحص /api/health فشل"; exit 1; }
+          EX=$(curl -s "$URL/api/explore")
+          echo "$EX" | grep -q '"posts"' || { echo "::error::فحص /api/explore فشل"; exit 1; }
+          echo "::notice::NEXUS v1.0 حي على $URL — الاستكشاف يعمل"
