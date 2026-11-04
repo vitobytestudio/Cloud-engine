@@ -22,3 +22,8 @@ id = "00000000000000000000000000000000"
 
 [vars]
 ENVIRONMENT = "development"
+
+# ——— إزالة كائن v0.9 القديم (ChatRoom) — تصفير v1.0 بلا Durable Objects ———
+[[migrations]]
+tag = "v1-reset"
+deleted_classes = ["ChatRoom"]
