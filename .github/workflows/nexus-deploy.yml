@@ -68,12 +68,13 @@ jobs:
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV جاهزان"
 
-      - name: المخطط (idempotent — CREATE IF NOT EXISTS)
+      - name: المخطط والبذرة (idempotent — CREATE/INSERT IF NOT EXISTS)
         working-directory: nexus
         run: |
           sed -i 's/ENVIRONMENT = "development"/ENVIRONMENT = "production"/' wrangler.toml
           npx wrangler d1 execute DB --remote -y --file schema.sql
-          echo "::notice::مخطط NEXUS مُطبّق"
+          npx wrangler d1 execute DB --remote -y --file seed.sql
+          echo "::notice::مخطط NEXUS وبذرة متجر العرض مُطبّقان"
 
       - name: النشر
         working-directory: nexus

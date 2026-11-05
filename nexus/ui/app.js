@@ -117,6 +117,27 @@ async function k0of(email, password) {
   return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/* ضغط الصورة في المتصفح ثم رفعها للمنصة (KV) — رابط جاهز فوراً */
+async function compressImage(file, maxDim = 1280, quality = 0.82) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+  const c = new OffscreenCanvas(w, h);
+  c.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  return c.convertToBlob({ type: "image/jpeg", quality });
+}
+async function uploadImage(file) {
+  const blob = await compressImage(file);
+  const res = await fetch("/api/media", {
+    method: "POST", credentials: "same-origin",
+    headers: { "content-type": "image/jpeg", ...(S.csrf ? { "x-csrf": S.csrf } : {}) },
+    body: blob,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw { status: res.status, ...data };
+  return data.url;
+}
+
 /* ───────── أدوات UI ───────── */
 function toast(msg, kind = "ok") {
   const el = document.createElement("div");
@@ -450,13 +471,12 @@ rr("/s/:slug", async (v, p) => {
 rr("/p/:id", async (v, p) => {
   buildTabbar();
   v.innerHTML = `${topbar()}<div class="page" style="padding-top:8px">${skeletons(1)}</div>`;
-  let prod = null, store = null;
+  let prod = null;
   try {
-    const all = await api("/api/feed?q=&");
-    prod = all.posts.find((x) => x.id === p.id);
+    const r = await api("/api/product/" + encodeURIComponent(p.id));
+    prod = { ...r.product, store_slug: r.store.slug, store_name: r.store.store_name, store_logo: r.store.logo };
   } catch {}
   if (!prod) {
-    /* ابحث عبر الاستكشاف بالعنوان لا يتوفر — نعرض غير متوفر */
     v.innerHTML = `${topbar()}<div class="empty"><h3>404</h3><p>${esc(t("no_results"))}</p></div>`;
     return;
   }
@@ -752,8 +772,15 @@ function productEditor(p = null) {
       <div class="field"><label>${esc(t("price"))}</label><input class="input" id="e-price" type="number" inputmode="numeric" dir="ltr" value="${p?.price ?? ""}"/></div>
       <div class="field"><label>${esc(t("compare_at"))}</label><input class="input" id="e-compare" type="number" inputmode="numeric" dir="ltr" value="${p?.compare_at || ""}"/></div>
     </div>
-    <div class="field"><label>${esc(t("image_url"))}</label><input class="input" id="e-image" dir="ltr" placeholder="https://…" value="${esc(p?.image || "")}"/>
-      <div id="e-preview" style="margin-top:4px"></div></div>
+    <div class="field"><label>${esc(t("image_url"))}</label>
+      <button class="btn wide" id="e-pick" type="button">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L7 19"/></svg>
+        ${esc(S.lang === "ar" ? "اختر صورة من هاتفك" : "Pick from phone")}
+      </button>
+      <input type="file" id="e-file" accept="image/*" class="hidden"/>
+      <div id="e-preview" style="margin-top:6px"></div>
+      <details style="margin-top:6px"><summary class="hint" style="cursor:pointer">${esc(S.lang === "ar" ? "أو ألصق رابط صورة" : "or paste image URL")}</summary>
+      <input class="input" id="e-image" dir="ltr" placeholder="https://…" style="margin-top:6px" value="${esc(p?.image || "")}"/></details></div>
     <div class="field"><label>${esc(t("category"))}</label>
       <select class="input" id="e-cat">${CATS.map((c) => `<option value="${c}" ${p?.category === c ? "selected" : ""}>${esc(catName(c))}</option>`).join("")}</select></div>
     <div class="field" style="flex-direction:row;align-items:center;justify-content:space-between">
@@ -763,14 +790,33 @@ function productEditor(p = null) {
     <button class="btn primary wide" id="e-save">${esc(t("save"))}</button>`);
   const imgIn = $("#e-image", sh.wrap);
   const prev = $("#e-preview", sh.wrap);
-  const showPrev = () => { const u = imgIn.value.trim(); prev.innerHTML = /^https:\/\//.test(u) ? imgTag(u, "", "preview").replace("<img ", '<img style="width:84px;height:84px;border-radius:14px;object-fit:cover" ') : ""; };
-  imgIn.oninput = showPrev; showPrev();
+  let curUrl = p?.image || "";
+  const showPrev = () => { prev.innerHTML = curUrl ? imgTag(curUrl, "", "preview").replace("<img ", '<img style="width:96px;height:96px;border-radius:16px;object-fit:cover" ') : '<div class="hint">' + esc(S.lang === "ar" ? "لا صورة بعد" : "No image yet") + "</div>"; };
+  showPrev();
+  imgIn.oninput = () => { curUrl = imgIn.value.trim(); showPrev(); };
+  const fileIn = $("#e-file", sh.wrap), pick = $("#e-pick", sh.wrap);
+  pick.onclick = () => fileIn.click();
+  fileIn.onchange = async () => {
+    const f = fileIn.files?.[0];
+    if (!f) return;
+    pick.disabled = true;
+    pick.innerHTML = '<span class="hint">' + esc(S.lang === "ar" ? "جارٍ الضغط والرفع…" : "Compressing & uploading…") + "</span>";
+    try {
+      curUrl = await uploadImage(f);
+      imgIn.value = "";
+      showPrev();
+      toast(S.lang === "ar" ? "رُفعت الصورة" : "Uploaded");
+      vibrate(10);
+    } catch (ex) { toast(ex.error || "error", "err"); }
+    pick.disabled = false;
+    pick.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L7 19"/></svg> ' + esc(S.lang === "ar" ? "اختر صورة من هاتفك" : "Pick from phone");
+  };
   $("#e-feat", sh.wrap).onclick = (e) => e.currentTarget.classList.toggle("on");
   $("#e-save", sh.wrap).onclick = async (e) => {
     const bbody = {
       title: $("#e-title", sh.wrap).value.trim(), descr: $("#e-desc", sh.wrap).value.trim(),
       price: Number($("#e-price", sh.wrap).value), compare_at: Number($("#e-compare", sh.wrap).value) || 0,
-      image: imgIn.value.trim(), category: $("#e-cat", sh.wrap).value, featured: $("#e-feat", sh.wrap).classList.contains("on"),
+      image: (curUrl || imgIn.value.trim()), category: $("#e-cat", sh.wrap).value, featured: $("#e-feat", sh.wrap).classList.contains("on"),
     };
     try {
       if (isEdit) await api("/api/products/" + p.id, { method: "PUT", body: bbody });
