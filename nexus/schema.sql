@@ -1,0 +1,64 @@
+-- NEXUS — نواة المنصة (مرحلة 1: المتجر + السوق + الطلبيات + المالية)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  k0 TEXT NOT NULL,
+  store_name TEXT NOT NULL DEFAULT '',
+  bio TEXT NOT NULL DEFAULT '',
+  logo TEXT NOT NULL DEFAULT '',
+  banner TEXT NOT NULL DEFAULT '',
+  whatsapp TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_slug ON users(slug);
+CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at);
+
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  descr TEXT NOT NULL DEFAULT '',
+  price INTEGER NOT NULL,
+  compare_at INTEGER NOT NULL DEFAULT 0,
+  image TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT '',
+  stock INTEGER NOT NULL DEFAULT -1,
+  featured INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_products_user ON products(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_products_feed ON products(active, created_at);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  product_id TEXT NOT NULL,
+  ptitle TEXT NOT NULL,
+  qty INTEGER NOT NULL,
+  unit_price INTEGER NOT NULL,
+  total INTEGER NOT NULL,
+  cname TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  wilaya INTEGER NOT NULL,
+  commune TEXT NOT NULL,
+  delivery TEXT NOT NULL,
+  address TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'new',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(user_id, status);
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_expenses_user ON expenses(user_id, created_at);

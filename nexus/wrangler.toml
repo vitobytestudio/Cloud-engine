@@ -1,0 +1,23 @@
+name = "nexus"
+workers_dev = true
+main = "src/index.ts"
+compatibility_date = "2026-03-01"
+
+# ——— الواجهة الثابتة عبر Workers Assets ———
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# ——— قاعدة NEXUS (نواة المنصة الجديدة) ———
+[[d1_databases]]
+binding = "DB"
+database_name = "nexus_db"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# ——— الجلسات وحدود المعدل ———
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "00000000000000000000000000000000"
+
+[vars]
+ENVIRONMENT = "development"
