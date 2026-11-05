@@ -71,6 +71,7 @@ jobs:
       - name: المخطط (idempotent — CREATE IF NOT EXISTS)
         working-directory: nexus
         run: |
+          sed -i 's/ENVIRONMENT = "development"/ENVIRONMENT = "production"/' wrangler.toml
           npx wrangler d1 execute DB --remote -y --file schema.sql
           echo "::notice::مخطط NEXUS مُطبّق"
 
