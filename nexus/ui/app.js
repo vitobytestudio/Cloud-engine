@@ -103,7 +103,7 @@ async function api(path, opts = {}) {
   const res = await fetch(path, { method: opts.method || "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
   let data = {};
   try { data = await res.json(); } catch {}
-  if (res.status === 401 && !path.includes("/auth/")) { go("#/auth"); throw { error: "auth_required" }; }
+  if (res.status === 401) throw { status: res.status, ...data };
   if (!res.ok) throw { status: res.status, ...data };
   return data;
 }
@@ -119,12 +119,22 @@ async function k0of(email, password) {
 
 /* ضغط الصورة في المتصفح ثم رفعها للمنصة (KV) — رابط جاهز فوراً */
 async function compressImage(file, maxDim = 1280, quality = 0.82) {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
-  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
-  const c = new OffscreenCanvas(w, h);
-  c.getContext("2d").drawImage(bmp, 0, 0, w, h);
-  return c.convertToBlob({ type: "image/jpeg", quality });
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    if (typeof OffscreenCanvas === "function") {
+      const c = new OffscreenCanvas(w, h);
+      c.getContext("2d").drawImage(bmp, 0, 0, w, h);
+      return c.convertToBlob({ type: "image/jpeg", quality });
+    }
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    c.getContext("2d").drawImage(bmp, 0, 0, w, h);
+    return await new Promise((res) => c.toBlob((b) => res(b || file), "image/jpeg", quality));
+  } catch {
+    return file; /* يرفضه الخادم إن تجاوز السقف — بلا انهيار */
+  }
 }
 async function uploadImage(file) {
   const blob = await compressImage(file);
@@ -222,33 +232,42 @@ const imgTag = (src, cls = "", alt = "") =>
 
 /* ───────── الراوتر ───────── */
 const routes = [];
-const rr = (pat, fn) => routes.push({ pat: pat.split("/"), fn });
-function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
+const rr = (pat, fn) => routes.push({ pat: pat.split("/").filter(Boolean), fn });
+function go(hash) { if (location.hash === hash) render(true); else location.hash = hash; }
 
-async function render() {
-  const hash = location.hash.replace(/^#/, "") || "/onb-check";
-  const parts = hash.split("/").filter(Boolean);
-  let matched = null, params = {};
-  for (const r of routes) {
-    if (r.pat.length !== parts.length) continue;
-    let ok = true; params = {};
-    for (let i = 0; i < r.pat.length; i++) {
-      if (r.pat[i].startsWith(":")) params[r.pat[i].slice(1)] = decodeURIComponent(parts[i]);
-      else if (r.pat[i] !== parts[i]) { ok = false; break; }
-    }
-    if (ok) { matched = r; break; }
-  }
-  const view = $("#view");
-  const vt = document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const doRender = async () => {
-    window.scrollTo?.(0, 0); view.scrollTop = 0;
-    view.innerHTML = "";
-    view.className = "view-in";
-    if (matched) await matched.fn(view, params);
-    else { location.hash = "#/"; }
-  };
-  if (vt) document.startViewTransition(doRender); else await doRender();
-  updateTabbar(parts[0] || "");
+let renderChain = Promise.resolve(), lastRendered = null;
+function render(force = false) {
+  renderChain = renderChain
+    .then(async () => {
+      const hash = location.hash.replace(/^#/, "") || "/onb-check";
+      if (!force && hash === lastRendered) return;
+      lastRendered = hash;
+      const parts = hash.split("/").filter(Boolean);
+      let matched = null, params = {};
+      for (const r of routes) {
+        if (r.pat.length !== parts.length) continue;
+        let ok = true; params = {};
+        for (let i = 0; i < r.pat.length; i++) {
+          if (r.pat[i].startsWith(":")) params[r.pat[i].slice(1)] = decodeURIComponent(parts[i]);
+          else if (r.pat[i] !== parts[i]) { ok = false; break; }
+        }
+        if (ok) { matched = r; break; }
+      }
+      const view = $("#view");
+      const vt = typeof document.startViewTransition === "function" && !(typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+      const doRender = async () => {
+        window.scrollTo?.(0, 0); view.scrollTop = 0;
+        view.innerHTML = "";
+        view.className = "view-in";
+        if (matched) await matched.fn(view, params);
+        else { lastRendered = null; location.hash = "#/"; }
+      };
+      if (vt) await Promise.resolve(document.startViewTransition(doRender).finished).catch(() => {});
+      else await doRender();
+      updateTabbar(parts[0] || "");
+    })
+    .catch((e) => { console.error("render:", e); });
+  return renderChain;
 }
 
 /* ───────── الشريط السفلي ───────── */
@@ -302,7 +321,7 @@ const skeletons = (n = 6) => `<div class="grid">${Array.from({ length: n }, () =
 /* الترحيب */
 rr("/onb-check", async (v) => {
   buildTabbar(); $("#tabbar").classList.add("hidden");
-  if (localStorage.getItem("nx_seen")) { location.hash = "#/"; return; }
+  if (localStorage.getItem("nx_seen") || $("#onb")) { location.hash = "#/"; return; }
   const art = (inner) => `<div class="onb-art">${inner}</div>`;
   v.parentElement.insertAdjacentHTML("beforeend", `
   <div class="onb" id="onb">
@@ -322,10 +341,11 @@ rr("/onb-check", async (v) => {
       </div>
     </div>
   </div>`);
-  const track = $("#onb-track"), dots = $$("#onb-dots i"), next = $("#onb-next");
+  const onbEl = $("#onb");
+  const track = onbEl.querySelector("#onb-track"), dots = [...onbEl.querySelectorAll("#onb-dots i")], next = onbEl.querySelector("#onb-next");
   const idx = () => Math.round(track.scrollLeft / track.clientWidth);
   track.onscroll = () => { const i = idx(); dots.forEach((d, j) => d.classList.toggle("on", j === i)); next.textContent = i === 2 ? t("start_now") : t("start_now"); };
-  $("#onb-skip").onclick = () => finishOnb();
+  onbEl.querySelector("#onb-skip").onclick = () => finishOnb();
   next.onclick = () => { if (idx() < 2) track.scrollTo({ left: track.clientWidth * (idx() + 1), behavior: "smooth" }); else finishOnb(); };
   function finishOnb() {
     localStorage.setItem("nx_seen", "1");
@@ -593,7 +613,7 @@ rr("/auth", async (v) => {
   buildTabbar(); $("#tabbar").classList.add("hidden");
   let mode = "login";
   v.innerHTML = `${topbar("")}<div class="page" id="auth-box" style="padding-top:20px"></div>`;
-  const box = $("#auth-box");
+  const box = v.querySelector("#auth-box");
   const draw = () => {
     box.innerHTML = `
       <div style="text-align:center;margin-bottom:22px">
@@ -605,7 +625,7 @@ rr("/auth", async (v) => {
         <button class="btn ${mode === "reg" ? "primary" : "ghost"}" id="m-reg" style="flex:1;min-height:42px;font-size:13.5px">${esc(t("register"))}</button>
       </div>
       <div id="auth-form"></div>`;
-    const form = $("#auth-form");
+    const form = box.querySelector("#auth-form");
     if (mode === "login") {
       form.innerHTML = `
         <div class="field"><label>${esc(t("email"))}</label><input class="input" id="a-email" type="email" dir="ltr" autocomplete="email"/></div>
@@ -655,9 +675,9 @@ rr("/auth", async (v) => {
   };
   const aerr = (m) => { $("#a-err", box).innerHTML = `<span class="err-text">${esc(m)}</span>`; vibrate([8, 30, 8]); };
   const busy = (b, on) => { b.disabled = on; if (on) b.style.opacity = ".6"; };
+  draw(); /* الرسم أولاً — الأزرار تُنشأ هنا ثم تُربط */
   $("#m-login", box).onclick = () => { mode = "login"; draw(); };
   $("#m-reg", box).onclick = () => { mode = "reg"; draw(); };
-  draw();
 });
 
 /* ═══ لوحة المتجر ═══ */
@@ -690,7 +710,6 @@ rr("/dash", async (v) => {
   dashShell(v, "overview", skeletons(3));
   const [counts, fin] = await Promise.all([api("/api/me"), api("/api/finance")]);
   const nb = Object.fromEntries((fin.by_status || []).map((x) => [x.status, x.n]));
-  drawChart("ov-chart", fin.rev_series, fin.exp_series);
   $("#dash-body").innerHTML = `
     <div class="kpis">
       <div class="kpi accent"><div class="v" data-c="${nb.new || 0}">0</div><div class="l">${esc(t("new_orders"))}</div></div>
@@ -709,6 +728,7 @@ rr("/dash", async (v) => {
       <a class="btn primary" style="flex:1" href="#/dash/products">${esc(t("add_product"))}</a>
     </div>`;
   $$("#dash-body .v[data-c]").forEach((el) => countUp(el, Number(el.dataset.c)));
+  drawChart("ov-chart", fin.rev_series, fin.exp_series);
 });
 
 function drawChart(cid, rev, exp) {
@@ -733,9 +753,9 @@ function drawChart(cid, rev, exp) {
     gr.addColorStop(0, "#7a5cff"); gr.addColorStop(1, "#7a5cff22");
     g.fillStyle = gr;
     g.beginPath();
-    g.roundRect(x0, H - hr, w, hr, 3);
+    if (typeof g.roundRect === "function") g.roundRect(x0, H - hr, w, hr, 3); else g.rect(x0, H - hr, w, hr);
     g.fill();
-    if (he > 0) { g.fillStyle = "#ff6b6b88"; g.beginPath(); g.roundRect(x0, H - he, w, Math.min(he, 4), 2); g.fill(); }
+    if (he > 0) { g.fillStyle = "#ff6b6b88"; g.beginPath(); if (typeof g.roundRect === "function") g.roundRect(x0, H - he, w, Math.min(he, 4), 2); else g.rect(x0, H - he, w, Math.min(he, 4)); g.fill(); }
   });
 }
 
@@ -1030,9 +1050,9 @@ document.documentElement.lang = S.lang;
 document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
 window.addEventListener("hashchange", render);
 (async () => {
-  await me();
   if (!location.hash) location.hash = localStorage.getItem("nx_seen") ? "#/" : "#/onb-check";
   render();
-  setTimeout(() => $("#boot").classList.add("off"), 650);
+  setTimeout(() => $("#boot")?.classList.add("off"), 650);
+  await me();
 })();
-window.go = go; window.productEditor = productEditor;
+window.go = go; window.productEditor = productEditor; window.setLang = setLang;
