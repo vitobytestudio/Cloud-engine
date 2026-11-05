@@ -154,13 +154,13 @@ let pid = "", pid2 = "";
 /* ─── 7. الفيد والاستكشاف ─── */
 {
   const feed = await j("/api/feed");
-  ok("الفيد يعرض منتجات المتجر", feed.status === 200 && feed.data.posts.length >= 2 && feed.data.posts[0].store_slug);
+  ok("الفيد يعرض المنتجات + بذرة العرض", feed.status === 200 && feed.data.posts.length >= 4 && feed.data.posts.some((p) => p.store_slug === "vito-store"));
   const cat = await j("/api/feed?cat=electronics");
   ok("فلترة بالصنف", cat.status === 200 && cat.data.posts.every((p) => p.category === "electronics"));
   const q = await j("/api/feed?q=" + encodeURIComponent("Max"));
   ok("بحث بالعنوان", q.status === 200 && q.data.posts.some((p) => p.title.includes("Max")));
   const cats = await j("/api/categories");
-  ok("أصناف مع عدّادات", cats.status === 200 && cats.data.categories.length >= 2);
+  ok("أصناف مع عدّادات", cats.status === 200 && cats.data.categories.length >= 4);
   const store = await j("/api/store/" + (await j("/api/me", { cookie })).data.user.slug);
   ok("المتجر العام + منتجاته", store.status === 200 && store.data.store.slug && store.data.products.length >= 2);
 }
@@ -169,6 +169,39 @@ let pid = "", pid2 = "";
 {
   const noCfg = await j("/api/admin/stats");
   ok("إدارة بلا سر = 404 صامت", noCfg.status === 404);
+}
+
+/* ─── 8ب. رفع الصور الحقيقي (KV) ─── */
+{
+  /* JPEG حقيقي مصغر: ترويسة FFD8FF + بيانات */
+  const jpeg = new Uint8Array(256);
+  jpeg[0] = 0xff; jpeg[1] = 0xd8; jpeg[2] = 0xff; jpeg[3] = 0xe0;
+  jpeg[100] = 0x11; jpeg[255] = 0xd9;
+  const up = await fetch(BASE + "/api/media", {
+    method: "POST", headers: { "content-type": "image/jpeg", cookie, "x-csrf": csrf }, body: jpeg,
+  });
+  const ud = await up.json();
+  ok("رفع صورة 201 + رابط /media/", up.status === 201 && /^\/media\/[0-9a-f]{16}\.jpg$/.test(ud.url || ""));
+  const serve = await fetch(BASE + (ud.url || ""));
+  ok("خدمة الصورة المرفوعة (immutable)", serve.status === 200 && serve.headers.get("content-type") === "image/jpeg" && (serve.headers.get("cache-control") || "").includes("immutable"));
+  /* رفض: نص بضاعة مزيفة */
+  const fake = await fetch(BASE + "/api/media", {
+    method: "POST", headers: { "content-type": "image/jpeg", cookie, "x-csrf": csrf }, body: "not-an-image" + "x".repeat(80),
+  });
+  ok("نص مزيف بضاعة صورة مرفوض", fake.status === 400);
+  const noauth = await fetch(BASE + "/api/media", { method: "POST", headers: { "content-type": "image/jpeg" }, body: jpeg });
+  ok("رفع بلا جلسة 401", noauth.status === 401);
+  /* منتج بصورة منصتنا المرفوعة */
+  const mkOwn = await j("/api/products", { method: "POST", cookie, csrf, body: { title: "منتج بصورة مرفوعة", price: 1500, image: ud.url, category: "other" } });
+  ok("منتج بصورة /media/ مقبول", mkOwn.status === 201);
+  /* مسار المنتج المستقل */
+  const pr = await j("/api/product/" + pid);
+  ok("مسار /api/product/:id يعمل دائماً", pr.status === 200 && pr.data.product.id === pid && pr.data.store.slug);
+  const pr404 = await j("/api/product/p_missing");
+  ok("منتج مجهول 404", pr404.status === 404);
+  /* أصول العرض تُخدم */
+  const demo = await fetch(BASE + "/data/demo/p-watch.jpg");
+  ok("صور متجر العرض تُخدم", demo.status === 200 && (demo.headers.get("content-type") || "").startsWith("image/"));
 }
 
 /* ─── 9. حذف وتنظيف ─── */

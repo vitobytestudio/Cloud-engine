@@ -2,7 +2,7 @@
 import type { Env, Session } from "./env";
 import {
   json, bad, id, now, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
-  destroySession, hex, ctEqual, rl, isEmail, isK0, isSlug, isPhoneDZ, isHttpsUrl, isStr, RESERVED_SLUGS,
+  destroySession, hex, ctEqual, rl, isEmail, isK0, isSlug, isPhoneDZ, isHttpsUrl, isImagePath, sniffImage, isStr, RESERVED_SLUGS,
 } from "./lib";
 
 type Route = {
@@ -141,7 +141,7 @@ function validateProduct(b: Record<string, unknown>): { error?: string; v?: Prod
   if (!isStr(title, 3, 120)) return { error: "invalid_title" };
   if (!Number.isFinite(price) || price < 1 || price > 99_000_000) return { error: "invalid_price" };
   if (compare_at && (compare_at < price || compare_at > 99_000_000)) return { error: "invalid_compare" };
-  if (!isHttpsUrl(image)) return { error: "invalid_image" };
+  if (!isHttpsUrl(image) && !isImagePath(image)) return { error: "invalid_image" };
   if (!CATEGORIES.includes(category)) return { error: "invalid_category" };
   if (stock < -1 || stock > 100_000) return { error: "invalid_stock" };
   return { v: { title, descr, price: Math.trunc(price), compare_at: Math.trunc(compare_at), image, category, stock, featured } };
@@ -297,6 +297,35 @@ route("DELETE", "/api/expenses/:id", async (_r, env, s, p) => {
   return json({ ok: true });
 }, { auth: true, csrf: true });
 
+// ═══ منتج مفرد (صفحة المنتج تعمل دائماً) ═══
+route("GET", "/api/product/:id", async (_r, env, _s, p) => {
+  const r = await env.DB.prepare(
+    `SELECT pr.id, pr.user_id, pr.title, pr.descr, pr.price, pr.compare_at, pr.image, pr.category, pr.stock, pr.created_at,
+      u.slug AS store_slug, u.store_name AS store_name, u.logo AS store_logo, u.whatsapp AS store_whatsapp
+    FROM products pr JOIN users u ON u.id = pr.user_id
+    WHERE pr.id = ?1 AND pr.active = 1`
+  ).bind(p.id).first();
+  if (!r) return bad("not_found", 404);
+  return json({ product: { ...r, user_id: undefined }, store: { slug: r.store_slug, store_name: r.store_name, logo: r.store_logo, whatsapp: r.store_whatsapp } });
+});
+
+// ═══ رفع الصور (KV — بلا R2) ═══
+route("POST", "/api/media", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  if (!(await rl(env, `med:${s.userId}`, 60, DAY_S))) return bad("too_many", 429);
+  const ct = (req.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+  if (!["image/jpeg", "image/png", "image/webp"].includes(ct)) return bad("invalid_type");
+  const buf = await req.arrayBuffer();
+  if (buf.byteLength < 64) return bad("too_small");
+  if (buf.byteLength > 600_000) return bad("too_large", 413);
+  const kind = sniffImage(buf);
+  if (!kind) return bad("invalid_image");
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  const hash = [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+  await env.CACHE_KV.put(`img:${hash}`, buf);
+  return json({ ok: true, url: `/media/${hash}.${kind}` }, 201);
+}, { auth: true, csrf: true });
+
 // ═══ المتجر العام ═══
 route("GET", "/api/store/:slug", async (_r, env, _s, p) => {
   const u = await env.DB.prepare("SELECT * FROM users WHERE slug = ?").bind(p.slug).first<UserRow>();
@@ -366,6 +395,14 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
+    if (path.startsWith("/media/")) {
+      const m = /^\/media\/([0-9a-f]{16})\.(jpg|png|webp)$/.exec(path);
+      if (!m) return bad("not_found", 404);
+      const obj = await env.CACHE_KV.get(`img:${m[1]}`, { type: "arrayBuffer" });
+      if (!obj) return bad("not_found", 404);
+      const ct = m[2] === "jpg" ? "image/jpeg" : m[2] === "png" ? "image/png" : "image/webp";
+      return new Response(obj, { headers: { "content-type": ct, "cache-control": "public, max-age=31536000, immutable" } });
+    }
     if (path.startsWith("/api/")) {
       const s = await getSession(env, req);
       for (const r of R) {

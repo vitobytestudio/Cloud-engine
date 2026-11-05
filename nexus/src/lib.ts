@@ -88,6 +88,18 @@ export function isHttpsUrl(s: string): boolean {
     return false;
   }
 }
+/** صور منصتنا المرفوعة أو المدمجة (مسارات نسبية آمنة) */
+export const isImagePath = (s: string) =>
+  /^\/media\/[0-9a-f]{16}\.(jpg|png|webp)$/.test(s) || /^\/data\/[a-z0-9/_.-]+\.(jpg|png|webp)$/.test(s);
+
+/** وسم بايتات الصورة الحقيقي (لا نثق بالترويسة) */
+export function sniffImage(b: ArrayBuffer): "jpg" | "png" | "webp" | null {
+  const u = new Uint8Array(b.slice(0, 16));
+  if (u[0] === 0xff && u[1] === 0xd8 && u[2] === 0xff) return "jpg";
+  if (u[0] === 0x89 && u[1] === 0x50 && u[2] === 0x4e && u[3] === 0x47) return "png";
+  if (u[0] === 0x52 && u[1] === 0x49 && u[2] === 0x46 && u[3] === 0x46 && u[8] === 0x57 && u[9] === 0x45) return "webp";
+  return null;
+}
 export const isStr = (v: unknown, min: number, max: number): v is string =>
   typeof v === "string" && v.trim().length >= min && v.trim().length <= max;
 
