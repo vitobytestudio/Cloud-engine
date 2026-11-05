@@ -277,16 +277,19 @@ const TABS = [
   { id: "mystore", icon: '<path d="M4 7h16l-1.2 13H5.2zM8 7a4 4 0 0 1 8 0"/>', route: "#/dash" },
   { id: "account", icon: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-5.5 8-5.5s6.5 1.5 8 5.5"/>', route: "#/account" },
 ];
-function buildTabbar() {
+function buildTabbar(visible = true) {
   const nav = $("#tabbar");
-  nav.innerHTML = TABS.map((tb) => `
-    <button class="tab" data-tab="${tb.id}" data-route="${tb.route}">
-      <span class="pill"></span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${tb.icon}</svg>
-      <span>${esc(t(tb.id === "mystore" ? "mystore" : tb.id))}</span>
-    </button>`).join("");
-  $$(".tab", nav).forEach((b) => (b.onclick = () => { vibrate(5); go(b.dataset.route); }));
-  nav.classList.remove("hidden");
+  if (!nav) return;
+  if (!nav.innerHTML) {
+    nav.innerHTML = TABS.map((tb) => `
+      <button class="tab" data-tab="${tb.id}" data-route="${tb.route}">
+        <span class="pill"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${tb.icon}</svg>
+        <span>${esc(t(tb.id))}</span>
+      </button>`).join("");
+    $$(".tab", nav).forEach((b) => (b.onclick = () => { vibrate(5); go(b.dataset.route); }));
+  }
+  nav.classList.toggle("hidden", !visible);
 }
 function updateTabbar(section) {
   const map = { "": "home", explore: "explore", s: "home", p: "home", dash: "mystore", account: "account", auth: "account", adm: "account" };
@@ -320,7 +323,7 @@ const skeletons = (n = 6) => `<div class="grid">${Array.from({ length: n }, () =
 
 /* الترحيب */
 rr("/onb-check", async (v) => {
-  buildTabbar(); $("#tabbar").classList.add("hidden");
+  buildTabbar(false);
   if (localStorage.getItem("nx_seen") || $("#onb")) { location.hash = "#/"; return; }
   const art = (inner) => `<div class="onb-art">${inner}</div>`;
   v.parentElement.insertAdjacentHTML("beforeend", `
@@ -358,8 +361,10 @@ rr("/onb-check", async (v) => {
 
 /* الرئيسية / الفيد */
 let feedCursor = null, feedCat = "", feedQ = "", feedBusy = false;
+const resetFeed = () => { feedCursor = null; feedCat = ""; feedQ = ""; feedBusy = false; };
 rr("/", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
+  resetFeed();
   v.innerHTML = `${topbar()}
     <div class="chips-row" id="feed-cats" style="padding-top:12px"></div>
     <div id="feed-list"></div>`;
@@ -412,7 +417,7 @@ async function loadFeed(reset = false) {
 
 /* الاستكشاف */
 rr("/explore", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   v.innerHTML = `${topbar()}
     <div class="page" style="padding-top:8px">
       <input class="input" id="q-in" placeholder="${esc(t("search_ph"))}" autocomplete="off"/>
@@ -456,7 +461,7 @@ async function runSearch(q) {
 
 /* المتجر */
 rr("/s/:slug", async (v, p) => {
-  buildTabbar();
+  buildTabbar(true);
   v.innerHTML = `${topbar()}<div id="store-body">${skeletons(2)}</div>`;
   let data;
   try { data = await api("/api/store/" + encodeURIComponent(p.slug)); }
@@ -489,7 +494,7 @@ rr("/s/:slug", async (v, p) => {
 
 /* صفحة المنتج */
 rr("/p/:id", async (v, p) => {
-  buildTabbar();
+  buildTabbar(true);
   v.innerHTML = `${topbar()}<div class="page" style="padding-top:8px">${skeletons(1)}</div>`;
   let prod = null;
   try {
@@ -610,7 +615,7 @@ async function orderSheet(prod) {
 
 /* ═══ المصادقة ═══ */
 rr("/auth", async (v) => {
-  buildTabbar(); $("#tabbar").classList.add("hidden");
+  buildTabbar(false);
   let mode = "login";
   v.innerHTML = `${topbar("")}<div class="page" id="auth-box" style="padding-top:20px"></div>`;
   const box = v.querySelector("#auth-box");
@@ -705,7 +710,7 @@ function dashShell(v, active, contentHtml) {
 }
 
 rr("/dash", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   dashShell(v, "overview", skeletons(3));
   const [counts, fin] = await Promise.all([api("/api/me"), api("/api/finance")]);
@@ -761,7 +766,7 @@ function drawChart(cid, rev, exp) {
 
 /* المنتجات */
 rr("/dash/products", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   dashShell(v, "products", skeletons(2));
   const data = await api("/api/products");
@@ -857,7 +862,7 @@ function productEditor(p = null) {
 /* الطلبيات */
 let ordersFilter = "";
 rr("/dash/orders", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   dashShell(v, "orders", skeletons(3));
   const [all, fin] = await Promise.all([
@@ -921,7 +926,7 @@ function orderDetail(o) {
 
 /* المالية */
 rr("/dash/finance", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   dashShell(v, "finance", skeletons(3));
   const [fin, exps] = await Promise.all([api("/api/finance"), api("/api/expenses")]);
@@ -968,7 +973,7 @@ rr("/dash/finance", async (v) => {
 
 /* الإعدادات */
 rr("/dash/settings", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   const u = S.user;
   dashShell(v, "settings", `
@@ -999,7 +1004,7 @@ rr("/dash/settings", async (v) => {
 
 /* الحساب */
 rr("/account", async (v) => {
-  buildTabbar();
+  buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   const u = S.user;
   const link = location.origin + "/#/s/" + u.slug;
@@ -1038,10 +1043,10 @@ rr("/account", async (v) => {
 function setLang(lang) {
   S.lang = lang;
   localStorage.setItem("nx_lang", lang);
+  $("#tabbar").innerHTML = "";
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
-  buildTabbar();
-  render();
+  render(true);
   vibrate(8);
 }
 

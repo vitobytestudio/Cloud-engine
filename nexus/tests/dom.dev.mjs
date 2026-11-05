@@ -81,6 +81,21 @@ w.eval('setLang("ar")');
 await sleep(600);
 ok("العودة للعربية RTL", d.documentElement.dir === "rtl" && alive());
 
+/* 8ب) جولة إجهاد: تنقل سريع متكرر ثم فحص السليمة */
+for (const h of ["#/p/p_demo_perfume", "#/s/vito-store", "#/explore", "#/", "#/p/p_demo_watch", "#/auth", "#/", "#/explore"]) {
+  w.location.hash = h;
+  await sleep(220);
+}
+await sleep(900);
+ok("إجهاد التنقل السريع: الرئيسية حية وبطاقاتها كاملة", alive() && d.querySelectorAll(".p-card").length >= 4);
+
+/* 8ج) اللغة الإنجليزية ثم دخول التنقل فيها */
+w.eval('setLang("en")');
+await sleep(600);
+ok("إنجليزية: الرئيسية بعد الإجهاد سليمة", alive() && d.querySelectorAll(".p-card").length >= 4);
+w.eval('setLang("ar")');
+await sleep(600);
+
 /* 9) صفر أخطاء غير الممسوكة في كل الجولة */
 ok("صفر أخطاء JS غير الممسوكة طوال الجولة", errors.length === 0);
 if (errors.length) console.log(errors.join("\n"));
