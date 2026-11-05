@@ -1,5 +1,5 @@
 // ——— NAKSAB — منصة العمل الحر — Stage 1 — Cloudflare Workers ———
-// عزل كامل عن nexus-hub: قاعدة D1 مستقلة، Worker مستقل، لا مساس بأي مورد قائم.
+// عزل كامل: قاعدة D1 مستقلة، Worker مستقل، لا مساس بأي مورد قائم.
 import type { Env, Session } from "./env";
 import {
   json, id, now, esc, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
