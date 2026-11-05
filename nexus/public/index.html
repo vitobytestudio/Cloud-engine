@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>NEXUS — منصة التجار</title>
+<meta name="description" content="NEXUS — متجرك الإلكتروني برابط مستقل + سوق يجلب لك زبائن جدد. الدفع عند الاستلام في كل الجزائر.">
+<meta name="theme-color" content="#07080D">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<meta property="og:title" content="NEXUS — منصة التجار">
+<meta property="og:description" content="متجرك الإلكتروني + سوق NEXUS في مكان واحد. أطلق متجرك في دقائق.">
+<meta property="og:image" content="/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div id="ambient" aria-hidden="true"></div>
+<div id="app">
+  <div id="boot" class="boot">
+    <div class="boot-logo">
+      <svg viewBox="0 0 64 64" width="72" height="72" fill="none">
+        <defs><linearGradient id="bg1" x1="0" y1="0" x2="64" y2="64">
+          <stop offset="0" stop-color="#7A5CFF"/><stop offset="1" stop-color="#2AD4F6"/>
+        </linearGradient></defs>
+        <path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" fill="url(#bg1)"/>
+      </svg>
+    </div>
+    <div class="boot-name">NEXUS</div>
+    <div class="boot-bar"><i></i></div>
+  </div>
+  <main id="view" tabindex="-1"></main>
+  <nav id="tabbar" class="tabbar hidden"></nav>
+</div>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+<script src="/app.js"></script>
+</body>
+</html>

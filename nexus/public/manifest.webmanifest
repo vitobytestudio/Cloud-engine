@@ -1,0 +1,12 @@
+{
+  "name": "NEXUS",
+  "short_name": "NEXUS",
+  "description": "منصة التجار — متجرك + السوق",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07080D",
+  "theme_color": "#07080D",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [{ "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}
