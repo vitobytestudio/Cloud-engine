@@ -38,6 +38,20 @@ jobs:
         working-directory: nexus
         run: npm run build
 
+      - name: البوابة الحية — هارنس API ×2 + هارنس DOM متصفح محاكى
+        working-directory: nexus
+        run: |
+          npx wrangler d1 execute DB --local -y --file schema.sql >/dev/null
+          npx wrangler d1 execute DB --local -y --file seed.sql >/dev/null
+          npx wrangler dev --port 8792 --local > dev.log 2>&1 &
+          WPID=$!
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8792/api/health && break; sleep 2; done
+          curl -s http://127.0.0.1:8792/api/health | grep -q '"ok":true' || { echo "::error::الخادم المحلي لم يقلع"; tail -n 20 dev.log; exit 1; }
+          node tests/harness.dev.mjs
+          node tests/harness.dev.mjs
+          node tests/dom.dev.mjs
+          kill $WPID 2>/dev/null || true
+
       - name: قاعدة NEXUS ومساحة KV (إنشاء برمجي إن لم توجدا)
         working-directory: nexus
         run: |
