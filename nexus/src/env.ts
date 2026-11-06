@@ -1,3 +1,4 @@
+export type Plan = "free" | "pro" | "vip";
 export type Session = { userId: string; csrf: string; exp: number };
 
 export interface Env {
@@ -6,4 +7,5 @@ export interface Env {
   ASSETS: Fetcher;
   ENVIRONMENT: string;
   ADMIN_K0?: string;
+  AI_KEYS?: string;
 }

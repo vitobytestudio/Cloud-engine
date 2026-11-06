@@ -38,6 +38,13 @@ const T = {
     req_field: "أكمل الحقول المطلوبة", bad_phone: "رقم هاتف غير صحيح", sending: "جارٍ الإرسال…",
     place_order_title: "إتمام الطلب", total: "الإجمالي", qty: "الكمية",
     demo: "عرض", share_store: "شارك رابط متجرك", copied_link: "نُسخ رابط متجرك",
+    ask_agent: "اسأل مساعد المتجر", agent_welcome: "أهلاً! أنا المساعد الذكي للمتجر — اسألني عن أي منتج أو سعر أو توصيل.",
+    agent_send_ph: "اكتب سؤالك…", agent_off: "المساعد الذكي متوقف حالياً — تواصل مع التاجر عبر الطلبية.",
+    agent_handoff: "سؤالك وصل للتاجر وسيرد عليك بنفسه.", plan: "الباقة", credits: "أرصدة منتجات إضافية",
+    quota_today: "محادثات اليوم", plan_free: "مجانية", plan_pro: "احترافية", plan_vip: "نخبة VIP",
+    verified_badge: "موثّق", agent_tab: "الوكيل", agent_sessions: "جلسات الزبائن", no_sessions: "لا جلسات بعد",
+    session_close: "إغلاق الجلسة", closed_s: "مغلقة", open_s: "مفتوحة", upgrade_note: "الترقية من لوحة المالك",
+    limit_reached: "وصلت حد باقتك — أضف رصيداً أو رقِّ باقتك",
   },
   en: {
     tagline: "Merchant Market", home: "Home", explore: "Explore", mystore: "My Store", account: "Account",
@@ -74,6 +81,13 @@ const T = {
     req_field: "Fill the required fields", bad_phone: "Invalid phone number", sending: "Sending…",
     place_order_title: "Complete order", total: "Total", qty: "Qty",
     demo: "Demo", share_store: "Share your store link", copied_link: "Store link copied",
+    ask_agent: "Ask the store assistant", agent_welcome: "Hi! I'm the store's smart assistant — ask me about any product, price or delivery.",
+    agent_send_ph: "Type your question…", agent_off: "Assistant is offline — reach the merchant via an order.",
+    agent_handoff: "Your question reached the merchant — they'll reply themselves.", plan: "Plan", credits: "Extra product credits",
+    quota_today: "Today's chats", plan_free: "Free", plan_pro: "Pro", plan_vip: "VIP",
+    verified_badge: "Verified", agent_tab: "Agent", agent_sessions: "Customer sessions", no_sessions: "No sessions yet",
+    session_close: "Close session", closed_s: "Closed", open_s: "Open", upgrade_note: "Upgrade via owner console",
+    limit_reached: "Plan limit reached — add credits or upgrade",
   },
 };
 
@@ -473,8 +487,14 @@ rr("/s/:slug", async (v, p) => {
       <div class="store-banner">${st.banner ? imgTag(st.banner) : ""}</div>
       <div class="store-id">
         ${st.logo ? imgTag(st.logo, "store-logo") : `<div class="store-logo empty-logo">${esc((st.store_name || "N")[0])}</div>`}
-        <div><div class="n">${esc(st.store_name)}</div><div class="s">@${esc(st.slug)}</div></div>
+        <div><div class="n">${esc(st.store_name)}
+          ${st.verified ? `<span class="vbadge ${st.plan === "vip" ? "gold" : ""}" title="${esc(t("verified_badge"))}"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
+          ${st.plan === "vip" ? `<span class="planbadge">VIP</span>` : st.plan === "pro" ? `<span class="planbadge pro">PRO</span>` : ""}
+        </div><div class="s">@${esc(st.slug)}</div></div>
       </div>
+      <button class="agent-fab ${data.agent_enabled ? "" : "off"}" id="agent-fab" title="${esc(t("ask_agent"))}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a7 7 0 0 1 7 7c0 1.2-.3 2.3-.9 3.3L19 17l-3-.6A7 7 0 1 1 12 3z"/><circle cx="9.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="12.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="15.5" cy="10.5" r=".8" fill="currentColor"/></svg>
+      </button>
       ${st.bio ? `<div class="store-bio">${esc(st.bio)}</div>` : ""}
       <div class="store-actions">
         <button class="btn primary" id="share-store" style="flex:1">${esc(t("share_store"))}</button>
@@ -490,7 +510,66 @@ rr("/s/:slug", async (v, p) => {
     try { await navigator.clipboard.writeText(link); toast(t("copied_link")); }
     catch { toast(link); }
   };
+  $("#agent-fab").onclick = () => agentChat(st, data.agent_enabled);
 });
+
+/* محادثة الوكيل الذكي (الزبون ↔ الوكيل) */
+async function agentChat(st, enabled) {
+  vibrate(8);
+  const bxKey = "nx_bx_" + st.slug;
+  let buyer = localStorage.getItem(bxKey) || "";
+  if (!buyer) { buyer = Math.random().toString(16).slice(2, 14); localStorage.setItem(bxKey, buyer); }
+  const sessKey = "nx_sess_" + st.slug;
+  let sessionId = sessionStorage.getItem(sessKey) || "";
+  const sh = sheet(`
+    <h3 style="display:flex;align-items:center;gap:8px">
+      <span style="width:34px;height:34px;border-radius:12px;background:var(--grad);display:grid;place-items:center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 3a7 7 0 0 1 7 7c0 1.2-.3 2.3-.9 3.3L19 17l-3-.6A7 7 0 1 1 12 3z"/></svg>
+      </span>
+      ${esc(t("ask_agent"))}</h3>
+    <div id="ag-log" style="display:flex;flex-direction:column;gap:8px;min-height:180px;max-height:46dvh;overflow-y:auto;padding:4px 2px"></div>
+    <div id="ag-err" style="min-height:18px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input class="input" id="ag-in" placeholder="${esc(t("agent_send_ph"))}" style="flex:1"/>
+      <button class="btn primary" id="ag-send" style="min-width:52px;padding:0 14px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+      </button>
+    </div>`);
+  const log = $("#ag-log", sh.wrap);
+  const bubble = (text, me = false, typing = false) => {
+    const el = document.createElement("div");
+    el.className = "ag-msg " + (me ? "me" : "bot") + (typing ? " typing" : "");
+    el.innerHTML = typing
+      ? '<span></span><span></span><span></span>'
+      : esc(text).replace(/\n/g, "<br>");
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  };
+  if (!enabled) { bubble(t("agent_off")); $("#ag-in", sh.wrap).disabled = true; $("#ag-send", sh.wrap).disabled = true; return; }
+  bubble(t("agent_welcome"));
+  const send = async () => {
+    const input = $("#ag-in", sh.wrap);
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = "";
+    bubble(msg, true);
+    const tEl = bubble("", false, true);
+    vibrate(5);
+    try {
+      const r = await fetch(`/api/agent/chat`, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ store_slug: st.slug, message: msg, lang: S.lang, buyer, session_id: sessionId }) });
+      const d = await r.json();
+      tEl.remove();
+      if (d.session_id) { sessionId = d.session_id; sessionStorage.setItem(sessKey, sessionId); }
+      if (d.reply) bubble(d.reply);
+      else if (d.handoff) bubble(t("agent_handoff"));
+      else bubble(t("agent_off"));
+    } catch { tEl.remove(); bubble(t("agent_off")); }
+  };
+  $("#ag-send", sh.wrap).onclick = send;
+  $("#ag-in", sh.wrap).onkeydown = (e) => { if (e.key === "Enter") send(); };
+}
 
 /* صفحة المنتج */
 rr("/p/:id", async (v, p) => {
@@ -689,7 +768,7 @@ rr("/auth", async (v) => {
 async function me() {
   try {
     const r = await api("/api/me");
-    S.user = r.user;
+    S.user = { ...r.user, plan: r.plan, credits: r.credits, agent_today: r.agent_today, agent_quota: r.agent_quota };
     if (r.csrf) { S.csrf = r.csrf; sessionStorage.setItem("nx_csrf", r.csrf); }
     return r;
   } catch { S.user = null; return null; }
@@ -697,7 +776,8 @@ async function me() {
 
 const DASH_TABS = [
   { id: "overview", r: "#/dash" }, { id: "products", r: "#/dash/products" },
-  { id: "orders", r: "#/dash/orders" }, { id: "finance", r: "#/dash/finance" }, { id: "settings", r: "#/dash/settings" },
+  { id: "orders", r: "#/dash/orders" }, { id: "finance", r: "#/dash/finance" },
+  { id: "agent_tab", r: "#/dash/agent" }, { id: "settings", r: "#/dash/settings" },
 ];
 function dashShell(v, active, contentHtml) {
   const u = S.user;
@@ -848,7 +928,8 @@ function productEditor(p = null) {
       else await api("/api/products", { method: "POST", body: bbody });
       toast(t("saved")); vibrate(10); sh.close(); render();
     } catch (ex) {
-      $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error || "error")}</span>`;
+      $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "plan_limit" ? t("limit_reached") : ex.error || "error")}</span>`;
+      vibrate([8, 30, 8]);
     }
   };
   if (isEdit) $("#e-del", sh.wrap).onclick = (e) => {
@@ -923,6 +1004,47 @@ function orderDetail(o) {
     } catch { toast("error", "err"); }
   }));
 }
+
+/* الوكيل الذكي: الحصة والجلسات */
+rr("/dash/agent", async (v) => {
+  buildTabbar(true);
+  if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
+  dashShell(v, "agent_tab", skeletons(3));
+  const data = await api("/api/agent/sessions");
+  const pct = Math.min(100, Math.round((data.today / Math.max(1, data.quota)) * 100));
+  $("#dash-body").innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <b style="font-size:14px">${esc(t("quota_today"))}</b>
+        <span class="price">${data.today} / ${data.quota}</span></div>
+      <div style="height:10px;border-radius:99px;background:var(--card2);overflow:hidden">
+        <div style="height:100%;width:${pct}%;border-radius:99px;background:var(--grad);transition:width 1s var(--spring)"></div></div>
+      <p class="hint" style="margin-top:8px">${esc(t("plan"))}: ${esc(t("plan_" + (S.user.plan || "free")))} · ${esc(t("credits"))}: <b>${S.user.credits ?? 0}</b></p>
+    </div>
+    <div class="section-title" style="margin-top:4px">${esc(t("agent_sessions"))}</div>
+    <div class="card" style="padding:4px 16px" id="sess-list">
+      ${(data.sessions || []).map((x) => `
+        <button class="list-item" data-s="${esc(x.id)}" style="width:100%;text-align:start">
+          <span class="bd"><span class="t">${esc(t("customer"))} · ${x.msgs} رسالة</span>
+          <span class="s">${fdate(x.updated_at)}</span></span>
+          <span class="st-tag ${x.status === "open" ? "st-new" : "st-cancelled"}">${esc(x.status === "open" ? t("open_s") : t("closed_s"))}</span>
+        </button>`).join("") || `<div class="empty" style="padding:24px"><p>${esc(t("no_sessions"))}</p></div>`}
+    </div>`;
+  $$("[data-s]", v).forEach((b) => (b.onclick = async () => {
+    const det = await api("/api/agent/sessions/" + b.dataset.s);
+    const sh = sheet(`
+      <h3>${esc(t("agent_sessions"))}</h3>
+      <div id="ag-hist" style="display:flex;flex-direction:column;gap:8px;max-height:44dvh;overflow-y:auto;padding:4px 2px">
+        ${det.messages.map((m) => `<div class="ag-msg ${m.role === "user" ? "me" : "bot"}">${esc(m.content).replace(/\n/g, "<br>")}</div>`).join("")}
+      </div>
+      ${det.session.status === "open" ? `<button class="btn wide danger" id="ag-close" style="margin-top:12px">${esc(t("session_close"))}</button>` : ""}`);
+    const cb = $("#ag-close", sh.wrap);
+    if (cb) cb.onclick = async () => {
+      await api("/api/agent/sessions/" + b.dataset.s, { method: "PATCH", body: { status: "closed" } });
+      toast(t("done")); sh.close(); render(true);
+    };
+  }));
+});
 
 /* المالية */
 rr("/dash/finance", async (v) => {
@@ -1010,10 +1132,24 @@ rr("/account", async (v) => {
   const link = location.origin + "/#/s/" + u.slug;
   v.innerHTML = `${topbar()}
     <div class="page" style="padding-top:16px">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
         ${u.logo ? imgTag(u.logo, "store-logo", "") : `<div class="store-logo empty-logo">${esc((u.store_name || "N")[0])}</div>`}
-        <div><div style="font-size:18px;font-weight:700">${esc(u.store_name || u.name)}</div>
+        <div><div style="font-size:18px;font-weight:700">${esc(u.store_name || u.name)}
+          ${u.verified ? `<span class="vbadge ${u.plan === "vip" ? "gold" : ""}"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
+          ${u.plan === "vip" ? '<span class="planbadge">VIP</span>' : u.plan === "pro" ? '<span class="planbadge pro">PRO</span>' : ""}
+        </div>
           <div class="s" style="color:var(--muted);font-size:12px;direction:ltr">@${esc(u.slug)}</div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px;padding:14px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="hint">${esc(t("plan"))}</span>
+          <b style="color:${u.plan === "vip" ? "#ffd166" : u.plan === "pro" ? "var(--cyan)" : "var(--muted)"}">${esc(t("plan_" + (u.plan || "free")))}</b>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px">
+          <span class="hint">${esc(t("credits"))}</span><b>${u.credits ?? 0}</b></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px">
+          <span class="hint">${esc(t("quota_today"))}</span><b>${u.agent_today ?? 0} / ${u.agent_quota ?? 15}</b></div>
+        <p class="hint" style="margin-top:10px">${esc(t("upgrade_note"))}</p>
       </div>
       <div class="card" style="padding:4px 16px;margin-bottom:14px">
         <button class="list-item" id="acc-link" style="width:100%;text-align:start">

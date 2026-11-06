@@ -82,13 +82,26 @@ jobs:
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV جاهزان"
 
-      - name: المخطط والبذرة (idempotent — CREATE/INSERT IF NOT EXISTS)
+      - name: المخطط والترقية والبذرة (idempotent)
         working-directory: nexus
         run: |
           sed -i 's/ENVIRONMENT = "development"/ENVIRONMENT = "production"/' wrangler.toml
           npx wrangler d1 execute DB --remote -y --file schema.sql
+          npx wrangler d1 execute DB --remote -y --file migrate.sql || echo "::notice::أعمدة الترقية مطبقة مسبقاً"
           npx wrangler d1 execute DB --remote -y --file seed.sql
-          echo "::notice::مخطط NEXUS وبذرة متجر العرض مُطبّقان"
+          echo "::notice::مخطط NEXUS وترقيته وبذرة العرض مُطبّقة"
+
+      - name: مفتاح أسطول الذكاء الاصطناعي (سر — إن وُجد)
+        working-directory: nexus
+        run: |
+          if [ -n "$AI_KEYS" ]; then
+            echo "$AI_KEYS" | npx wrangler secret put AI_KEYS
+            echo "::notice::AI_KEYS نُقل كسر للعامل"
+          else
+            echo "::notice::AI_KEYS غير مضبوط — الوكيل يعمل بلا أسطول حتى إضافته"
+          fi
+        env:
+          AI_KEYS: ${{ secrets.AI_KEYS }}
 
       - name: النشر
         working-directory: nexus

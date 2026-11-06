@@ -96,6 +96,16 @@ ok("إنجليزية: الرئيسية بعد الإجهاد سليمة", alive(
 w.eval('setLang("ar")');
 await sleep(600);
 
+/* 8د) الوكيل والشارات في متجر العرض */
+await nav("#/s/vito-store");
+ok("متجر pro يحمل شارة التوثيق", !!d.querySelector(".vbadge") && !!d.querySelector(".planbadge.pro"));
+ok("زر الوكيل العائم موجود في المتجر", !!d.getElementById("agent-fab"));
+d.getElementById("agent-fab")?.click();
+await sleep(700);
+ok("ورقة الوكيل تفتح برسالة ترحيب", !!d.getElementById("ag-log") && d.getElementById("ag-log").textContent.length > 10);
+d.querySelector(".sheet-bd")?.click();
+await sleep(500);
+
 /* 9) صفر أخطاء غير الممسوكة في كل الجولة */
 ok("صفر أخطاء JS غير الممسوكة طوال الجولة", errors.length === 0);
 if (errors.length) console.log(errors.join("\n"));
