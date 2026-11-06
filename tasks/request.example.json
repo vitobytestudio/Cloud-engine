@@ -1,0 +1,5 @@
+[
+  {"id": "ex_shot_1", "action": "screenshot", "url": "https://example.com", "wait_ms": 3000},
+  {"id": "ex_txt_1", "action": "extract", "url": "https://example.com", "max_chars": 5000},
+  {"id": "ex_chat_1", "action": "chat", "url": "https://gemini.google.com/app", "input_selector": "textarea", "message": "اكتب وصفاً قصيراً بالدارجة الجزائرية لساعة يد ذكية", "reply_ms": 30000}
+]
