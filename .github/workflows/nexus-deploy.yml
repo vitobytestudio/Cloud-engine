@@ -96,9 +96,11 @@ jobs:
         run: |
           if [ -n "$AI_KEYS" ]; then
             echo "$AI_KEYS" | npx wrangler secret put AI_KEYS
+            SHAPE=$(echo "$AI_KEYS" | jq -r 'def walk_paths: if type=="object" then (keys[] as $k | "\($k):\(getpath([$k])|type|.[0:4])") elif type=="array" then "array[\(length)]" else type end' 2>/dev/null | head -8 | tr '\n' ' ' || echo "not-json")
+            echo "::notice::AI_KEYS موجود — الشكل المقنّع: $SHAPE (الأطوال: $(echo "$AI_KEYS" | jq -r '[.. | strings | length] | join(",")' 2>/dev/null | head -c 120))"
             echo "::notice::AI_KEYS نُقل كسر للعامل"
           else
-            echo "::notice::AI_KEYS غير مضبوط — الوكيل يعمل بلا أسطول حتى إضافته"
+            echo "::warning::AI_KEYS غير مضبوط في أسرار GitHub — الوكيل يعمل بلا أسطول حتى إضافته"
           fi
         env:
           AI_KEYS: ${{ secrets.AI_KEYS }}
