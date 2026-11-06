@@ -7,3 +7,5 @@ INSERT OR IGNORE INTO products (id, user_id, title, descr, price, compare_at, im
 ('p_demo_perfume', 'u_demo_vito', 'عطر شرقي فاخر 100مل', 'عطر شرقي بثبات يتجاوز 12 ساعة، مزيج العود والعنبر والمسك الأبيض. مثالي للمناسبات والسهرات، عبوة زجاجية فاخرة.', 3500, 4900, '/data/demo/p-perfume.jpg', 'beauty', -1, 1, 1, 1730733300000),
 ('p_demo_sneakers', 'u_demo_vito', 'حذاء رياضي بريميوم أبيض', 'حذاء رياضي عصري بجلد صناعي عالي الجودة، نعل مريح مضاد للانزلاق، مناسب للجري والاستعمال اليومي. مقاسات 39-45.', 8900, 11500, '/data/demo/p-sneakers.jpg', 'sport', -1, 1, 1, 1730734200000),
 ('p_demo_dress', 'u_demo_vito', 'فستان سهرة مطرز', 'فستان سهرة أسود أنيق بتطريز يدوي راقٍ، قماش فاخر لا يتجعد، تصميم يحتفي بالأناقة الجزائرية. متوفر بجميع المقاسات.', 10500, 13900, '/data/demo/p-dress.jpg', 'mode', -1, 0, 1, 1730735100000);
+
+UPDATE users SET plan='pro', verified=1 WHERE slug='vito-store';

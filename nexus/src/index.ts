@@ -1,5 +1,6 @@
 // ——— NEXUS — منصة التجار: متجر برابط مستقل + سوق/فيد + طلبيات + مالية ———
-import type { Env, Session } from "./env";
+import type { Env, Session, Plan } from "./env";
+import { fleetChat, buildSystemPrompt, PLAN_QUOTA, PLAN_PRODUCTS } from "./agent";
 import {
   json, bad, id, now, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
   destroySession, hex, ctEqual, rl, isEmail, isK0, isSlug, isPhoneDZ, isHttpsUrl, isImagePath, sniffImage, isStr, RESERVED_SLUGS,
@@ -41,11 +42,13 @@ const CATEGORIES = ["mode", "beauty", "electronics", "home", "kids", "food", "sp
 
 type UserRow = {
   id: string; email: string; name: string; slug: string; k0: string;
-  store_name: string; bio: string; logo: string; banner: string; whatsapp: string; color: string; created_at: number;
+  store_name: string; bio: string; logo: string; banner: string; whatsapp: string; color: string;
+  plan: Plan; credits: number; verified: number; created_at: number;
 };
 const publicUser = (u: UserRow) => ({
   slug: u.slug, store_name: u.store_name || u.name, bio: u.bio, logo: u.logo, banner: u.banner,
   whatsapp: u.whatsapp, color: u.color, created_at: u.created_at,
+  plan: u.plan ?? "free", verified: u.verified ?? 0,
 });
 
 async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
@@ -108,7 +111,15 @@ route("GET", "/api/me", async (_r, env, s) => {
       (SELECT COUNT(*) FROM orders WHERE user_id = ?1 AND status = 'new') AS orders_new,
       (SELECT COUNT(*) FROM orders WHERE user_id = ?1) AS orders`
   ).bind(u.id).first<{ products: number; orders_new: number; orders: number }>();
-  return json({ user: { ...publicUser(u), name: u.name, email: u.email }, csrf: s.csrf, counts });
+  const day = new Date().toISOString().slice(0, 10);
+  const agentToday = Number((await env.CACHE_KV.get(`aq:${u.id}:${day}`)) ?? "0");
+  return json({
+    user: { ...publicUser(u), name: u.name, email: u.email },
+    csrf: s.csrf, counts,
+    plan: u.plan ?? "free", credits: u.credits ?? 0,
+    plan_products: PLAN_PRODUCTS[u.plan ?? "free"] ?? 3,
+    agent_today: agentToday, agent_quota: PLAN_QUOTA[u.plan ?? "free"] ?? 15,
+  });
 });
 
 route("PUT", "/api/me", async (req, env, s) => {
@@ -153,6 +164,18 @@ route("POST", "/api/products", async (req, env, s) => {
   if (!(await rl(env, `prd:${s.userId}`, 80, DAY_S))) return bad("too_many", 429);
   const v = validateProduct(await body(req));
   if (v.error) return bad(v.error);
+  const u = await getUser(env, s.userId);
+  if (!u) return bad("auth_required", 401);
+  const plan = (u.plan ?? "free") as Plan;
+  const cnt = await env.DB.prepare("SELECT COUNT(*) AS n FROM products WHERE user_id = ? AND active = 1").bind(u.id)
+    .first<{ n: number }>();
+  const limit = PLAN_PRODUCTS[plan] ?? 3;
+  if ((cnt?.n ?? 0) >= limit) {
+    if ((u.credits ?? 0) > 0) {
+      const ded = await env.DB.prepare("UPDATE users SET credits = credits - 1 WHERE id = ? AND credits > 0").bind(u.id).run();
+      if ((ded.meta.changes ?? 0) === 0) return bad("plan_limit", 402);
+    } else return json({ error: "plan_limit", limit }, 402);
+  }
   const pid = id("p");
   await env.DB.prepare(
     "INSERT INTO products (id, user_id, title, descr, price, compare_at, image, category, stock, featured, active, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
@@ -333,7 +356,7 @@ route("GET", "/api/store/:slug", async (_r, env, _s, p) => {
   const { results } = await env.DB.prepare(
     "SELECT id, title, descr, price, compare_at, image, category, stock, created_at FROM products WHERE user_id = ? AND active = 1 ORDER BY featured DESC, created_at DESC LIMIT 100"
   ).bind(u.id).all();
-  return json({ store: publicUser(u), products: results ?? [] });
+  return json({ store: publicUser(u), products: results ?? [], agent_enabled: !!env.AI_KEYS });
 });
 
 // ═══ الفيد والاستكشاف ═══
@@ -343,13 +366,13 @@ route("GET", "/api/feed", async (req, env) => {
   const cat = clip(url.searchParams.get("cat") ?? "", 20);
   const q = clip((url.searchParams.get("q") ?? "").trim(), 60);
   let sql = `SELECT pr.id, pr.title, pr.price, pr.compare_at, pr.image, pr.category, pr.created_at,
-    u.slug AS store_slug, u.store_name AS store_name, u.logo AS store_logo
+    u.slug AS store_slug, u.store_name AS store_name, u.logo AS store_logo, u.verified AS store_verified, u.plan AS store_plan
     FROM products pr JOIN users u ON u.id = pr.user_id
     WHERE pr.active = 1 AND pr.created_at < ?1`;
   const binds: (string | number)[] = [before];
   if (cat) { sql += " AND pr.category = ?2"; binds.push(cat); }
   if (q) { sql += ` AND (pr.title LIKE ?${binds.length + 1} OR u.store_name LIKE ?${binds.length + 1})`; binds.push(`%${q}%`); }
-  sql += " ORDER BY pr.created_at DESC LIMIT 24";
+  sql += ` ORDER BY CASE u.plan WHEN 'vip' THEN 0 WHEN 'pro' THEN 1 ELSE 2 END, pr.featured DESC, pr.created_at DESC LIMIT 24`;
   const { results } = await env.DB.prepare(sql).bind(...binds).all();
   return json({ posts: results ?? [] });
 });
@@ -360,6 +383,102 @@ route("GET", "/api/categories", async (_r, env) => {
   ).all();
   return json({ categories: results ?? [] });
 });
+
+// ═══ الوكيل الذكي (قناتنا الأولى داخل المتجر — القنوات الخارجية لاحقاً بأمر المالك) ═══
+route("GET", "/api/store/:slug/agent", async (_r, env, _s, p) => {
+  const u = await env.DB.prepare("SELECT id, store_name, plan, verified FROM users WHERE slug = ?").bind(p.slug).first<UserRow>();
+  if (!u) return bad("not_found", 404);
+  const day = new Date().toISOString().slice(0, 10);
+  const used = Number((await env.CACHE_KV.get(`aq:${u.id}:${day}`)) ?? "0");
+  const quota = PLAN_QUOTA[(u.plan ?? "free") as Plan] ?? 15;
+  return json({
+    enabled: !!env.AI_KEYS && used < quota,
+    store_name: u.store_name || u.name,
+    plan: u.plan ?? "free", verified: u.verified ?? 0,
+    remaining: Math.max(0, quota - used),
+  });
+});
+
+route("POST", "/api/agent/chat", async (req, env) => {
+  if (!env.AI_KEYS) return json({ error: "agent_disabled" }, 503);
+  const ip = req.headers.get("cf-connecting-ip") ?? "x";
+  if (!(await rl(env, `chat:${ip}`, 30, 600))) return bad("too_many", 429);
+  const b = await body(req);
+  const slug = clip(str(b, "store_slug").toLowerCase(), 30);
+  const message = clip(str(b, "message").trim(), 600);
+  const lang = str(b, "lang") === "en" ? "en" : "ar";
+  const buyer = clip(str(b, "buyer"), 24) || hex(12);
+  const sidIn = clip(str(b, "session_id"), 30);
+  if (!isStr(message, 1, 600)) return bad("invalid_message");
+  const store = await env.DB.prepare("SELECT * FROM users WHERE slug = ?").bind(slug).first<UserRow>();
+  if (!store) return bad("not_found", 404);
+  const day = new Date().toISOString().slice(0, 10);
+  const kq = `aq:${store.id}:${day}`;
+  const used = Number((await env.CACHE_KV.get(kq)) ?? "0");
+  const quota = PLAN_QUOTA[(store.plan ?? "free") as Plan] ?? 15;
+  if (used >= quota) return json({ handoff: true, reply: "" }, 200);
+
+  let sess = sidIn
+    ? await env.DB.prepare("SELECT * FROM agent_sessions WHERE id = ? AND user_id = ?").bind(sidIn, store.id).first<{ id: string; msgs: number }>()
+    : null;
+  if (!sess) {
+    sess = { id: id("as"), msgs: 0 };
+    await env.DB.prepare("INSERT INTO agent_sessions (id, user_id, buyer, status, msgs, created_at, updated_at) VALUES (?,?,?,'open',0,?,?)")
+      .bind(sess.id, store.id, buyer, now(), now()).run();
+  }
+  const hist = await env.DB.prepare("SELECT role, content FROM agent_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 8")
+    .bind(sess.id).all<{ role: string; content: string }>();
+  const msgs = (hist.results ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+  msgs.push({ role: "user", content: message });
+  const prods = await env.DB.prepare("SELECT title, price, descr FROM products WHERE user_id = ? AND active = 1 ORDER BY featured DESC, created_at DESC LIMIT 20")
+    .bind(store.id).all<{ title: string; price: number; descr: string }>();
+  const sys = buildSystemPrompt(store.store_name || store.name, prods.results ?? [], lang);
+  let reply = await fleetChat(env, sys, msgs);
+  if (reply === null) {
+    reply = "";
+    await env.DB.prepare("INSERT INTO agent_messages (id, session_id, role, content, created_at) VALUES (?,?,?,?,?)")
+      .bind(id("am"), sess.id, "user", message, now()).run();
+    return json({ handoff: true, session_id: sess.id }, 200);
+  }
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO agent_messages (id, session_id, role, content, created_at) VALUES (?,?,?,?,?)").bind(id("am"), sess.id, "user", message, now()),
+    env.DB.prepare("INSERT INTO agent_messages (id, session_id, role, content, created_at) VALUES (?,?,?,?,?)").bind(id("am"), sess.id, "assistant", clip(reply, 1200), now()),
+    env.DB.prepare("UPDATE agent_sessions SET msgs = msgs + 2, updated_at = ? WHERE id = ?").bind(now(), sess.id),
+  ]);
+  await env.CACHE_KV.put(kq, String(used + 1), { expirationTtl: DAY_S });
+  return json({ reply: clip(reply, 1200), session_id: sess.id, remaining: Math.max(0, quota - used - 1) });
+});
+
+route("GET", "/api/agent/sessions", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM agent_sessions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 50"
+  ).bind(s.userId).all();
+  const day = new Date().toISOString().slice(0, 10);
+  const used = Number((await env.CACHE_KV.get(`aq:${s.userId}:${day}`)) ?? "0");
+  const u = await getUser(env, s.userId);
+  const quota = PLAN_QUOTA[(u?.plan ?? "free") as Plan] ?? 15;
+  return json({ sessions: results ?? [], today: used, quota });
+}, { auth: true });
+
+route("GET", "/api/agent/sessions/:id", async (_r, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  const sess = await env.DB.prepare("SELECT * FROM agent_sessions WHERE id = ? AND user_id = ?").bind(p.id, s.userId).first();
+  if (!sess) return bad("not_found", 404);
+  const { results } = await env.DB.prepare("SELECT role, content, created_at FROM agent_messages WHERE session_id = ? ORDER BY created_at")
+    .bind(p.id).all();
+  return json({ session: sess, messages: results ?? [] });
+}, { auth: true });
+
+route("PATCH", "/api/agent/sessions/:id", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  const b = await body(req);
+  const status = str(b, "status");
+  if (!["open", "closed"].includes(status)) return bad("invalid_status");
+  const r = await env.DB.prepare("UPDATE agent_sessions SET status = ? WHERE id = ? AND user_id = ?").bind(status, p.id, s.userId).run();
+  if ((r.meta.changes ?? 0) === 0) return bad("not_found", 404);
+  return json({ ok: true });
+}, { auth: true, csrf: true });
 
 // ═══ الإدارة (مخفية — 404 صامت بلا سر) ═══
 route("POST", "/api/admin/auth", async (req, env) => {
@@ -380,6 +499,26 @@ async function adminGuard(env: Env, req: Request): Promise<boolean> {
   if (!tok || !/^[0-9a-f]{48}$/.test(tok)) return false;
   return (await env.CACHE_KV.get(`adm:${tok}`)) === "1";
 }
+
+route("POST", "/api/admin/grant", async (req, env) => {
+  if (!(await adminGuard(env, req))) return bad("not_found", 404);
+  const b = await body(req);
+  const slug = clip(str(b, "slug").toLowerCase().trim(), 30);
+  const u = await env.DB.prepare("SELECT id FROM users WHERE slug = ?").bind(slug).first<{ id: string }>();
+  if (!u) return bad("not_found", 404);
+  const plan = str(b, "plan");
+  if (plan && !["free", "pro", "vip"].includes(plan)) return bad("invalid_plan");
+  const addCredits = Math.max(0, Math.min(999, Math.trunc(num(b, "credits")) || 0));
+  const verified = typeof b.verified === "boolean" ? (b.verified ? 1 : 0) : null;
+  await env.DB.prepare(
+    `UPDATE users SET
+      plan = COALESCE(?2, plan),
+      credits = credits + ?3,
+      verified = COALESCE(?4, verified)
+    WHERE id = ?1`
+  ).bind(u.id, plan || null, addCredits, verified).run();
+  return json({ ok: true });
+});
 
 route("GET", "/api/admin/stats", async (req, env) => {
   if (!(await adminGuard(env, req))) return bad("not_found", 404);

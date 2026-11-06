@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
   banner TEXT NOT NULL DEFAULT '',
   whatsapp TEXT NOT NULL DEFAULT '',
   color TEXT NOT NULL DEFAULT '',
+  plan TEXT NOT NULL DEFAULT 'free',
+  credits INTEGER NOT NULL DEFAULT 0,
+  verified INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_slug ON users(slug);
@@ -62,3 +65,23 @@ CREATE TABLE IF NOT EXISTS expenses (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_expenses_user ON expenses(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS agent_sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  buyer TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  msgs INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_asess_user ON agent_sessions(user_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS agent_messages (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_amsg_sess ON agent_messages(session_id, created_at);
