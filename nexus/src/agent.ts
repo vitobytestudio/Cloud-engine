@@ -15,11 +15,34 @@ const OPENROUTER_MODELS = ["openrouter/free"];
 export function parseFleet(raw: string | undefined): Target[] {
   if (!raw) return [];
   const out: Target[] = [];
+  const push = (p: Provider, cred: Cred, models: string[]) => {
+    if (!cred?.key) return;
+    for (const m of models) out.push({ p, acct: cred.name || p, key: cred.key, model: m });
+  };
+  const creds = (v: unknown): Cred[] => {
+    if (typeof v === "string") return [{ name: "acc", key: v }];
+    if (Array.isArray(v)) return v.map((x) => (typeof x === "string" ? { name: "acc", key: x } : { name: String(x?.name ?? "acc"), key: String(x?.key ?? x?.api_token ?? x?.token ?? "") }));
+    if (v && typeof v === "object") return [{ name: String((v as any).name ?? "acc"), key: String((v as any).key ?? (v as any).api_token ?? "") }];
+    return [];
+  };
   try {
-    const j = JSON.parse(raw) as Record<string, Cred[]>;
-    for (const c of j.gemini ?? []) for (const m of GEMINI_MODELS) out.push({ p: "gemini", acct: c.name, key: c.key, model: m });
-    for (const c of j.groq ?? []) for (const m of GROQ_MODELS) out.push({ p: "groq", acct: c.name, key: c.key, model: m });
-    for (const c of j.openrouter ?? []) for (const m of OPENROUTER_MODELS) out.push({ p: "openrouter", acct: c.name, key: c.key, model: m });
+    let j: any = JSON.parse(raw);
+    if (typeof j === "string") j = { gemini: j };
+    const flatKey = (base: string) => {
+      for (const k of Object.keys(j)) {
+        const kl = k.toLowerCase();
+        if (kl.includes(base) && (kl.includes("key") || kl.includes("token")) && typeof j[k] === "string" && j[k].length > 10)
+          return [{ name: k, key: j[k] }];
+      }
+      return [];
+    };
+    const first = (...cs: (Cred | undefined)[]): Cred | undefined => cs.find(Boolean);
+    const gm = first(creds(j.gemini)[0], creds(j.Gemini)[0], creds(j.GEMINI)[0], flatKey("gemini")[0], flatKey("google")[0]);
+    const gq = first(creds(j.groq)[0], creds(j.Groq)[0], creds(j.GROQ)[0], flatKey("groq")[0]);
+    const or = first(creds(j.openrouter)[0], creds(j.OpenRouter)[0], creds(j.OPENROUTER)[0], flatKey("openrouter")[0]);
+    if (gm) push("gemini", gm, GEMINI_MODELS);
+    if (gq) push("groq", gq, GROQ_MODELS);
+    if (or) push("openrouter", or, OPENROUTER_MODELS);
   } catch {}
   return out;
 }

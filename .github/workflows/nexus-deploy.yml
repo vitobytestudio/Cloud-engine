@@ -130,8 +130,10 @@ jobs:
           DZ=$(curl -s -o /dev/null -w "%{http_code}" "$URL/data/dz.json")
           echo "dz.json: $DZ"
           [ "$DZ" = 200 ] || { echo "::error::داتا الولايات غير مخدومة"; exit 1; }
+          CF=$(curl -s "$URL/api/store/vito-store/agent")
+          echo "::notice::fleet-config=${CF:0:300}"
           AG=$(curl -s -X POST "$URL/api/agent/chat" -H "content-type: application/json" \
             -d '{"store_slug":"vito-store","message":"شحال الساعة؟","lang":"ar","buyer":"ci-smoke"}')
-          echo "agent: $AG"
-          echo "$AG" | grep -q '"reply"' && echo "::notice::الوكيل الذكي حي ويرد فعلاً من الأسطول" || echo "::warning::الوكيل بلا رد (AI_KEYS غير مضبوطة أو الأسطول مبرَّد) — يبقى الموقع كاملاً عاملاً"
+          echo "::notice::agent-reply=${AG:0:300}"
+          echo "$AG" | grep -q '"reply"' && echo "::notice::الوكيل الذكي حي ويرد فعلاً من الأسطول" || echo "::warning::الوكيل بلا رد — راجع fleet-config أعلاه (عدّادات الأسطول أو الرد السببي)"
           echo "::notice::NEXUS حي على $URL — الفيد والولايات يعملان"
