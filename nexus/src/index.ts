@@ -1,6 +1,6 @@
 // ——— NEXUS — منصة التجار: متجر برابط مستقل + سوق/فيد + طلبيات + مالية ———
 import type { Env, Session, Plan } from "./env";
-import { fleetChat, buildSystemPrompt, PLAN_QUOTA, PLAN_PRODUCTS } from "./agent";
+import { fleetChat, buildSystemPrompt, parseFleet, PLAN_QUOTA, PLAN_PRODUCTS } from "./agent";
 import {
   json, bad, id, now, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
   destroySession, hex, ctEqual, rl, isEmail, isK0, isSlug, isPhoneDZ, isHttpsUrl, isImagePath, sniffImage, isStr, RESERVED_SLUGS,
@@ -391,11 +391,15 @@ route("GET", "/api/store/:slug/agent", async (_r, env, _s, p) => {
   const day = new Date().toISOString().slice(0, 10);
   const used = Number((await env.CACHE_KV.get(`aq:${u.id}:${day}`)) ?? "0");
   const quota = PLAN_QUOTA[(u.plan ?? "free") as Plan] ?? 15;
+  const fleet = parseFleet(env.AI_KEYS);
+  const out = { counts: { gemini: 0, groq: 0, openrouter: 0 } };
+  for (const f of fleet) out.counts[f.p as "gemini" | "groq" | "openrouter"]++;
   return json({
     enabled: !!env.AI_KEYS && used < quota,
     store_name: u.store_name || u.name,
     plan: u.plan ?? "free", verified: u.verified ?? 0,
     remaining: Math.max(0, quota - used),
+    fleet: { gemini: out.counts.gemini, groq: out.counts.groq, openrouter: out.counts.openrouter },
   });
 });
 
