@@ -43,6 +43,17 @@ export function parseFleet(raw: string | undefined): Target[] {
     if (gm) push("gemini", gm, GEMINI_MODELS);
     if (gq) push("groq", gq, GROQ_MODELS);
     if (or) push("openrouter", or, OPENROUTER_MODELS);
+    /* الماسح الشامل: تعرف بمسماك المفتاح أينما كان — AIza=gemini، gsk_=groq، sk-or-v1-=openrouter */
+    const scan = (v: unknown) => {
+      if (typeof v === "string") {
+        const k = v.trim();
+        if (k.startsWith("AIza") && !out.some((t) => t.p === "gemini")) push("gemini", { name: "scan", key: k }, GEMINI_MODELS);
+        else if (k.startsWith("gsk_") && !out.some((t) => t.p === "groq")) push("groq", { name: "scan", key: k }, GROQ_MODELS);
+        else if (k.startsWith("sk-or-v1-") && !out.some((t) => t.p === "openrouter")) push("openrouter", { name: "scan", key: k }, OPENROUTER_MODELS);
+      } else if (Array.isArray(v)) v.forEach(scan);
+      else if (v && typeof v === "object") Object.values(v as Record<string, unknown>).forEach(scan);
+    };
+    scan(j);
   } catch {}
   return out;
 }
