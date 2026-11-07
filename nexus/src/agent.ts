@@ -8,9 +8,16 @@ type Provider = "gemini" | "groq" | "openrouter";
 type Cred = { name: string; key: string };
 type Target = { p: Provider; acct: string; key: string; model: string };
 
-const GEMINI_MODELS = ["gemma-3-27b-it", "gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-3.5-flash-lite"];
-const GROQ_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"];
-const OPENROUTER_MODELS = ["openrouter/free"];
+/* سياسة المالك المقفلة: لا انتقال لمزود تالٍ إلا بعد استنفاد كل نماذجه المجانية
+   (كل حساب × كل نموذج بالترتيب) — والتوسيع من الكتالوج الرسمي docs/ai-fleet.md */
+const GEMINI_MODELS = [
+  "gemma-3-27b-it", "gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-3.6-flash", "gemini-3.8-flash",
+];
+const GROQ_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]; /* كل المجاني في غروق */
+const OPENROUTER_MODELS = [
+  "openrouter/free", "gemma-3-27b:free", "gpt-oss-20b:free", "qwen3-235b:free", "glm-4.7:free", "mistral-large-3:free",
+];
 
 export function parseFleet(raw: string | undefined): Target[] {
   if (!raw) return [];
@@ -128,6 +135,8 @@ async function callOpenAIish(url: string, t: Target, sys: string, msgs: Msg[]): 
 
 /** يجرّب السلسلة بالترتيب: صحي أولاً (gemma ثم الفلاشات) ثم غروق ثم أوبنروتر — وأي 429 يبرّد نموذجه */
 export async function fleetChat(env: Env, sys: string, msgs: Msg[]): Promise<string | null> {
+  /* الاستنفاد الشامل: الأهداف مرتبة بكتل المزودات (gemini كاملاً ثم groq كاملاً ثم openrouter كاملاً)،
+     وكل فشل يبرّد هدفه وحده وينتقل للتالي — فلا يُقصد المزود التالي إلا بعد موت كل سابقه. */
   for (const t of parseFleet(env.AI_KEYS)) {
     if (!(await healthy(env, t))) continue;
     try {
