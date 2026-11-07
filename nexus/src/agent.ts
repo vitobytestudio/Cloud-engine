@@ -15,10 +15,20 @@ const OPENROUTER_MODELS = ["openrouter/free"];
 export function parseFleet(raw: string | undefined): Target[] {
   if (!raw) return [];
   const out: Target[] = [];
+  const seen = new Set<string>();
   const push = (p: Provider, cred: Cred, models: string[]) => {
-    if (!cred?.key) return;
-    for (const m of models) out.push({ p, acct: cred.name || p, key: cred.key, model: m });
+    const k = (cred?.key || "").trim();
+    if (!k || seen.has(`${p}:${k}`)) return;
+    seen.add(`${p}:${k}`);
+    for (const m of models) out.push({ p, acct: cred.name || p, key: k, model: m });
   };
+  /* الماسح الخام أولاً: مفاتيح عارية أو قوائم نصية بأي صيغة — بلا حاجة إلى JSON أصلاً */
+  const grab = (re: RegExp, p: Provider, models: string[]) => {
+    for (const m of raw.matchAll(new RegExp(re.source, "g"))) push(p, { name: "raw", key: m[0] }, models);
+  };
+  grab(/AIza[A-Za-z0-9_-]{30,}/, "gemini", GEMINI_MODELS);
+  grab(/gsk_[A-Za-z0-9]{20,}/, "groq", GROQ_MODELS);
+  grab(/sk-or-v1-[a-f0-9]{32,}/, "openrouter", OPENROUTER_MODELS);
   const creds = (v: unknown): Cred[] => {
     if (typeof v === "string") return [{ name: "acc", key: v }];
     if (Array.isArray(v)) return v.map((x) => (typeof x === "string" ? { name: "acc", key: x } : { name: String(x?.name ?? "acc"), key: String(x?.key ?? x?.api_token ?? x?.token ?? "") }));
