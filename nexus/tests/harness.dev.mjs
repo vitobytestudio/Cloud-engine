@@ -305,6 +305,19 @@ let pid = "", pid2 = "";
   } else ok("إدارة الفيديوهات (تخطي — بلا ADMIN_K0 محلياً)", true);
 }
 
+/* ─── 8ز. وكيل الاستقبال + منظّم المنتج ─── */
+{
+  const rec = await j("/api/reception/chat", { method: "POST", body: { message: "كيف نفتح متجراً؟" } });
+  ok("الاستقبال يرد دائماً حتى بلا مفاتيح", rec.status === 200 && (rec.data.reply || "").length > 20);
+  ok("الاستقبال الملبّي يتعرف موضوع المتجر", rec.data.canned === true && rec.data.reply.includes("متجر"));
+  const recEn = await j("/api/reception/chat", { method: "POST", body: { message: "plans?", lang: "en" } });
+  ok("الاستقبال بالإنجليزية", recEn.status === 200 && /[a-z]/.test(recEn.data.reply));
+  ok("منظّم المنتج بلا جلسة 401", (await j("/api/agent/organize", { method: "POST", body: { title: "ساعة" } })).status === 401);
+  const org = await j("/api/agent/organize", { method: "POST", cookie, csrf, body: { title: "ساعة يد", descr: "", price: 9000 } });
+  ok("منظّم المنتج بلا مفاتيح 503 أنيق", org.status === 503 && org.data.error === "agent_disabled");
+  ok("فحص المفاتيح يسبق فحص العنوان (503)", (await j("/api/agent/organize", { method: "POST", cookie, csrf, body: { title: "س" } })).status === 503);
+}
+
 /* ─── 9. حذف وتنظيف ─── */
 {
   const del = await j("/api/products/" + pid2, { method: "DELETE", cookie, csrf });
