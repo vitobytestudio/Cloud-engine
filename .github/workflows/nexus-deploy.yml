@@ -47,6 +47,7 @@ jobs:
           WPID=$!
           for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8792/api/health && break; sleep 2; done
           curl -s http://127.0.0.1:8792/api/health | grep -q '"ok":true' || { echo "::error::الخادم المحلي لم يقلع"; tail -n 20 dev.log; exit 1; }
+          node tests/parser.dev.mjs
           node tests/harness.dev.mjs
           node tests/harness.dev.mjs
           node tests/dom.dev.mjs
