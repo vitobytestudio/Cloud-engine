@@ -239,6 +239,41 @@ let pid = "", pid2 = "";
   ok("أولوية الباقات بالفيد (pro أولاً)", feed.data.posts[0].store_plan === "pro" || feed.data.posts[0].store_plan === "vip");
 }
 
+/* ─── 8هـ. المؤسسة: إشعارات + صياغة + حماية ─── */
+{
+  /* ترويسات الأمان على كل رد */
+  const hh = await fetch(BASE + "/api/health");
+  ok("CSP ترويسة حاضرة", (hh.headers.get("content-security-policy") || "").includes("default-src 'self'"));
+  ok("nosniff + رفض التأطير", hh.headers.get("x-content-type-options") === "nosniff" && hh.headers.get("x-frame-options") === "DENY");
+  /* الإشعارات: بلا جلسة 401 */
+  ok("إشعارات بلا جلسة 401", (await j("/api/notifications")).status === 401);
+  /* صياغة الوصف: بلا جلسة 401، وبجلسة بلا مفاتيح 503 */
+  ok("صياغة بلا جلسة 401", (await j("/api/agent/describe", { method: "POST", body: { title: "x" } })).status === 401);
+  const dd = await j("/api/agent/describe", { method: "POST", cookie, csrf, body: { title: "ساعة ذكية" } });
+  ok("صياغة بجلسة بلا مفاتيح 503 أنيقة", dd.status === 503 && dd.data.error === "agent_disabled");
+  /* تدفق إشعار طلبية: مستخدم ثانٍ يطلب منتج الأول ثم الأول يرى الإشعار */
+  const prodsA = await j("/api/products", { cookie });
+  const prodA = (prodsA.data.products || [])[0];
+  if (prodA) {
+    const regB = await j("/api/auth/register", { method: "POST", body: { email: `b${Date.now()}@t.test`, k0: "a".repeat(64), name: "مشتري", slug: "b" + Date.now().toString(36), store_name: "B" } });
+    const cb = (regB.headers.get("set-cookie") || "").split(";")[0];
+    const meA = await j("/api/me", { cookie });
+    const ord = await j(`/api/store/${meA.data.user.slug}/order`, { method: "POST", cookie: cb, body: { product_id: prodA.id, cname: "شخص ثانٍ", phone: "0555112233", wilaya: 31, commune: "وهران", delivery: "desk", qty: 1 } });
+    ok("طلبية المشتري تُقبل", ord.status === 201);
+    const notif = await j("/api/notifications", { cookie });
+    const hasOrder = (notif.data.notifications || []).some((n) => n.type === "order");
+    ok("التاجر يرى إشعار الطلبية", notif.status === 200 && hasOrder && notif.data.unread >= 1);
+    const mark = await j("/api/notifications/read", { method: "POST", cookie, csrf });
+    const after = await j("/api/notifications", { cookie });
+    ok("تعليم الكل مقروء يصفّر العدّاد", mark.status === 200 && after.data.unread === 0);
+  } else ok("إشعار الطلبية (تخطي — لا منتجات)", true);
+  /* حماية الدخول: فيض بريد واحد → 429 */
+  const floodMail = `flood${Date.now()}@t.test`;
+  let last = 0;
+  for (let i = 0; i < 9; i++) last = (await j("/api/auth/login", { method: "POST", body: { email: floodMail, k0: "b".repeat(64) } })).status;
+  ok("فيض محاولات الدخول يُخنق 429", last === 429);
+}
+
 /* ─── 9. حذف وتنظيف ─── */
 {
   const del = await j("/api/products/" + pid2, { method: "DELETE", cookie, csrf });

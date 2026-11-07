@@ -45,6 +45,9 @@ const T = {
     verified_badge: "موثّق", agent_tab: "الوكيل", agent_sessions: "جلسات الزبائن", no_sessions: "لا جلسات بعد",
     session_close: "إغلاق الجلسة", closed_s: "مغلقة", open_s: "مفتوحة", upgrade_note: "الترقية من لوحة المالك",
     limit_reached: "وصلت حد باقتك — أضف رصيداً أو رقِّ باقتك",
+    ai_desc: "صياغة الوصف بالوكيل", ai_descing: "الوكيل يصيغ…", ai_desc_fail: "الوكيل غير متاح الآن", ai_desc_ok: "الوصف جاهز",
+    notif: "الإشعارات", notif_empty: "لا إشعارات بعد", notif_mark: "تعليم الكل كمقروء",
+    n_order: "طلبية جديدة", n_agent: "جلسة وكيل جديدة", n_grant: "تحديث باقتك", need_keys: "الوكيل ينتظر مفاتيح المالك",
   },
   en: {
     tagline: "Merchant Market", home: "Home", explore: "Explore", mystore: "My Store", account: "Account",
@@ -88,6 +91,9 @@ const T = {
     verified_badge: "Verified", agent_tab: "Agent", agent_sessions: "Customer sessions", no_sessions: "No sessions yet",
     session_close: "Close session", closed_s: "Closed", open_s: "Open", upgrade_note: "Upgrade via owner console",
     limit_reached: "Plan limit reached — add credits or upgrade",
+    ai_desc: "AI write description", ai_descing: "Agent writing…", ai_desc_fail: "Agent unavailable", ai_desc_ok: "Description ready",
+    notif: "Notifications", notif_empty: "No notifications yet", notif_mark: "Mark all read",
+    n_order: "New order", n_agent: "New agent session", n_grant: "Plan updated", need_keys: "Agent awaits owner keys",
   },
 };
 
@@ -779,14 +785,41 @@ const DASH_TABS = [
   { id: "orders", r: "#/dash/orders" }, { id: "finance", r: "#/dash/finance" },
   { id: "agent_tab", r: "#/dash/agent" }, { id: "settings", r: "#/dash/settings" },
 ];
+async function openBell() {
+  let data;
+  try { data = await api("/api/notifications"); } catch { return; }
+  const rows = (data.notifications || []).map((n) => `
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:11px 2px;border-bottom:1px solid var(--line)">
+      <b style="font-size:13px">${esc(t("n_" + n.type) || n.type)}</b>
+      <span style="font-size:12.5px;color:var(--muted);line-height:1.7">${esc(n.title)} — ${esc(n.body)}</span>
+    </div>`).join("");
+  const sh = sheet(`<b style="font-size:16px;display:block;margin-bottom:6px">${esc(t("notif"))}</b>
+    ${rows || `<p class="hint">${esc(t("notif_empty"))}</p>`}
+    <button class="btn ghost wide" id="n-mark" style="margin-top:10px">${esc(t("notif_mark"))}</button>`);
+  $("#n-mark", sh.wrap).onclick = async () => {
+    try { await api("/api/notifications/read", { method: "POST" }); } catch {}
+    const b = $("#bell-n"); if (b) b.classList.add("hidden");
+  };
+}
+async function refreshBell() {
+  try {
+    const r = await api("/api/notifications");
+    const b = $("#bell-n"); if (!b) return;
+    const n = r.unread | 0;
+    b.textContent = n > 9 ? "9+" : String(n);
+    b.classList.toggle("hidden", n === 0);
+  } catch {}
+}
 function dashShell(v, active, contentHtml) {
   const u = S.user;
-  v.innerHTML = `${topbar(u?.store_name || t("dash"), `<a class="icon-btn accent" href="#/dash/products" title="+"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>`)}
+  v.innerHTML = `${topbar(u?.store_name || t("dash"), `<button class="icon-btn" id="bell-btn" style="position:relative" aria-label="${t("notif")}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="bell-n" class="nbadge hidden"></span></button><a class="icon-btn accent" href="#/dash/products" title="+"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>`)}
     <div class="chips-row" style="padding-top:12px" id="dash-tabs">
       ${DASH_TABS.map((d) => `<button class="chip ${d.id === active ? "on" : ""}" data-r="${d.r}">${esc(t(d.id))}</button>`).join("")}
     </div>
     <div class="page" style="padding-top:6px" id="dash-body">${contentHtml}</div>`;
   $$("#dash-tabs .chip").forEach((c) => (c.onclick = () => go(c.dataset.r)));
+  $("#bell-btn")?.addEventListener("click", openBell);
+  refreshBell();
 }
 
 rr("/dash", async (v) => {
@@ -872,7 +905,8 @@ function productEditor(p = null) {
   const sh = sheet(`
     <h3>${esc(isEdit ? t("edit_product") : t("add_product"))}</h3>
     <div class="field"><label>${esc(t("product_title"))}</label><input class="input" id="e-title" value="${esc(p?.title || "")}"/></div>
-    <div class="field"><label>${esc(t("description"))}</label><textarea class="input" id="e-desc">${esc(p?.descr || "")}</textarea></div>
+    <div class="field"><label>${esc(t("description"))}</label><textarea class="input" id="e-desc">${esc(p?.descr || "")}</textarea>
+      <button class="btn ghost wide" id="e-ai" type="button" style="margin-top:6px">${esc(t("ai_desc"))}</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field"><label>${esc(t("price"))}</label><input class="input" id="e-price" type="number" inputmode="numeric" dir="ltr" value="${p?.price ?? ""}"/></div>
       <div class="field"><label>${esc(t("compare_at"))}</label><input class="input" id="e-compare" type="number" inputmode="numeric" dir="ltr" value="${p?.compare_at || ""}"/></div>
@@ -894,6 +928,18 @@ function productEditor(p = null) {
     ${isEdit ? `<button class="btn danger wide" id="e-del" style="margin-bottom:10px">${esc(t("delete"))}</button>` : ""}
     <button class="btn primary wide" id="e-save">${esc(t("save"))}</button>`);
   const imgIn = $("#e-image", sh.wrap);
+  $("#e-ai", sh.wrap).onclick = async () => {
+    const btn = $("#e-ai", sh.wrap), dIn = $("#e-desc", sh.wrap);
+    btn.disabled = true; btn.textContent = t("ai_descing");
+    try {
+      const r = await api("/api/agent/describe", { method: "POST", body: { title: $("#e-title", sh.wrap).value.trim(), hints: dIn.value.trim() } });
+      dIn.value = r.descr || ""; toast(t("ai_desc_ok")); vibrate([10, 40, 10]);
+    } catch (ex) {
+      const msg = ex.error === "agent_disabled" ? t("need_keys") : ex.error === "quota_exhausted" ? t("limit_reached") : t("ai_desc_fail");
+      $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(msg)}</span>`; vibrate([8, 30, 8]);
+    }
+    btn.disabled = false; btn.textContent = t("ai_desc");
+  };
   const prev = $("#e-preview", sh.wrap);
   let curUrl = p?.image || "";
   const showPrev = () => { prev.innerHTML = curUrl ? imgTag(curUrl, "", "preview").replace("<img ", '<img style="width:96px;height:96px;border-radius:16px;object-fit:cover" ') : '<div class="hint">' + esc(S.lang === "ar" ? "لا صورة بعد" : "No image yet") + "</div>"; };

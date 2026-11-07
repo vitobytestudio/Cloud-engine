@@ -29,6 +29,27 @@ function matchPath(pat: string, path: string): Record<string, string> | null {
 const DAY = 86400_000; // ملّي — للاستعلامات
 const DAY_S = 86400; // ثوانٍ — لنوافذ rl
 
+// ═══ الحماية: ترويسات أمنية على كل رد ═══
+const SEC: Record<string, string> = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+  "content-security-policy":
+    "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+};
+function secure(res: Response): Response {
+  const h = new Headers(res.headers);
+  for (const [k, v] of Object.entries(SEC)) h.set(k, v);
+  return new Response(res.body, { status: res.status, headers: h });
+}
+
+// ═══ الإشعارات ═══
+async function notify(env: Env, userId: string, type: string, title: string, body: string): Promise<void> {
+  await env.DB.prepare("INSERT INTO notifications (id, user_id, type, title, body, read, created_at) VALUES (?,?,?,?,?,0,?)")
+    .bind(id("n"), userId, type, clip(title, 80), clip(body, 200), now()).run();
+}
+
 const body = async (req: Request): Promise<Record<string, unknown>> => {
   try { return (await req.json()) as Record<string, unknown>; } catch { return {}; }
 };
@@ -88,6 +109,7 @@ route("POST", "/api/auth/login", async (req, env) => {
   if (!(await rl(env, `log:${ip}`, 30, 600))) return bad("too_many", 429);
   const b = await body(req);
   const email = clip(str(b, "email").toLowerCase().trim(), 190);
+  if (!(await rl(env, `logE:${email}`, 8, 900))) return bad("too_many", 429);
   const k0 = str(b, "k0");
   if (!isEmail(email) || !isK0(k0)) return bad("invalid", 401);
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<UserRow>();
@@ -242,6 +264,7 @@ route("POST", "/api/store/:slug/order", async (req, env, _s, p) => {
   await env.DB.prepare(
     "INSERT INTO orders (id, user_id, product_id, ptitle, qty, unit_price, total, cname, phone, wilaya, commune, delivery, address, note, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'new',?)"
   ).bind(oid, store.id, prod.id, prod.title, qty, prod.price, prod.price * qty, cname, phone, wilaya, commune, delivery, address, note, now()).run();
+  await notify(env, store.id, "order", "طلبية جديدة", `${cname} طلب ${qty} × ${prod.title} — ${commune}`);
   return json({ ok: true, id: oid }, 201);
 });
 
@@ -429,6 +452,7 @@ route("POST", "/api/agent/chat", async (req, env) => {
     sess = { id: id("as"), msgs: 0 };
     await env.DB.prepare("INSERT INTO agent_sessions (id, user_id, buyer, status, msgs, created_at, updated_at) VALUES (?,?,?,'open',0,?,?)")
       .bind(sess.id, store.id, buyer, now(), now()).run();
+    if (!sidIn) await notify(env, store.id, "agent", "جلسة وكيل جديدة", "زبون بدأ محادثة مع وكيل متجرك");
   }
   const hist = await env.DB.prepare("SELECT role, content FROM agent_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 8")
     .bind(sess.id).all<{ role: string; content: string }>();
@@ -521,6 +545,7 @@ route("POST", "/api/admin/grant", async (req, env) => {
       verified = COALESCE(?4, verified)
     WHERE id = ?1`
   ).bind(u.id, plan || null, addCredits, verified).run();
+  await notify(env, u.id, "grant", "تحديث باقتك", [plan ? `الباقة: ${plan}` : "", addCredits ? `رصيد منتجات: +${addCredits}` : "", verified !== null ? (verified ? "موثق" : "") : ""].filter(Boolean).join(" — ") || "تحديث");
   return json({ ok: true });
 });
 
@@ -533,6 +558,41 @@ route("GET", "/api/admin/stats", async (req, env) => {
   return json({ stats: u, recent_merchants: recent.results ?? [] });
 });
 
+// ═══ صياغة وصف المنتج بالوكيل (تحسب من حصة الباقة) ═══
+route("POST", "/api/agent/describe", async (req, env, s) => {
+  if (!env.AI_KEYS) return json({ error: "agent_disabled" }, 503);
+  if (!(await rl(env, `desc:${s!.userId}`, 10, DAY_S))) return bad("too_many", 429);
+  const b = await body(req);
+  const title = clip(str(b, "title").trim(), 80);
+  const hints = clip(str(b, "hints").trim(), 200);
+  if (!isStr(title, 2, 80)) return bad("invalid_title");
+  const day = new Date().toISOString().slice(0, 10);
+  const kq = `aq:${s!.userId}:${day}`;
+  const used = Number((await env.CACHE_KV.get(kq)) ?? "0");
+  const u = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(s!.userId).first<UserRow>();
+  if (!u) return bad("auth_required", 401);
+  const quota = PLAN_QUOTA[(u.plan ?? "free") as Plan] ?? 15;
+  if (used >= quota) return json({ error: "quota_exhausted" }, 429);
+  const sys = `أنت كاتب أوصاف منتجات جزائري محترف في منصة NEXUS. اكتب وصفاً تجارياً جاذباً للمنتج "${title}"${hints ? ` مع إبراز: ${hints}` : ""}.
+القواعد: دارجة جزائرية مبسطة، من 25 إلى 60 كلمة، بلا مبالغات كاذبة، بلا أسعار ولا أرقام هواتف، اختم بميزة الثقة (الدفع عند الاستلام لكل الولايات). أرجع الوصف فقط بلا مقدمات.`;
+  const text = await fleetChat(env, sys, [{ role: "user", content: hints ? `${title} — ${hints}` : title }]);
+  if (text === null) return json({ error: "fleet_down" }, 502);
+  await env.CACHE_KV.put(kq, String(used + 1), { expirationTtl: DAY_S });
+  return json({ ok: true, descr: clip(text, 600) });
+}, { auth: true, csrf: true });
+
+// ═══ إشعارات التاجر ═══
+route("GET", "/api/notifications", async (_r, env, s) => {
+  const { results } = await env.DB.prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 30").bind(s!.userId).all();
+  const unread = await env.DB.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND read = 0").bind(s!.userId).first<{ c: number }>();
+  return json({ notifications: results ?? [], unread: unread?.c ?? 0 });
+}, { auth: true });
+
+route("POST", "/api/notifications/read", async (_r, env, s) => {
+  await env.DB.prepare("UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0").bind(s!.userId).run();
+  return json({ ok: true });
+}, { auth: true, csrf: true });
+
 // ═══ الموجّه ═══
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -544,7 +604,7 @@ export default {
       const obj = await env.CACHE_KV.get(`img:${m[1]}`, { type: "arrayBuffer" });
       if (!obj) return bad("not_found", 404);
       const ct = m[2] === "jpg" ? "image/jpeg" : m[2] === "png" ? "image/png" : "image/webp";
-      return new Response(obj, { headers: { "content-type": ct, "cache-control": "public, max-age=31536000, immutable" } });
+      return secure(new Response(obj, { headers: { "content-type": ct, "cache-control": "public, max-age=31536000, immutable" } }));
     }
     if (path.startsWith("/api/")) {
       const s = await getSession(env, req);
@@ -557,13 +617,13 @@ export default {
           if (!s || hdr !== s.csrf) return bad("csrf", 403);
         }
         try {
-          return await r.h(req, env, s, params);
+          return secure(await r.h(req, env, s, params));
         } catch (e) {
-          return json({ error: "server", detail: String(e).slice(0, 200) }, 500);
+          return secure(json({ error: "server", detail: String(e).slice(0, 200) }, 500));
         }
       }
       return bad("not_found", 404);
     }
-    return env.ASSETS.fetch(req);
+    return secure(await env.ASSETS.fetch(req));
   },
 };
