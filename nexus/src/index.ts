@@ -593,6 +593,70 @@ route("POST", "/api/notifications/read", async (_r, env, s) => {
   return json({ ok: true });
 }, { auth: true, csrf: true });
 
+// ═══ الفيديوهات الإعلانية — استوديو VITO (أسعار أولية والخصم مفروض خادمياً) ═══
+const AD_STYLES = [
+  { id: "quick", base: 2500, dur: "15-20s" },
+  { id: "lifestyle", base: 3900, dur: "20-30s" },
+  { id: "sale", base: 2900, dur: "15-25s" },
+  { id: "lux", base: 4500, dur: "25-35s" },
+  { id: "intro", base: 5900, dur: "30-45s" },
+];
+const AD_DISCOUNT: Record<Plan, number> = { free: 0, pro: 0.3, vip: 0.5 };
+const adPrice = (base: number, plan: Plan) => Math.round(base * (1 - (AD_DISCOUNT[plan] ?? 0)));
+
+route("GET", "/api/ads", async (_r, env, s) => {
+  const u = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(s!.userId).first<UserRow>();
+  const plan = (u?.plan ?? "free") as Plan;
+  const { results } = await env.DB.prepare("SELECT * FROM ad_orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 20").bind(s!.userId).all();
+  return json({
+    discount: AD_DISCOUNT[plan] ?? 0,
+    styles: AD_STYLES.map((st) => ({ id: st.id, dur: st.dur, base: st.base, price: adPrice(st.base, plan) })),
+    orders: results ?? [],
+  });
+}, { auth: true });
+
+route("POST", "/api/ads/order", async (req, env, s) => {
+  if (!(await rl(env, `ad:${s!.userId}`, 5, DAY_S))) return bad("too_many", 429);
+  const b = await body(req);
+  const st = AD_STYLES.find((x) => x.id === str(b, "style"));
+  if (!st) return bad("invalid_style");
+  const note = clip(str(b, "note").trim(), 300);
+  const pid = clip(str(b, "product_id"), 30);
+  if (pid) {
+    const p = await env.DB.prepare("SELECT id FROM products WHERE id = ? AND user_id = ? AND active = 1").bind(pid, s!.userId).first();
+    if (!p) return bad("invalid_product");
+  }
+  const u = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(s!.userId).first<UserRow>();
+  const price = adPrice(st.base, (u?.plan ?? "free") as Plan);
+  const oid = id("ad");
+  await env.DB.prepare("INSERT INTO ad_orders (id, user_id, style, product_id, status, price, note, created_at, updated_at) VALUES (?,?,?,?, 'new', ?,?,?,?)")
+    .bind(oid, s!.userId, st.id, pid || null, price, note, now(), now()).run();
+  await notify(env, s!.userId, "ads", "طلب فيديو إعلاني", "طلبك وصل الاستوديو — الحالة تظهر هنا");
+  return json({ ok: true, id: oid, price }, 201);
+}, { auth: true, csrf: true });
+
+route("GET", "/api/admin/ads", async (req, env) => {
+  if (!(await adminGuard(env, req))) return bad("not_found", 404);
+  const { results } = await env.DB.prepare(
+    "SELECT a.*, u.slug AS store_slug, u.store_name FROM ad_orders a JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC LIMIT 100").all();
+  return json({ orders: results ?? [] });
+});
+
+route("PATCH", "/api/admin/ads/:id", async (req, env, _s, p) => {
+  if (!(await adminGuard(env, req))) return bad("not_found", 404);
+  const b = await body(req);
+  const status = str(b, "status");
+  if (status && !["new", "wip", "done"].includes(status)) return bad("invalid_status");
+  const video = clip(str(b, "video_url").trim(), 500);
+  if (video && !isHttpsUrl(video)) return bad("invalid_url");
+  const row = await env.DB.prepare("SELECT user_id FROM ad_orders WHERE id = ?").bind(p.id).first<{ user_id: string }>();
+  if (!row) return bad("not_found", 404);
+  await env.DB.prepare("UPDATE ad_orders SET status = COALESCE(?2, status), video_url = COALESCE(?3, video_url), updated_at = ?4 WHERE id = ?1")
+    .bind(p.id, status || null, video || null, now()).run();
+  if (status === "done") await notify(env, row.user_id, "ads", "فيديوك الإعلاني جاهز", "شاهده من صفحة الفيديوهات");
+  return json({ ok: true });
+});
+
 // ═══ الموجّه ═══
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {

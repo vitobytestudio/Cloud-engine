@@ -106,6 +106,11 @@ ok("ورقة الوكيل تفتح برسالة ترحيب", !!d.getElementById(
 d.querySelector(".sheet-bd")?.click();
 await sleep(500);
 
+/* 8هـ) صفحة الفيديوهات الإعلانية: الحارس يوجّه الغريب للدخول */
+await nav("#/ads");
+await sleep(600);
+ok("حارس #/ads: بلا جلسة → الدخول", w.location.hash.includes("auth") || !!d.querySelector("#a-email, #l-email"));
+
 /* 9) صفر أخطاء غير الممسوكة في كل الجولة */
 ok("صفر أخطاء JS غير الممسوكة طوال الجولة", errors.length === 0);
 if (errors.length) console.log(errors.join("\n"));

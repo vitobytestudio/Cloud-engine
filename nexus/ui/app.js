@@ -48,6 +48,13 @@ const T = {
     ai_desc: "صياغة الوصف بالوكيل", ai_descing: "الوكيل يصيغ…", ai_desc_fail: "الوكيل غير متاح الآن", ai_desc_ok: "الوصف جاهز",
     notif: "الإشعارات", notif_empty: "لا إشعارات بعد", notif_mark: "تعليم الكل كمقروء",
     n_order: "طلبية جديدة", n_agent: "جلسة وكيل جديدة", n_grant: "تحديث باقتك", need_keys: "الوكيل ينتظر مفاتيح المالك",
+    ads_tab: "الفيديوهات", ads_hero_t: "فيديوهات إعلانية تبيع عنك", ads_hero_s: "من استوديو VITO BYTE — لقطات سينمائية لمنتجاتك جاهزة لفيسبوك وإنستغرام وتيك توك.",
+    your_disc: "خصم باقتك", order_vid: "اطلب الفيديو", vid_note: "ملاحظات للاستوديو (اختياري)", vid_product: "المنتج المميز (اختياري)",
+    send_order: "أرسل الطلب", my_vids: "طلباتي", no_vids: "لا طلبات بعد", order_ok: "طلبك وصل الاستوديو",
+    st_new: "جديد", st_wip: "قيد التنفيذ", st_done: "جاهز", watch_vid: "شاهد الفيديو", pick_product: "بلا منتج — عام",
+    s_quick: "عرض منتج سريع", d_quick: "دوران المنتج مع نص متحرك وسعر لافت", s_lifestyle: "لايف ستايل", d_lifestyle: "المنتج في يوميات حقيقية يبيع إحساساً لا شيئاً",
+    s_sale: "عرض وتخفيضات", d_sale: "نداء بيع حاد بالسعر القديم والجديد والمؤقت", s_lux: "فخامة سينمائية", d_lux: "إضاءة وظلال ذهبية للمنتجات الغالية",
+    s_intro: "افتتاح المتجر", d_intro: "تعريف بمتجرك كامل ومنتجاتك الأقوى في فيديو واحد",
   },
   en: {
     tagline: "Merchant Market", home: "Home", explore: "Explore", mystore: "My Store", account: "Account",
@@ -94,6 +101,13 @@ const T = {
     ai_desc: "AI write description", ai_descing: "Agent writing…", ai_desc_fail: "Agent unavailable", ai_desc_ok: "Description ready",
     notif: "Notifications", notif_empty: "No notifications yet", notif_mark: "Mark all read",
     n_order: "New order", n_agent: "New agent session", n_grant: "Plan updated", need_keys: "Agent awaits owner keys",
+    ads_tab: "Video ads", ads_hero_t: "Ad videos that sell for you", ads_hero_s: "By VITO BYTE studio — cinematic product cuts ready for Facebook, Instagram & TikTok.",
+    your_disc: "Your plan discount", order_vid: "Order this video", vid_note: "Notes for the studio (optional)", vid_product: "Featured product (optional)",
+    send_order: "Send order", my_vids: "My orders", no_vids: "No orders yet", order_ok: "Order received by the studio",
+    st_new: "New", st_wip: "In progress", st_done: "Ready", watch_vid: "Watch video", pick_product: "No product — generic",
+    s_quick: "Quick product spot", d_quick: "Rotating product with animated text and price", s_lifestyle: "Lifestyle", d_lifestyle: "Your product in real daily life — selling a feeling",
+    s_sale: "Sale blast", d_sale: "Hard-selling call with old/new limited price", s_lux: "Cinematic luxury", d_lux: "Golden lighting and shadows for premium items",
+    s_intro: "Store intro", d_intro: "Introduce your whole store and top products in one video",
   },
 };
 
@@ -783,8 +797,66 @@ async function me() {
 const DASH_TABS = [
   { id: "overview", r: "#/dash" }, { id: "products", r: "#/dash/products" },
   { id: "orders", r: "#/dash/orders" }, { id: "finance", r: "#/dash/finance" },
-  { id: "agent_tab", r: "#/dash/agent" }, { id: "settings", r: "#/dash/settings" },
+  { id: "agent_tab", r: "#/dash/agent" }, { id: "ads_tab", r: "#/ads" }, { id: "settings", r: "#/dash/settings" },
 ];
+async function openAdsOrder(style, price) {
+  let prods = [];
+  try { prods = (await api("/api/products")).products || []; } catch {}
+  const sh = sheet(`<b style="font-size:16px;display:block;margin-bottom:4px">${esc(t("s_" + style))}</b>
+    <span class="price-now" style="font-size:15px">${new Intl.NumberFormat(S.lang === "ar" ? "ar-DZ" : "en-US").format(price)} ${esc(S.lang === "ar" ? "دج" : "DZD")}</span>
+    <div class="field" style="margin-top:10px"><label>${esc(t("vid_product"))}</label>
+      <select class="input" id="ao-prod"><option value="">${esc(t("pick_product"))}</option>
+        ${prods.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("")}</select></div>
+    <div class="field"><label>${esc(t("vid_note"))}</label><textarea class="input" id="ao-note" rows="2"></textarea></div>
+    <div id="ao-err" style="min-height:18px"></div>
+    <button class="btn primary wide" id="ao-send">${esc(t("send_order"))}</button>`);
+  $("#ao-send", sh.wrap).onclick = async () => {
+    try {
+      await api("/api/ads/order", { method: "POST", body: { style, product_id: $("#ao-prod", sh.wrap).value, note: $("#ao-note", sh.wrap).value.trim() } });
+      sh.close(); toast(t("order_ok")); vibrate([10, 40, 10]); go("#/ads");
+    } catch (ex) {
+      $("#ao-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "too_many" ? t("limit_reached") : ex.error || "error")}</span>`;
+    }
+  };
+}
+rr("/ads", async (v) => {
+  buildTabbar(true);
+  if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
+  v.innerHTML = `${topbar(t("ads_tab"))}<div class="page" style="padding-top:6px" id="ads-body">${skeletons(3)}</div>`;
+  let d;
+  try { d = await api("/api/ads"); } catch { $("#ads-body").innerHTML = `<p class="hint">error</p>`; return; }
+  const fmt = new Intl.NumberFormat(S.lang === "ar" ? "ar-DZ" : "en-US");
+  const stName = { quick: "adp-quick", lifestyle: "adp-life", sale: "adp-sale", lux: "adp-lux", intro: "adp-intro" };
+  const stOrders = (d.orders || []).map((o) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line)">
+      <span class="st st-${esc(o.status)}">${esc(t("st_" + o.status))}</span>
+      <b style="font-size:13px">${esc(t("s_" + o.style))}</b>
+      <span class="sp"></span>
+      <span class="price-now">${fmt.format(o.price)}</span>
+      ${o.video_url ? `<a class="chip on" href="${esc(o.video_url)}" target="_blank" rel="noopener">${esc(t("watch_vid"))}</a>` : ""}
+    </div>`).join("");
+  $("#ads-body").innerHTML = `
+    <div class="ad-hero">
+      <b style="font-size:16px;display:block">${esc(t("ads_hero_t"))}</b>
+      <p style="font-size:12.5px;margin:4px 0 8px;opacity:.92;line-height:1.8">${esc(t("ads_hero_s"))}</p>
+      <span class="disc-chip">${esc(t("your_disc"))}: ${Math.round((d.discount || 0) * 100)}%</span>
+    </div>
+    <div class="ad-grid">${(d.styles || []).map((st) => `
+      <div class="ad-card">
+        <div class="adp ${stName[st.id] || ""}"><span class="dur">${esc(st.dur)}</span>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+        <div class="ad-meta"><div class="ad-name">${esc(t("s_" + st.id))}</div>
+          <p class="hint" style="margin:2px 0 4px;line-height:1.6">${esc(t("d_" + st.id))}</p>
+          <div class="ad-price"><s class="price-old">${fmt.format(st.base)}</s>
+            <span class="price-now">${fmt.format(st.price)} ${esc(S.lang === "ar" ? "دج" : "DZD")}</span></div>
+          <button class="btn primary wide" style="margin-top:8px;padding:9px 0" data-adstyle="${esc(st.id)}" data-adprice="${st.price}">${esc(t("order_vid"))}</button>
+        </div>
+      </div>`).join("")}</div>
+    <h3 style="margin:16px 0 4px;font-size:14px">${esc(t("my_vids"))}</h3>
+    ${stOrders || `<p class="hint">${esc(t("no_vids"))}</p>`}`;
+  $$("#ads-body [data-adstyle]").forEach((b) => (b.onclick = () => openAdsOrder(b.dataset.adstyle, Number(b.dataset.adprice))));
+});
+
 async function openBell() {
   let data;
   try { data = await api("/api/notifications"); } catch { return; }

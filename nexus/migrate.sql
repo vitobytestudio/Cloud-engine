@@ -14,3 +14,19 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
+
+-- ترقية طلبات الفيديوهات (idempotent)
+-- ═══ طلبات الفيديوهات الإعلانية ═══
+CREATE TABLE IF NOT EXISTS ad_orders (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  style TEXT NOT NULL,
+  product_id TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  price INTEGER NOT NULL,
+  note TEXT NOT NULL DEFAULT '',
+  video_url TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ad_user ON ad_orders(user_id, created_at DESC);
