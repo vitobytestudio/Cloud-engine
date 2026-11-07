@@ -50,7 +50,8 @@ const T = {
     n_order: "طلبية جديدة", n_agent: "جلسة وكيل جديدة", n_grant: "تحديث باقتك", need_keys: "الوكيل ينتظر مفاتيح المالك",
     ads_tab: "الفيديوهات", ads_hero_t: "فيديوهات إعلانية تبيع عنك", ads_hero_s: "من استوديو VITO BYTE — لقطات سينمائية لمنتجاتك جاهزة لفيسبوك وإنستغرام وتيك توك.",
     your_disc: "خصم باقتك", order_vid: "اطلب الفيديو", vid_note: "ملاحظات للاستوديو (اختياري)", vid_product: "المنتج المميز (اختياري)",
-    send_order: "أرسل الطلب", my_vids: "طلباتي", no_vids: "لا طلبات بعد", order_ok: "طلبك وصل الاستوديو",
+    send_order: "إرسال عبر واتساب", my_vids: "طلباتي", no_vids: "لا طلبات بعد", order_ok: "طلبك سجل — أكمل المحادثة في واتساب",
+    wa_ask: "استفسر عن الفيديوهات على واتساب", wa_open_fail: "افتح واتساب ومراسلة: 0777 84 56 35",
     st_new: "جديد", st_wip: "قيد التنفيذ", st_done: "جاهز", watch_vid: "شاهد الفيديو", pick_product: "بلا منتج — عام",
     s_quick: "عرض منتج سريع", d_quick: "دوران المنتج مع نص متحرك وسعر لافت", s_lifestyle: "لايف ستايل", d_lifestyle: "المنتج في يوميات حقيقية يبيع إحساساً لا شيئاً",
     s_sale: "عرض وتخفيضات", d_sale: "نداء بيع حاد بالسعر القديم والجديد والمؤقت", s_lux: "فخامة سينمائية", d_lux: "إضاءة وظلال ذهبية للمنتجات الغالية",
@@ -103,7 +104,8 @@ const T = {
     n_order: "New order", n_agent: "New agent session", n_grant: "Plan updated", need_keys: "Agent awaits owner keys",
     ads_tab: "Video ads", ads_hero_t: "Ad videos that sell for you", ads_hero_s: "By VITO BYTE studio — cinematic product cuts ready for Facebook, Instagram & TikTok.",
     your_disc: "Your plan discount", order_vid: "Order this video", vid_note: "Notes for the studio (optional)", vid_product: "Featured product (optional)",
-    send_order: "Send order", my_vids: "My orders", no_vids: "No orders yet", order_ok: "Order received by the studio",
+    send_order: "Send via WhatsApp", my_vids: "My orders", no_vids: "No orders yet", order_ok: "Order saved — continue the chat on WhatsApp",
+    wa_ask: "Ask about video ads on WhatsApp", wa_open_fail: "Open WhatsApp and message: 0777 84 56 35",
     st_new: "New", st_wip: "In progress", st_done: "Ready", watch_vid: "Watch video", pick_product: "No product — generic",
     s_quick: "Quick product spot", d_quick: "Rotating product with animated text and price", s_lifestyle: "Lifestyle", d_lifestyle: "Your product in real daily life — selling a feeling",
     s_sale: "Sale blast", d_sale: "Hard-selling call with old/new limited price", s_lux: "Cinematic luxury", d_lux: "Golden lighting and shadows for premium items",
@@ -809,11 +811,26 @@ async function openAdsOrder(style, price) {
         ${prods.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("vid_note"))}</label><textarea class="input" id="ao-note" rows="2"></textarea></div>
     <div id="ao-err" style="min-height:18px"></div>
-    <button class="btn primary wide" id="ao-send">${esc(t("send_order"))}</button>`);
+    <button class="btn wa wide" id="ao-send">${esc(t("send_order"))}</button>`);
   $("#ao-send", sh.wrap).onclick = async () => {
     try {
-      await api("/api/ads/order", { method: "POST", body: { style, product_id: $("#ao-prod", sh.wrap).value, note: $("#ao-note", sh.wrap).value.trim() } });
-      sh.close(); toast(t("order_ok")); vibrate([10, 40, 10]); go("#/ads");
+      const stTitle = t("s_" + style), prodSel = $("#ao-prod", sh.wrap);
+      const prodName = prodSel.selectedOptions[0]?.textContent || "";
+      const note = $("#ao-note", sh.wrap).value.trim();
+      const u = S.user || {};
+      const msg = [
+        "السلام عليكم استوديو VITO، أريد طلب فيديو إعلاني من NEXUS:",
+        `- النمط: ${stTitle}`,
+        `- السعر: ${new Intl.NumberFormat("fr-DZ").format(price)} دج (بعد خصم باقتي)`,
+        u.store_name ? `- المتجر: ${u.store_name}${u.slug ? ` — nexus.vitobytestudio.workers.dev/#/s/${u.slug}` : ""}` : "",
+        prodName && prodName !== t("pick_product") ? `- المنتج المميز: ${prodName}` : "",
+        note ? `- ملاحظات: ${note}` : "",
+      ].filter(Boolean).join("\n");
+      await api("/api/ads/order", { method: "POST", body: { style, product_id: prodSel.value, note } });
+      sh.close(); toast(t("order_ok")); vibrate([10, 40, 10]);
+      const wa = window.open(`https://wa.me/213777845635?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+      if (!wa) toast(t("wa_open_fail"));
+      go("#/ads");
     } catch (ex) {
       $("#ao-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "too_many" ? t("limit_reached") : ex.error || "error")}</span>`;
     }
@@ -840,6 +857,7 @@ rr("/ads", async (v) => {
       <b style="font-size:16px;display:block">${esc(t("ads_hero_t"))}</b>
       <p style="font-size:12.5px;margin:4px 0 8px;opacity:.92;line-height:1.8">${esc(t("ads_hero_s"))}</p>
       <span class="disc-chip">${esc(t("your_disc"))}: ${Math.round((d.discount || 0) * 100)}%</span>
+      <a class="wa-ask" href="https://wa.me/213777845635?text=${encodeURIComponent("السلام عليكم، عندي استفسار حول الفيديوهات الإعلانية NEXUS")}" target="_blank" rel="noopener">${esc(t("wa_ask"))}</a>
     </div>
     <div class="ad-grid">${(d.styles || []).map((st) => `
       <div class="ad-card">
