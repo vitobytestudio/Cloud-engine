@@ -274,6 +274,37 @@ let pid = "", pid2 = "";
   ok("فيض محاولات الدخول يُخنق 429", last === 429);
 }
 
+/* ─── 8و. الفيديوهات الإعلانية ─── */
+{
+  ok("إعلانات بلا جلسة 401", (await j("/api/ads")).status === 401);
+  const ads = await j("/api/ads", { cookie });
+  ok("الأنماط الخمسة بخصم free=0", ads.status === 200 && (ads.data.styles || []).length === 5 && ads.data.discount === 0);
+  const quick = (ads.data.styles || []).find((x) => x.id === "quick");
+  ok("سعر quick الأساسي 2500", quick && quick.base === 2500 && quick.price === 2500);
+  ok("نمط مجهول 400", (await j("/api/ads/order", { method: "POST", cookie, csrf, body: { style: "ghost" } })).status === 400);
+  ok("منتج زائف 400", (await j("/api/ads/order", { method: "POST", cookie, csrf, body: { style: "quick", product_id: "p_fake" } })).status === 400);
+  const ord = await j("/api/ads/order", { method: "POST", cookie, csrf, body: { style: "quick", note: "بسرعة قبل العيد" } });
+  ok("طلب فيديو 201 بسعر الباقة", ord.status === 201 && ord.data.price === 2500);
+  const ads2 = await j("/api/ads", { cookie });
+  ok("الطلب في قائمتي كجديد", (ads2.data.orders || []).some((o) => o.id === ord.data.id && o.status === "new"));
+  /* الإدارة: إن وُجد ADMIN_K0 — ترقية pro تخفض السعر 30% وتسليم الفيديو يُشعر التاجر */
+  const adm = await j("/api/admin/auth", { method: "POST", body: { k0: "a".repeat(64) } });
+  if (adm.status === 200) {
+    const ac = (adm.headers.get("set-cookie") || "").split(";")[0];
+    await j("/api/admin/grant", { method: "POST", cookie: ac, body: { slug: await (await j("/api/me", { cookie })).data.user.slug, plan: "pro" } });
+    const adsP = await j("/api/ads", { cookie });
+    ok("خصم pro: quick يصبح 1750", adsP.data.discount === 0.3 && (adsP.data.styles || []).find((x) => x.id === "quick").price === 1750);
+    const wip = await j(`/api/admin/ads/${ord.data.id}`, { method: "PATCH", cookie: ac, body: { status: "wip" } });
+    const done = await j(`/api/admin/ads/${ord.data.id}`, { method: "PATCH", cookie: ac, body: { status: "done", video_url: "https://drive.google.com/file/v1" } });
+    ok("الإدارة تسلم الفيديو (wip ثم done)", wip.status === 200 && done.status === 200);
+    const after = await j("/api/ads", { cookie });
+    const o2 = (after.data.orders || []).find((o) => o.id === ord.data.id);
+    ok("التاجر يرى الجاهز مع الرابط", o2 && o2.status === "done" && o2.video_url.includes("drive"));
+    const notif = await j("/api/notifications", { cookie });
+    ok("إشعار الجاهز وصل", (notif.data.notifications || []).some((n) => n.type === "ads" && n.title.includes("جاهز")));
+  } else ok("إدارة الفيديوهات (تخطي — بلا ADMIN_K0 محلياً)", true);
+}
+
 /* ─── 9. حذف وتنظيف ─── */
 {
   const del = await j("/api/products/" + pid2, { method: "DELETE", cookie, csrf });
