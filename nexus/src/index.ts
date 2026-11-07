@@ -657,6 +657,86 @@ route("PATCH", "/api/admin/ads/:id", async (req, env, _s, p) => {
   return json({ ok: true });
 });
 
+// ═══ وكيل استقبال نيكسوس (عام — يشتغل حتى بلا مفاتيح بذكاء معلب) ═══
+const RECEPTION_FALLBACK: [RegExp, string, string][] = [
+  [/متجر|افتح|حساب|سجل|store|open|register/i,
+   "لفتح متجرك: سجّل بدقيقة (بريد + اسم متجرك ورابطه)، أضف أول منتج بصورته وسعره، وشارك رابط متجرك مع زبائنك — ومنتجاتك تظهر تلقائياً في سوق نيكسوس.",
+   "To open your store: register in a minute (email + store name & link), add your first product with photo and price, share your store link — and your products appear in the NEXUS market automatically."],
+  [/باقة|اشتراك|سعر المنصة|plan|pro|vip|subscription/i,
+   "الباقات: المجانية (3 منتجات، 15 محادثة وكيل يومياً)، الاحترافية PRO (10 منتجات، 300 محادثة، خصم 30% على الفيديوهات)، وVIP النخبة (30 منتج، 1000 محادثة، خصم 50%). الترقية تتم بالتواصل مع إدارة المنصة.",
+   "Plans: Free (3 products, 15 agent chats/day), PRO (10 products, 300 chats, 30% off videos), VIP (30 products, 1000 chats, 50% off). Upgrades are done via platform management."],
+  [/توصيل|دفع|تسليم|delivery|cod|pay/i,
+   "الطلبيات بالدفع عند الاستلام لكل ولايات الجزائر الـ58، والتوصيل للمنزل أو مكتب التوصيل — أنت لا تدفع شيئاً قبل ما تستلم سلعتك.",
+   "Orders are cash-on-delivery across all Algerian wilayas, home or desk delivery — you pay nothing before receiving your item."],
+  [/فيديو|إعلان|اعلان|ترويج|video|ad/i,
+   "في لوحتك صفحة «الفيديوهات»: 5 أنماط إعلانية سينمائية بخصم باقتك، والطلب يوصل استوديو VITO مباشرة عبر واتساب.",
+   "In your dashboard there's a Video ads page: 5 cinematic ad styles with your plan discount, ordered straight to the VITO studio via WhatsApp."],
+];
+function receptionCanned(m: string, lang: string): string {
+  for (const [re, ar, en] of RECEPTION_FALLBACK) if (re.test(m)) return lang === "en" ? en : ar;
+  return lang === "en"
+    ? "Welcome to NEXUS — Algeria's merchant platform: your own store link, a national market, and an AI agent that answers your buyers. Register in a minute and start selling."
+    : "أهلاً بك في نيكسوس — منصة التجار الجزائرية: متجر برابط مستقل، سوق وطني، ووكيل ذكي يرد على زبائنك. سجّل بدقيقة وابدأ البيع.";
+}
+
+route("POST", "/api/reception/chat", async (req, env) => {
+  const ip = req.headers.get("cf-connecting-ip") ?? "x";
+  if (!(await rl(env, `rec:${ip}`, 30, 600))) return bad("too_many", 429);
+  const b = await body(req);
+  const lang = str(b, "lang") === "en" ? "en" : "ar";
+  const day = new Date().toISOString().slice(0, 10);
+  const kc = `rec:day:${day}`;
+  const used = Number((await env.CACHE_KV.get(kc)) ?? "0");
+  const last = (Array.isArray(b.messages) ? b.messages : []).slice(-4)
+    .map((m: any) => ({ role: m?.role === "assistant" ? "assistant" : "user", content: clip(String(m?.content ?? ""), 300) }))
+    .filter((m: any) => m.content.trim());
+  const question = last.length ? last[last.length - 1]!.content : clip(str(b, "message"), 300);
+  /* السقف اليومي العام يحمي الأسطول — الاستقبال الملبّي لا يُطفأ أبداً */
+  if (used >= 400 || !env.AI_KEYS) return json({ reply: receptionCanned(question, lang), canned: true });
+  const sys = `أنت موظف استقبال منصة NEXUS (منصة تجار جزائرية). اشرح بإيجاز ودلف: كل تاجر يملك متجراً برابط مستقل + سوق وطني (فيد) + وكيل ذكي يرد زبائنه + باقات Free/PRO/VIP (3/10/30 منتجات) + استوديو فيديوهات إعلانية عبر واتساب. الطلبيات بالدفع عند الاستلام وطنياً. وجه الزائر دائماً نحو التسجيل («ابدأ الآن»). جاوب بسطرين إلى أربعة بالدارجة الجزائرية${lang === "en" ? " or English if asked" : ""}. لا تخترع أرقاماً ولا وعوداً.`;
+  const msgs = last.map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content }));
+  let reply = await fleetChat(env, sys, msgs.length ? msgs : [{ role: "user", content: question || "سلام، واش هي نيكسوس؟" }]);
+  if (reply === null) return json({ reply: receptionCanned(question, lang), canned: true });
+  await env.CACHE_KV.put(kc, String(used + 1), { expirationTtl: DAY_S });
+  return json({ reply: clip(reply, 900) });
+});
+
+// ═══ منظّم المنتج قبل النشر (وكيل التاجر — من حصة باقته) ═══
+route("POST", "/api/agent/organize", async (req, env, s) => {
+  if (!env.AI_KEYS) return json({ error: "agent_disabled" }, 503);
+  if (!(await rl(env, `org:${s!.userId}`, 20, DAY_S))) return bad("too_many", 429);
+  const b = await body(req);
+  const title = clip(str(b, "title").trim(), 80);
+  const descr = clip(str(b, "descr").trim(), 600);
+  const price = Math.trunc(num(b, "price"));
+  if (!isStr(title, 2, 80)) return bad("invalid_title");
+  const day = new Date().toISOString().slice(0, 10);
+  const kq = `aq:${s!.userId}:${day}`;
+  const used = Number((await env.CACHE_KV.get(kq)) ?? "0");
+  const u = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(s!.userId).first<UserRow>();
+  if (!u) return bad("auth_required", 401);
+  const quota = PLAN_QUOTA[(u.plan ?? "free") as Plan] ?? 15;
+  if (used >= quota) return json({ error: "quota_exhausted" }, 429);
+  const sys = `أنت منظّم منتجات محترف في منصة NEXUS الجزائرية. رتب بطاقة المنتج التالية قبل نشرها. أرجع JSON فقط بهذا الشكل بلا أي نص إضافي:
+{"title":"عنوان بيعي قصير واضح","descr":"وصف من 30 إلى 60 كلمة بالدارجة المبسطة يبرز الميزة والدفع عند الاستلام، بلا أسعار ولا هواتف","category":"واحد من: ${CATEGORIES.join("/")}","tips":["نصيحة تحسينية قصيرة","نصيحة قصيرة","نصيحة قصيرة"]}
+المنتج: العنوان "${title}" — الوصف الحالي "${descr || "(فارغ)"}" — السعر ${price || "(غير محدد)"} دج.`;
+  const text = await fleetChat(env, sys, [{ role: "user", content: title }]);
+  if (text === null) return json({ error: "fleet_down" }, 502);
+  let parsed: any = null;
+  try {
+    const m = /\{[\s\S]*\}/.exec(text);
+    parsed = m ? JSON.parse(m[0]) : null;
+  } catch { parsed = null; }
+  await env.CACHE_KV.put(kq, String(used + 1), { expirationTtl: DAY_S });
+  const out = {
+    title: parsed && typeof parsed.title === "string" ? clip(parsed.title, 80) : title,
+    descr: parsed && typeof parsed.descr === "string" ? clip(parsed.descr, 600) : descr,
+    category: parsed && CATEGORIES.includes(parsed.category) ? parsed.category : null,
+    tips: Array.isArray(parsed?.tips) ? parsed.tips.slice(0, 3).map((x: any) => clip(String(x), 120)) : [],
+  };
+  return json({ ok: true, ...out });
+}, { auth: true, csrf: true });
+
 // ═══ الموجّه ═══
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {

@@ -56,6 +56,9 @@ const T = {
     s_quick: "عرض منتج سريع", d_quick: "دوران المنتج مع نص متحرك وسعر لافت", s_lifestyle: "لايف ستايل", d_lifestyle: "المنتج في يوميات حقيقية يبيع إحساساً لا شيئاً",
     s_sale: "عرض وتخفيضات", d_sale: "نداء بيع حاد بالسعر القديم والجديد والمؤقت", s_lux: "فخامة سينمائية", d_lux: "إضاءة وظلال ذهبية للمنتجات الغالية",
     s_intro: "افتتاح المتجر", d_intro: "تعريف بمتجرك كامل ومنتجاتك الأقوى في فيديو واحد",
+    recep: "مساعد المنصة", recep_hello: "أهلاً! أنا استقبال نيكسوس — اسألني: كيف تفتح متجراً؟ إيش الباقات؟ كيف يوصل الطلب؟",
+    org_btn: "رتّب منتجي بالوكيل", orging: "الوكيل يرتب…", org_ok: "اقتراحات الوكيل طُبقت", org_tips: "نصائح الوكيل",
+    ready: "جاهزية النشر", apply_org: "طبّق الاقتراحات",
   },
   en: {
     tagline: "Merchant Market", home: "Home", explore: "Explore", mystore: "My Store", account: "Account",
@@ -110,6 +113,9 @@ const T = {
     s_quick: "Quick product spot", d_quick: "Rotating product with animated text and price", s_lifestyle: "Lifestyle", d_lifestyle: "Your product in real daily life — selling a feeling",
     s_sale: "Sale blast", d_sale: "Hard-selling call with old/new limited price", s_lux: "Cinematic luxury", d_lux: "Golden lighting and shadows for premium items",
     s_intro: "Store intro", d_intro: "Introduce your whole store and top products in one video",
+    recep: "Platform assistant", recep_hello: "Hi! I'm NEXUS reception — ask me: how to open a store? What are the plans? How does delivery work?",
+    org_btn: "Organize my product with AI", orging: "Agent organizing…", org_ok: "Agent suggestions applied", org_tips: "Agent tips",
+    ready: "Publish readiness", apply_org: "Apply suggestions",
   },
 };
 
@@ -398,6 +404,33 @@ rr("/onb-check", async (v) => {
 /* الرئيسية / الفيد */
 let feedCursor = null, feedCat = "", feedQ = "", feedBusy = false;
 const resetFeed = () => { feedCursor = null; feedCat = ""; feedQ = ""; feedBusy = false; };
+let recHist = [];
+function recepChat() {
+  const sh = sheet(`<b style="font-size:15px;display:block;margin-bottom:6px">${esc(t("recep"))}</b>
+    <div id="rec-log" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;margin-bottom:8px"></div>
+    <div class="qrow">
+      ${["كيف نفتح متجراً؟", "إيش الباقات؟", "كيف يوصل الطلب؟"].map((q) => `<button class="qchip" data-q="${esc(q)}">${esc(q)}</button>`).join("")}
+    </div>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <input class="input" id="rec-in" placeholder="${esc(S.lang === "ar" ? "اكتب سؤالك…" : "Ask…")}"/>
+      <button class="btn primary" id="rec-go" style="padding:0 16px">→</button>
+    </div>`);
+  const log = $("#rec-log", sh.wrap);
+  const push = (txt, me) => { const d = document.createElement("div"); d.className = "ag-msg " + (me ? "me" : "bot"); d.textContent = txt; log.appendChild(d); log.scrollTop = 1e6; };
+  push(t("recep_hello"), false);
+  const send = async (q) => {
+    if (!q.trim()) return;
+    push(q, true); recHist.push({ role: "user", content: q });
+    const d = document.createElement("div"); d.className = "ag-msg bot typing"; d.innerHTML = "<span></span><span></span><span></span>"; log.appendChild(d); log.scrollTop = 1e6;
+    try {
+      const r = await api("/api/reception/chat", { method: "POST", body: { messages: recHist.slice(-4), lang: S.lang } });
+      d.remove(); push(r.reply || t("ai_desc_fail"), false); recHist.push({ role: "assistant", content: r.reply || "" });
+    } catch { d.remove(); push(t("ai_desc_fail"), false); }
+  };
+  $("#rec-go", sh.wrap).onclick = () => { const i = $("#rec-in", sh.wrap); send(i.value); i.value = ""; };
+  $("#rec-in", sh.wrap).onkeydown = (e) => { if (e.key === "Enter") { const i = $("#rec-in", sh.wrap); send(i.value); i.value = ""; } };
+  $$(".qchip", sh.wrap).forEach((c) => (c.onclick = () => send(c.dataset.q)));
+}
 rr("/", async (v) => {
   buildTabbar(true);
   resetFeed();
@@ -406,6 +439,13 @@ rr("/", async (v) => {
     <div id="feed-list"></div>`;
   renderCats();
   loadFeed(true);
+  if (!S.user && !$("#recep-fab")) {
+    const b = document.createElement("button");
+    b.className = "recep-fab"; b.id = "recep-fab"; b.setAttribute("aria-label", t("recep"));
+    b.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.7 1.4 5.1 3.6 6.7L5 22l4.1-2c.9.2 1.9.4 2.9.4 5.5 0 10-3.9 10-8.7S17.5 3 12 3z"/></svg>`;
+    b.onclick = () => recepChat();
+    v.appendChild(b);
+  }
 });
 
 function renderCats() {
@@ -997,6 +1037,10 @@ function productEditor(p = null) {
     <div class="field"><label>${esc(t("product_title"))}</label><input class="input" id="e-title" value="${esc(p?.title || "")}"/></div>
     <div class="field"><label>${esc(t("description"))}</label><textarea class="input" id="e-desc">${esc(p?.descr || "")}</textarea>
       <button class="btn ghost wide" id="e-ai" type="button" style="margin-top:6px">${esc(t("ai_desc"))}</button></div>
+    <button class="btn ghost wide" id="e-org" type="button">${esc(t("org_btn"))}</button>
+    <div class="ready-wrap"><span id="ready-lbl">${esc(t("ready"))}</span>
+      <div class="ready-bar"><i id="ready-fill"></i></div><span id="ready-pct" style="font-weight:800;font-size:12px">0%</span></div>
+    <div id="org-tips" class="tips-box" style="display:none"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field"><label>${esc(t("price"))}</label><input class="input" id="e-price" type="number" inputmode="numeric" dir="ltr" value="${p?.price ?? ""}"/></div>
       <div class="field"><label>${esc(t("compare_at"))}</label><input class="input" id="e-compare" type="number" inputmode="numeric" dir="ltr" value="${p?.compare_at || ""}"/></div>
@@ -1029,6 +1073,36 @@ function productEditor(p = null) {
       $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(msg)}</span>`; vibrate([8, 30, 8]);
     }
     btn.disabled = false; btn.textContent = t("ai_desc");
+  };
+  /* جاهزية النشر: تحليل حي لكل حقل */
+  const readyCalc = () => {
+    const tt = $("#e-title", sh.wrap).value.trim(), dd = $("#e-desc", sh.wrap).value.trim();
+    const im = ($("#e-image", sh.wrap).value.trim() || $("#e-preview img", sh.wrap)) ? 1 : 0;
+    const ca = $("#e-compare", sh.wrap) ? ($("#e-compare", sh.wrap).value.trim() ? 1 : 0) : 0;
+    const pts = (tt.length >= 10 ? 30 : tt.length >= 4 ? 15 : 0) + (dd.length >= 40 ? 40 : dd.length >= 15 ? 20 : 0) + im * 20 + ca * 10;
+    $("#ready-fill", sh.wrap).style.width = pts + "%";
+    $("#ready-pct", sh.wrap).textContent = pts + "%";
+    $("#ready-fill", sh.wrap).style.background = pts >= 80 ? "linear-gradient(90deg,#34d399,#2ad4f6)" : pts >= 50 ? "linear-gradient(90deg,#ffd166,#ff9f43)" : "linear-gradient(90deg,#ff5d73,#ff9f43)";
+  };
+  ["#e-title", "#e-desc", "#e-image", "#e-compare"].forEach((id) => { const el = $(id, sh.wrap); if (el) el.addEventListener("input", readyCalc); });
+  readyCalc();
+  /* منظّم المنتج: الوكيل يرتب الباقة ويقترح */
+  $("#e-org", sh.wrap).onclick = async () => {
+    const btn = $("#e-org", sh.wrap);
+    btn.disabled = true; btn.textContent = t("orging");
+    try {
+      const r = await api("/api/agent/organize", { method: "POST", body: { title: $("#e-title", sh.wrap).value.trim(), descr: $("#e-desc", sh.wrap).value.trim(), price: Number($("#e-price", sh.wrap)?.value || 0) } });
+      $("#e-title", sh.wrap).value = r.title || $("#e-title", sh.wrap).value;
+      $("#e-desc", sh.wrap).value = r.descr || $("#e-desc", sh.wrap).value;
+      if (r.category) { const c = $("#e-cat", sh.wrap); if (c && [...c.options].some((o) => o.value === r.category)) c.value = r.category; }
+      const tb = $("#org-tips", sh.wrap);
+      if ((r.tips || []).length) { tb.style.display = "block"; tb.innerHTML = `<b>${esc(t("org_tips"))}</b><ul>${r.tips.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`; }
+      readyCalc(); toast(t("org_ok")); vibrate([10, 40, 10]);
+    } catch (ex) {
+      const msg = ex.error === "agent_disabled" ? t("need_keys") : ex.error === "quota_exhausted" ? t("limit_reached") : t("ai_desc_fail");
+      $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(msg)}</span>`; vibrate([8, 30, 8]);
+    }
+    btn.disabled = false; btn.textContent = t("org_btn");
   };
   const prev = $("#e-preview", sh.wrap);
   let curUrl = p?.image || "";

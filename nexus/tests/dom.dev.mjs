@@ -111,6 +111,16 @@ await nav("#/ads");
 await sleep(600);
 ok("حارس #/ads: بلا جلسة → الدخول", w.location.hash.includes("auth") || !!d.querySelector("#a-email, #l-email"));
 
+/* 8و) وكيل الاستقبال للضيف على الرئيسية */
+await nav("#/");
+await sleep(700);
+ok("زر الاستقبال العائم للضيف", !!d.getElementById("recep-fab"));
+d.getElementById("recep-fab")?.click();
+await sleep(700);
+ok("ورقة الاستقبال بترحيب وأسئلة سريعة", !!d.getElementById("rec-log") && d.querySelectorAll(".qchip").length >= 3);
+d.querySelector(".sheet-bd")?.click();
+await sleep(400);
+
 /* 9) صفر أخطاء غير الممسوكة في كل الجولة */
 ok("صفر أخطاء JS غير الممسوكة طوال الجولة", errors.length === 0);
 if (errors.length) console.log(errors.join("\n"));
