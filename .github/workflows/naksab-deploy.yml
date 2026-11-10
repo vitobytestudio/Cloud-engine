@@ -79,6 +79,8 @@ jobs:
         run: |
           npx wrangler d1 execute DB --remote -y --file schema.sql
           npx wrangler d1 execute DB --remote -y --file seed.sql
+          TABLES=$(npx wrangler d1 execute DB --remote -y --json --command "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table'" 2>/dev/null | grep -oE '"n":[0-9]+' | head -1)
+          echo "::notice::قاعدة naksab-db جاهزة — $TABLES"
 
       - name: أسرار بوابة بريدي (تُنقل كسر للعامل إن وُجدت)
         working-directory: naksab
@@ -98,8 +100,6 @@ jobs:
           BARIDI_PASS: ${{ secrets.BARIDI_PASS }}
           BARIDI_ANSWER: ${{ secrets.BARIDI_ANSWER }}
           BARIDI_ENDPOINT: ${{ secrets.BARIDI_ENDPOINT }}
-          TABLES=$(npx wrangler d1 execute DB --remote -y --json --command "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table'" 2>/dev/null | grep -oE '"n":[0-9]+' | head -1)
-          echo "::notice::قاعدة naksab-db جاهزة — $TABLES"
 
       - name: بريد المدير الأولي (من متغيرات GitHub إن عُرِّف)
         working-directory: naksab
