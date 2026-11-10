@@ -9,6 +9,7 @@ import {
 import { runTask, STRUCTURE_SYSTEM } from "./ai";
 import { renderSite, renderDocPrint, templateAllowed } from "./sites";
 import { paymentsEnabled, canTransit, genReference, REF_RE, amountExact, verifyWebhookSig, finAudit, idemKeyOf, riskFlags, type PayState } from "./payments";
+import { baridiConfigured, ccpConfigured, ccpParts, collectTransfers, pickMatch, WINDOW_MS, type RawTransfer, type PendingOrder } from "./baridi";
 
 type Route = { m: string; pat: string; h: (r: Request, e: Env, s: Session, p: Record<string, string>) => Promise<Response>; auth?: boolean; admin?: boolean; csrf?: boolean };
 const R: Route[] = [];
@@ -1081,7 +1082,191 @@ route("POST", "/api/admin/rotate-panel", async (_r, env, s) => {
   return json({ ok: true, panel_url: `/panel/${tok}` });
 });
 
+// ═══ محفظة الدينار + بوابة بريدي موب المؤتمتة + إشراك الجسر ═══
+async function walletBalance(env: Env, userId: string): Promise<number> {
+  const b = await env.DB.prepare("SELECT COALESCE(SUM(delta_dzd),0) AS s FROM wallet_tx WHERE user_id = ?").bind(userId).first<any>();
+  return Number(b?.s ?? 0);
+}
+async function walletTx(env: Env, userId: string, delta: number, kind: string, refId: string): Promise<void> {
+  await env.DB.prepare(
+    "INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)"
+  ).bind(id("wt"), userId, delta, kind, refId, delta, now()).run();
+}
+export async function baridiScan(env: Env): Promise<{ scanned: number; credited: number; review: number; error?: string }> {
+  if (!baridiConfigured(env)) return { scanned: 0, credited: 0, review: 0, error: "not_configured" };
+  const c = await collectTransfers(env);
+  if (!c.ok || !c.transfers) {
+    await finAudit(env, "baridi", "collect_fail", "", c.error || "unknown");
+    return { scanned: 0, credited: 0, review: 0, error: c.error };
+  }
+  let credited = 0, review = 0;
+  for (const t of c.transfers as RawTransfer[]) {
+    const used = await env.DB.prepare("SELECT id FROM payments WHERE provider = 'baridimob' AND provider_ref = ?").bind(t.id).first();
+    if (used) continue;
+    const pend = await env.DB.prepare(
+      "SELECT id, reference, amount_dzd, created_at FROM payments WHERE kind = 'topup' AND status = 'pending' AND created_at > ?"
+    ).bind(now() - WINDOW_MS - 3600_000).all<PendingOrder & { id: string }>();
+    const order = pickMatch(t, pend.results ?? []);
+    if (!order) { review++; continue; }
+    const row = await env.DB.prepare("SELECT status, user_id, amount_dzd FROM payments WHERE id = ?").bind(order.id).first<{ status: PayState; user_id: string; amount_dzd: number }>();
+    if (!row || !canTransit(row.status, "confirmed")) { review++; continue; }
+    await env.DB.batch([
+      env.DB.prepare("UPDATE payments SET status = 'confirmed', provider = 'baridimob', provider_ref = ? WHERE id = ?").bind(t.id, order.id),
+      env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)")
+        .bind(id("wt"), row.user_id, row.amount_dzd, "topup", order.id, row.amount_dzd, now()),
+    ]);
+    await notify(env, row.user_id, "payment", `تم تأكيد شحن محفظتك: ${row.amount_dzd} دج — المرجع ${order.reference}`, order.id);
+    await finAudit(env, "baridi", "auto_confirm", order.id, `transfer=${t.id} amount=${t.amount}`);
+    credited++;
+  }
+  return { scanned: c.transfers!.length, credited, review };
+}
+
+route("GET", "/api/wallet", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const { results } = await env.DB.prepare("SELECT * FROM wallet_tx WHERE user_id = ? ORDER BY created_at DESC LIMIT 30").bind(s.userId).all();
+  const pend = await env.DB.prepare("SELECT id, reference, amount_dzd, created_at FROM payments WHERE user_id = ? AND kind = 'topup' AND status = 'pending' ORDER BY created_at DESC LIMIT 5").bind(s.userId).all();
+  return json({ balance: await walletBalance(env, s.userId), tx: results ?? [], pending: pend.results ?? [], gateway: ccpConfigured(env) ? "ready" : "configuring", baridi: baridiConfigured(env) ? "ready" : "off" });
+}, { auth: true });
+
+route("POST", "/api/wallet/topup", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
+  const cp = ccpParts(env);
+  if (!cp) return bad("gateway_configuring", 503);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const amount = Math.trunc(Number(b.amount_dzd));
+  if (!(amount >= 500 && amount <= 50000)) return bad("invalid_amount");
+  const ikey = idemKeyOf(s.userId, "topup", String(amount));
+  const exist = await env.DB.prepare("SELECT id, reference, amount_dzd, created_at FROM payments WHERE idempotency_key = ? AND status = 'pending'").bind(ikey).first<any>();
+  if (exist) return json({ ok: true, ...exist, rip: cp.rip, cle: cp.cle, expires_at: exist.created_at + WINDOW_MS });
+  const ref = genReference(hex(12));
+  await env.DB.prepare(
+    "INSERT INTO payments (id, user_id, kind, amount_dzd, reference, status, idempotency_key, created_at) VALUES (?,?, 'topup', ?,?, 'pending', ?, ?)"
+  ).bind(id("pm"), s.userId, amount, ref, ikey, now()).run();
+  await finAudit(env, s.userId, "topup_created", "", `ref=${ref} amount=${amount}`);
+  return json({ ok: true, reference: ref, amount_dzd: amount, rip: cp.rip, cle: cp.cle, expires_at: now() + WINDOW_MS }, 201);
+});
+
+route("POST", "/api/admin/baridi/scan", async (req, env, s) => {
+  if (!s) return bad("not_found", 404);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const me = await env.DB.prepare("SELECT role FROM users WHERE id = ?").bind(s.userId).first<any>();
+  if (me?.role !== "admin") return bad("not_found", 404);
+  const r = await baridiScan(env);
+  await audit(env, s.userId, "baridi_scan", JSON.stringify(r).slice(0, 200));
+  return json({ ok: true, ...r });
+});
+
+// ═══ جسر الخدمات: كتالوج الموثقين + الإشراك ═══
+const bridgeFee = async (env: Env, amount: number): Promise<number> => {
+  const pct = Number(await getSetting(env, "bridge_fee_pct", "5"));
+  return Math.max(100, Math.round((amount * pct) / 100));
+};
+
+route("GET", "/api/bridge/catalog", async (_r, env) => {
+  const { results } = await env.DB.prepare(
+    `SELECT s.id, s.title, s.description, s.category, s.price_min, s.delivery_days, u.username, u.name, u.reputation, u.completed, u.avatar_url
+     FROM services s JOIN users u ON u.id = s.user_id
+     WHERE s.active = 1 AND u.verified = 1 AND u.banned = 0
+     ORDER BY s.boost_until > ? DESC, u.reputation DESC, s.created_at DESC LIMIT 50`
+  ).bind(now()).all();
+  return json({ services: results ?? [], fee_pct: Number(await getSetting(env, "bridge_fee_pct", "5")), gateway: ccpConfigured(env) ? "ready" : "configuring" });
+});
+
+route("POST", "/api/bridge/orders", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
+  if (!(await rl(env, `bord:${s.userId}`, 10, 86400))) return bad("too_many", 429);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const svc = await env.DB.prepare(
+    "SELECT s.id, s.user_id, s.price_min, s.active, u.verified, u.banned FROM services s JOIN users u ON u.id = s.user_id WHERE s.id = ?"
+  ).bind(clip(String(b.service_id ?? ""), 40)).first<any>();
+  if (!svc || !svc.active || !svc.verified || svc.banned) return bad("service_unavailable", 404);
+  const brief = clip(String(b.brief ?? "").trim(), 800);
+  if (brief.length < 10) return bad("invalid_brief");
+  const fee = await bridgeFee(env, svc.price_min);
+  const oid = id("bo");
+  await env.DB.prepare(
+    "INSERT INTO bridge_orders (id, buyer_id, freelancer_id, service_id, amount_dzd, fee_dzd, status, brief, source, created_at, updated_at) VALUES (?,?,?,?,?,?, 'awaiting_payment', ?, ?, ?, ?)"
+  ).bind(oid, s.userId, svc.user_id, svc.id, svc.price_min, fee, brief, String(b.source) === "nexus" ? "nexus" : "naksab", now(), now()).run();
+  return json({ ok: true, id: oid, amount_dzd: svc.price_min, fee_dzd: fee, total_dzd: svc.price_min + fee }, 201);
+});
+
+route("POST", "/api/bridge/orders/:id/pay", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const o = await env.DB.prepare("SELECT * FROM bridge_orders WHERE id = ?").bind(p.id).first<any>();
+  if (!o || o.buyer_id !== s.userId) return bad("not_found", 404);
+  if (o.status !== "awaiting_payment") return bad("invalid_state");
+  const total = o.amount_dzd + o.fee_dzd;
+  const bal = await walletBalance(env, s.userId);
+  if (bal < total) return json({ error: "insufficient", balance: bal, needed: total }, 402);
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) - ?3, ?4)")
+      .bind(id("wt"), s.userId, -total, "hold", o.id, total, now()),
+    env.DB.prepare("UPDATE bridge_orders SET status = 'active', updated_at = ? WHERE id = ? AND status = 'awaiting_payment'").bind(now(), o.id),
+  ]);
+  await notify(env, o.freelancer_id, "bridge", "طلب خدمة جديد مدفوع — ابدأ العمل", o.id);
+  return json({ ok: true, status: "active" });
+});
+
+route("POST", "/api/bridge/orders/:id/deliver", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const o = await env.DB.prepare("SELECT * FROM bridge_orders WHERE id = ?").bind(p.id).first<any>();
+  if (!o || o.freelancer_id !== s.userId) return bad("not_found", 404);
+  if (o.status !== "active") return bad("invalid_state");
+  await env.DB.prepare("UPDATE bridge_orders SET status = 'delivered', delivered_at = ?, auto_release_at = ?, updated_at = ? WHERE id = ?")
+    .bind(now(), now() + 72 * 3600_000, now(), o.id).run();
+  await notify(env, o.buyer_id, "bridge", "تسليم جديد — راجع ورافق خلال 72 ساعة وإلا أُفرج تلقائياً", o.id);
+  return json({ ok: true });
+});
+
+route("POST", "/api/bridge/orders/:id/confirm", async (req, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const o = await env.DB.prepare("SELECT * FROM bridge_orders WHERE id = ?").bind(p.id).first<any>();
+  if (!o || o.buyer_id !== s.userId) return bad("not_found", 404);
+  if (o.status !== "delivered") return bad("invalid_state");
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)")
+      .bind(id("wt"), o.freelancer_id, o.amount_dzd, "release", o.id, o.amount_dzd, now()),
+    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)")
+      .bind(id("wt"), "PLATFORM", o.fee_dzd, "fee", o.id, o.fee_dzd, now()),
+    env.DB.prepare("UPDATE bridge_orders SET status = 'released', updated_at = ? WHERE id = ? AND status = 'delivered'").bind(now(), o.id),
+    env.DB.prepare("UPDATE users SET completed = completed + 1 WHERE id = ?").bind(o.freelancer_id),
+  ]);
+  await notify(env, o.freelancer_id, "bridge", `أُفرج عن ${o.amount_dzd} دج إلى محفظتك`, o.id);
+  await finAudit(env, s.userId, "bridge_release", o.id, `amount=${o.amount_dzd} fee=${o.fee_dzd}`);
+  return json({ ok: true });
+});
+
+route("GET", "/api/bridge/orders", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM bridge_orders WHERE buyer_id = ? OR freelancer_id = ? ORDER BY created_at DESC LIMIT 50"
+  ).bind(s.userId, s.userId).all();
+  return json({ orders: results ?? [], balance: await walletBalance(env, s.userId) });
+}, { auth: true });
+
+route("GET", "/api/admin/bridge/orders", async (req, env, s) => {
+  if (!s) return bad("not_found", 404);
+  if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
+  const me = await env.DB.prepare("SELECT role FROM users WHERE id = ?").bind(s.userId).first<any>();
+  if (me?.role !== "admin") return bad("not_found", 404);
+  const { results } = await env.DB.prepare(
+    "SELECT b.*, u1.username AS buyer_username, u2.username AS freelancer_username FROM bridge_orders b JOIN users u1 ON u1.id = b.buyer_id JOIN users u2 ON u2.id = b.freelancer_id ORDER BY b.created_at DESC LIMIT 100"
+  ).all();
+  return json({ orders: results ?? [] });
+});
+
 export default {
+  async scheduled(_ctrl: unknown, env: Env, ctx: { waitUntil(p: Promise<unknown>): void }): Promise<void> {
+    if (baridiConfigured(env)) ctx.waitUntil(baridiScan(env).catch(() => undefined));
+  },
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;

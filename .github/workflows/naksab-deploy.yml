@@ -79,6 +79,25 @@ jobs:
         run: |
           npx wrangler d1 execute DB --remote -y --file schema.sql
           npx wrangler d1 execute DB --remote -y --file seed.sql
+
+      - name: أسرار بوابة بريدي (تُنقل كسر للعامل إن وُجدت)
+        working-directory: naksab
+        run: |
+          for S in CCP_PAY BARIDI_USER BARIDI_PASS BARIDI_ANSWER BARIDI_ENDPOINT; do
+            V="${!S}"
+            if [ -n "$V" ]; then
+              echo "$V" | npx wrangler secret put "$S"
+              echo "::notice::$S نُقل كسر للعامل"
+            else
+              echo "::notice::$S غير مضبوط — الميزة نائمة بأمان"
+            fi
+          done
+        env:
+          CCP_PAY: ${{ secrets.CCP_PAY }}
+          BARIDI_USER: ${{ secrets.BARIDI_USER }}
+          BARIDI_PASS: ${{ secrets.BARIDI_PASS }}
+          BARIDI_ANSWER: ${{ secrets.BARIDI_ANSWER }}
+          BARIDI_ENDPOINT: ${{ secrets.BARIDI_ENDPOINT }}
           TABLES=$(npx wrangler d1 execute DB --remote -y --json --command "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table'" 2>/dev/null | grep -oE '"n":[0-9]+' | head -1)
           echo "::notice::قاعدة naksab-db جاهزة — $TABLES"
 
