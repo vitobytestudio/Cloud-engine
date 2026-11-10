@@ -316,3 +316,33 @@ CREATE TABLE IF NOT EXISTS site_leads (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_leads_user ON site_leads(username, created_at);
+
+-- ═══ محفظة الدينار + إشراك خدمات الجسر (جولة البوابة المؤتمتة) ═══
+CREATE TABLE IF NOT EXISTS wallet_tx (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  delta_dzd INTEGER NOT NULL,
+  kind TEXT NOT NULL,            -- topup | hold | release | fee | withdraw | refund
+  ref_id TEXT DEFAULT '',
+  balance_after INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wallet_user ON wallet_tx(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS bridge_orders (
+  id TEXT PRIMARY KEY,
+  buyer_id TEXT NOT NULL,
+  freelancer_id TEXT NOT NULL,
+  service_id TEXT NOT NULL,
+  amount_dzd INTEGER NOT NULL,
+  fee_dzd INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'awaiting_payment',  -- awaiting_payment|active|delivered|released|cancelled|disputed
+  brief TEXT DEFAULT '',
+  source TEXT DEFAULT 'naksab',  -- naksab | nexus
+  delivered_at INTEGER,
+  auto_release_at INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bridge_buyer ON bridge_orders(buyer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bridge_free ON bridge_orders(freelancer_id, created_at DESC);
