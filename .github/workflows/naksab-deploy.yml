@@ -67,7 +67,7 @@ jobs:
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV لـNAKSAB جاهزان"
 
-      - name: تصفير حسابات الإدارة (فقط عند وسم [reset-admin] في رسالة الالتزام — بأمر المالك)
+      - name: تصفير حسابات الإدارة (فقط عند وسم [reset-admin] في رسالة دمج الالتزام النهائية — بأمر المالك)
         if: ${{ contains(github.event.head_commit.message, '[reset-admin]') }}
         working-directory: naksab
         run: |
