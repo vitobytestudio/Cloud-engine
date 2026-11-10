@@ -10,6 +10,8 @@ binding = "ASSETS"
 [vars]
 ENVIRONMENT = "production"
 ADMIN_BOOTSTRAP_EMAIL = ""
+# حساب استقبال الحوالات (بيان تجاري معلن بالتصميم — يُعرض للتاجر في صفحة الشحن ولا يُسحب منه إلا بحوالة المالك)
+CCP_PAY = "00799999004159589:029"
 
 [[d1_databases]]
 binding = "DB"
