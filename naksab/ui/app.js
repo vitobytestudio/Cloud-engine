@@ -760,7 +760,7 @@ async function viewService(id) {
   const sv = r.data.service;
   shell(`<div class="wrap page-head"><a href="#/services" class="tiny muted">← ${T.services}</a>
     <h1 style="margin-top:8px">${esc(sv.title)}</h1></div>
-  <div class="wrap grid" style="grid-template-columns:2fr 1fr;align-items:start">
+  <div class="wrap grid split-a">
     <div class="panel">
       <p style="white-space:pre-wrap;color:var(--dim);font-size:14.5px">${esc(sv.description)}</p>
       ${sv.requirements ? `<h3 style="margin:22px 0 8px;font-size:15px">${T.requirements}</h3><p class="muted" style="font-size:13.5px;white-space:pre-wrap">${esc(sv.requirements)}</p>` : ""}
@@ -800,7 +800,7 @@ async function viewProfile(username) {
       </div>
     </div>
   </div>
-  <div class="wrap grid" style="grid-template-columns:2fr 1fr;align-items:start">
+  <div class="wrap grid split-a">
     <div>
       <div class="panel" style="margin-bottom:14px"><h3 style="font-size:15px;margin-bottom:10px">${T.about_h}</h3><p class="muted" style="font-size:13.5px;white-space:pre-wrap">${esc(u.bio || T.no_bio)}</p></div>
       <h3 style="font-size:16px;margin:18px 0 12px">${T.services_h}</h3>
@@ -1243,7 +1243,7 @@ async function viewProject(id) {
         ${p.status === "completed" && !iReviewed ? `<button class="btn primary sm" id="pj-review">${T.leave_review}</button>` : ""}
       </div>
     </div></div>
-  <div class="wrap grid" style="grid-template-columns:1.6fr 1fr;align-items:start">
+  <div class="wrap grid split-b">
     <div>
       <div class="panel" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">${T.messages_h}</h3>
         <div class="chat" id="chat">${messages.map((m) => `<div class="bubble ${m.sender_id === S.user.id ? "mine" : ""}"><div class="who">${esc(m.sender_name)} · ${ago(m.created_at)}</div>${esc(m.body)}</div>`).join("") || `<div class="empty tiny">${T.start_convo}</div>`}</div>
