@@ -8,4 +8,5 @@ export interface Env {
   ENVIRONMENT: string;
   ADMIN_K0?: string;
   AI_KEYS?: string;
+  NAKSAB_ORIGIN?: string; /* مصدر كتالوج المحترفين — جسر ناكساب */
 }

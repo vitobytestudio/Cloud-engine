@@ -318,6 +318,16 @@ let pid = "", pid2 = "";
   ok("فحص المفاتيح يسبق فحص العنوان (503)", (await j("/api/agent/organize", { method: "POST", cookie, csrf, body: { title: "س" } })).status === 503);
 }
 
+/* ─── 8ح. جسر المحترفين ─── */
+{
+  const pro = await j("/api/pro/services");
+  ok("وكيل الكتالوج يرد بمصفوفة", pro.status === 200 && Array.isArray(pro.data.services));
+  const mem = await j("/api/pro/member?u=ghost-user-x");
+  ok("تحقق عضوية وهمية: صفر خصم", mem.status === 200 && mem.data.active === false && mem.data.extra_pct === 0);
+  const adsNk = await j("/api/ads/order", { method: "POST", cookie, csrf, body: { style: "quick", nk_user: "ghost-user-x" } });
+  ok("طلب فيديو باسم وهمي: بلا خصم إضافي (سعر الباقة)", adsNk.status === 201 && adsNk.data.price === 2500, JSON.stringify(adsNk.data));
+}
+
 /* ─── 9. حذف وتنظيف ─── */
 {
   const del = await j("/api/products/" + pid2, { method: "DELETE", cookie, csrf });

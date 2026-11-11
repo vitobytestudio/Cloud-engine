@@ -18,3 +18,8 @@ INSERT OR IGNORE INTO settings (k, v, updated_at, updated_by) VALUES
 ('ai_free_daily', '10', 0, 'system'),
 ('ai_free_monthly', '100', 0, 'system'),
 ('credits_price_dzd_per_100', '300', 0, 'system');
+
+-- باقتا العضوية الجسرية (امتيازات المنصتين — idempotent)
+INSERT OR REPLACE INTO plans (id, name, price_dzd, period, ai_quota_daily, ai_quota_monthly, features, active, buyable, sort) VALUES
+('bridge-weekly', 'عضوية الأسبوع', 199, 'weekly', 0, 0, '["ثمن الجسر 3% بدل 5%","خصم 10% إضافي على فيديوهات نيكسوس","أولوية عرض في كتالوج المحترفين"]', 1, 1, 90),
+('bridge-monthly', 'عضوية الشهر', 699, 'monthly', 0, 0, '["ثمن الجسر 2% بدل 5%","خصم 20% إضافي على فيديوهات نيكسوس","أولوية عرض في كتالوج المحترفين","شارة عضوية على ملفك"]', 1, 1, 91);

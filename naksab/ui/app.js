@@ -143,7 +143,14 @@ en: {
   panel_copy: "Copy link", panel_open: "Open my panel",
   remember_me: "Keep me signed in on this device",
   ai_credits: "AI structuring", used_today: "Used today", quota_monthly: "This month",
-  topup_soon: "Top-up in DZD — coming soon", plan_l: "Plan",
+  topup_soon: "Top-up in DZD", wallet_t: "My wallet", wallet_top: "Top up wallet", wallet_amt: "Amount in DZD (500 – 50000)",
+  wallet_create: "Create payment order", wallet_how: "Send the exact amount to this account via BaridiMob, and put the reference in the transfer note:",
+  wallet_ref: "Reference", wallet_exp: "Valid for 10 minutes", wallet_pending: "Pending top-up orders", wallet_tx: "Ledger",
+  wallet_empty: "No transactions yet", wallet_ok: "Payment order ready — copy the reference", mem_buy: "Buy membership",
+  mem_active: "Membership active", mem_until: "until", bridge_tab: "Bridge orders", bridge_empty: "No bridge orders yet",
+  order_svc: "Order this service", order_brief: "Describe your request (10+ chars)", order_send: "Send order",
+  order_created: "Order created — pay from your wallet", order_pay: "Pay from wallet", order_deliver: "Deliver work",
+  order_confirm: "Approve & release", need_login: "Please sign in first", plan_l: "Plan",
   balance_l: "Credits balance",
   admin_settings: "Settings", payments_tab: "Payments", devices_tab: "Devices", fin_audit: "Financial audit",
   payments_enabled_l: "Enable payments (charges real money)", ai_daily_l: "FREE daily AI limit",
@@ -317,7 +324,14 @@ ar: {
   panel_copy: "انسخ الرابط", panel_open: "افتح لوحتي",
   remember_me: "أبقني مسجلاً على هذا الجهاز",
   ai_credits: "الهيكلة الذكية", used_today: "استُخدم اليوم", quota_monthly: "هذا الشهر",
-  topup_soon: "شحن بالدينار — قريباً", plan_l: "الباقة",
+  topup_soon: "شحن بالدينار", wallet_t: "محفظتي", wallet_top: "شحن المحفظة", wallet_amt: "المبلغ بالدينار (500 – 50000)",
+  wallet_create: "أنشئ أمر الدفع", wallet_how: "حوّل المبلغ بالضبط إلى هذا الحساب عبر بريدي موب، واكتب المرجع في ملاحظة التحويل:",
+  wallet_ref: "المرجع", wallet_exp: "صالح لمدة 10 دقائق", wallet_pending: "أوامر شحن قيد التأكيد", wallet_tx: "دفتر الحركات",
+  wallet_empty: "لا حركات بعد", wallet_ok: "أمر الدفع جاهز — انسخ المرجع", mem_buy: "اشترِ العضوية",
+  mem_active: "عضويتك نشطة", mem_until: "حتى", bridge_tab: "طلبات الجسر", bridge_empty: "لا طلبات جسر بعد",
+  order_svc: "اطلب هذه الخدمة", order_brief: "اشرح طلبك (10 أحرف على الأقل)", order_send: "أرسل الطلب",
+  order_created: "طلبك جُرح — أكمل الدفع من محفظتك", order_pay: "ادفع من المحفظة", order_deliver: "سلم العمل",
+  order_confirm: "وافق وأفرج عن المبلغ", need_login: "سجّل دخولك أولاً", plan_l: "الباقة",
   balance_l: "رصيد العمليات",
   admin_settings: "الإعدادات", payments_tab: "المدفوعات", devices_tab: "الأجهزة", fin_audit: "التدقيق المالي",
   payments_enabled_l: "تفعيل الدفع (يحصّل أموالاً حقيقية)", ai_daily_l: "حد الذكاء اليومي لـFREE",
@@ -754,9 +768,11 @@ async function viewService(id) {
     <div class="panel">
       <div class="price" style="font-size:26px">${money(sv.price_min, sv.currency)}${sv.price_max > sv.price_min ? ` – ${money(sv.price_max, sv.currency)}` : ""}</div>
       <div class="chips" style="margin:14px 0"><span class="chip">${sv.delivery_days} ${T.days_delivery}</span><span class="chip">${sv.revisions} ${T.revisions}</span></div>
-      <a class="btn primary" style="width:100%;justify-content:center" href="#/u/${esc(sv.username)}">${T.view_profile}</a>
+      <button class="btn primary" style="width:100%;justify-content:center" id="svc-order">${T.order_svc}</button>
+      <a class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" href="#/u/${esc(sv.username)}">${T.view_profile}</a>
     </div>
   </div>`, "services");
+  $("#svc-order")?.addEventListener("click", () => orderModal(sv));
 }
 
 // ═══════════ صفحة المستقل ═══════════
@@ -882,7 +898,7 @@ async function viewDashboard() {
       <div class="tiny muted">${T.used_today}: <b style="color:var(--fg)">${S.ai.used_daily}/${S.ai.limit_daily}</b></div>
       <div class="tiny muted">${T.quota_monthly}: <b style="color:var(--fg)">${S.ai.used_monthly}/${S.ai.limit_monthly}</b></div>
       <span class="chip brand">${T.balance_l}: ${S.ai.balance ?? 0}</span>
-      <span class="chip">${T.topup_soon}</span>
+      <a class="chip brand" href="#/wallet" style="text-decoration:none">${T.topup_soon} →</a>
     </div></div></div>` : "";
   shell(`<div class="wrap page-head"><h1>${T.dashboard}</h1><p>${S.user.role === "admin" ? T.dash_sub_admin : isFreelancer ? T.dash_sub_freelancer : T.dash_sub_client}</p></div>
   <div class="wrap">
@@ -890,7 +906,7 @@ async function viewDashboard() {
     <div class="tabs" id="d-tabs">
       <button data-t="profile" class="on">${T.tab_profile}</button>
       ${isFreelancer ? `<button data-t="services">${T.tab_services}</button><button data-t="open">${T.tab_open}</button><button data-t="proposals">${T.tab_proposals}</button><button data-t="site">${T.tab_site}</button>` : `<button data-t="requests">${T.tab_requests}</button>`}
-      <button data-t="portfolio">${T.tab_portfolio}</button><button data-t="projects">${T.tab_projects}</button>
+      <button data-t="bridge">${T.bridge_tab}</button><button data-t="portfolio">${T.tab_portfolio}</button><button data-t="projects">${T.tab_projects}</button>
     </div>
     <div id="d-body"><div class="skel"></div></div>
   </div>`, "dashboard");
@@ -942,6 +958,26 @@ async function viewDashboard() {
           <div style="font-size:12.5px;color:var(--dim);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(sv.description)}</div>
           <div class="svc-price"><span class="price">${money(sv.price_min, sv.currency)}</span><span class="chip">${sv.delivery_days}d</span></div></div>`).join("") || `<div class="empty">${T.no_services_yet}</div>`}</div>`;
       $("#sv-new").addEventListener("click", serviceModal);
+    }
+    if (tab === "bridge") {
+      const r = await api("/api/bridge/orders");
+      const me2 = await api("/api/me");
+      const mem = me2.data.member || {};
+      body.innerHTML = `${mem.active ? `<div class="panel" style="margin-bottom:12px"><b>${T.mem_active}</b> <span class="chip ok">${esc(mem.plan_id)}</span> <span class="tiny muted">${T.mem_until} ${new Date(mem.expires_at).toLocaleDateString()}</span> <a class="btn ghost sm" href="#/pricing" style="margin-inline-start:8px">${T.pricing}</a></div>` : `<div class="panel" style="margin-bottom:12px"><a class="btn primary sm" href="#/pricing">${T.mem_buy} — ${T.pricing}</a> <a class="btn ghost sm" href="#/wallet">${T.wallet_top} →</a></div>`}
+        ${(r.data.orders || []).map((o) => `<div class="panel" style="margin-bottom:10px">
+          <div class="spread"><b dir="ltr">#${esc(o.id.slice(0, 10))}</b><span class="chip ${o.status === "released" ? "ok" : o.status === "active" || o.status === "delivered" ? "brand" : "warn"}">${esc(o.status)}</span></div>
+          <div class="tiny muted" style="margin-top:4px">${money(o.amount_dzd)} + ${T.wallet_ref} ${money(o.fee_dzd)} — ${o.source === "nexus" ? "NEXUS" : "NAKSAB"}</div>
+          <div class="row" style="margin-top:8px">
+            ${S.user.id === o.freelancer_id && o.status === "active" ? `<button class="btn sm" data-del="${o.id}">${T.order_deliver}</button>` : ""}
+            ${S.user.id === o.buyer_id && o.status === "delivered" ? `<button class="btn primary sm" data-conf="${o.id}">${T.order_confirm}</button>` : ""}
+            ${o.status === "awaiting_payment" && S.user.id === o.buyer_id ? `<button class="btn primary sm" data-pay="${o.id}">${T.order_pay}</button>` : ""}
+          </div></div>`).join("") || `<div class="empty">${T.bridge_empty}</div>`}`;
+      $$("[data-del]", body).forEach((b) => b.addEventListener("click", async () => { await api(`/api/bridge/orders/${b.dataset.del}/deliver`, "POST", {}); renderTab("bridge"); }));
+      $$("[data-conf]", body).forEach((b) => b.addEventListener("click", async () => { await api(`/api/bridge/orders/${b.dataset.conf}/confirm`, "POST", {}); renderTab("bridge"); }));
+      $$("[data-pay]", body).forEach((b) => b.addEventListener("click", async () => {
+        const rr2 = await api(`/api/bridge/orders/${b.dataset.pay}/pay`, "POST", {});
+        if (!rr2.ok && rr2.data.error === "insufficient") location.hash = "#/wallet"; else renderTab("bridge");
+      }));
     }
     if (tab === "portfolio") {
       const mine = await api(`/api/u/${S.user.username}`);
@@ -1511,6 +1547,66 @@ async function viewSetup() {
 }
 
 // ═══ الأسعار ═══
+async function viewWallet() {
+  if (!S.user) return authModal("register");
+  shell(`<div class="wrap page-head"><h1>${T.wallet_t}</h1><p>${T.wallet_how}</p></div>
+  <div class="wrap"><div class="panel" style="max-width:640px">
+    <div class="spread"><b style="font-size:20px">${T.balance_l}</b><span class="price" style="font-size:22px" id="w-bal">…</span></div>
+    <div class="field" style="margin-top:14px"><label>${T.wallet_amt}</label><input id="w-amt" type="number" min="500" max="50000" step="50" dir="ltr" placeholder="2000"/></div>
+    <button class="btn primary" id="w-go" style="width:100%;justify-content:center">${T.wallet_create}</button>
+    <div class="msg info" id="w-msg" hidden></div>
+    <h3 style="margin:18px 0 6px;font-size:14px">${T.wallet_pending}</h3><div id="w-pend"></div>
+    <h3 style="margin:18px 0 6px;font-size:14px">${T.wallet_tx}</h3><div id="w-tx"></div>
+  </div></div>`, "dashboard");
+  const load = async () => {
+    const r = await api("/api/wallet");
+    $("#w-bal").textContent = money(r.data.balance);
+    $("#w-pend").innerHTML = (r.data.pending || []).map((p) => `<div class="chips" style="padding:6px 0"><b dir="ltr">${esc(p.reference)}</b><span class="chip brand">${money(p.amount_dzd)}</span><span class="chip warn">${new Date(p.created_at + 600000).toLocaleTimeString()}</span></div>`).join("") || `<div class="tiny muted">—</div>`;
+    $("#w-tx").innerHTML = (r.data.tx || []).map((t) => `<div class="chips" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="chip ${t.delta_dzd > 0 ? "ok" : ""}">${t.delta_dzd > 0 ? "+" : ""}${t.delta_dzd}</span><b>${esc(t.kind)}</b><span class="tiny muted">${new Date(t.created_at).toLocaleString()}</span></div>`).join("") || `<div class="tiny muted">${T.wallet_empty}</div>`;
+  };
+  $("#w-go").onclick = async () => {
+    const amt = Math.trunc(Number($("#w-amt").value));
+    if (!(amt >= 500 && amt <= 50000)) { $("#w-msg").hidden = false; $("#w-msg").textContent = T.wallet_amt; return; }
+    const r = await api("/api/wallet/topup", "POST", { amount_dzd: amt });
+    if (!r.ok) { $("#w-msg").hidden = false; $("#w-msg").textContent = errText(r.data.error); return; }
+    const d = r.data;
+    $("#w-msg").hidden = false; $("#w-msg").className = "msg ok";
+    $("#w-msg").innerHTML = `<b>${T.wallet_ok}</b><br>${T.wallet_how}<br>
+      <div class="chips" style="margin-top:8px"><span class="chip brand" dir="ltr">${esc(d.rip)} / ${esc(d.cle)}</span><span class="chip">${T.wallet_ref}: <b dir="ltr">${esc(d.reference)}</b></span><span class="chip warn">${money(d.amount_dzd)}</span></div>
+      <div class="tiny muted" style="margin-top:6px">${T.wallet_exp}</div>`;
+    toast(T.wallet_ok); await load();
+  };
+  await load();
+}
+async function buyPlan(planId) {
+  if (!S.user) return authModal("register");
+  const r = await api("/api/payments/checkout", "POST", { kind: "plan", plan_id: planId });
+  if (!r.ok) return toast(errText(r.data.error));
+  const d = r.data;
+  modal(`<h3 style="font-size:16px;margin-bottom:6px">${T.mem_buy} — ${money(d.amount_dzd)}</h3>
+    <p class="tiny muted" style="line-height:1.9">${T.wallet_how}</p>
+    <div class="chips"><span class="chip">${T.wallet_ref}: <b dir="ltr">${esc(d.reference)}</b></span><span class="chip warn">${money(d.amount_dzd)}</span></div>
+    <div class="tiny muted" style="margin-top:8px">${T.wallet_exp} — تأكيد آلي عند وصول الحوالة، أو يدوياً من الإدارة.</div>
+    <a class="btn primary" style="width:100%;justify-content:center;margin-top:10px" href="#/wallet" onclick="document.getElementById('modal').hidden = true">${T.wallet_t} →</a>`);
+}
+function orderModal(svc) {
+  if (!S.user) return authModal("register");
+  if (S.user.username === svc.username) return toast(T.owner_only);
+  modal(`<h3 style="font-size:16px;margin-bottom:6px">${T.order_svc}</h3>
+    <p class="tiny muted">${esc(svc.title)} — ${money(svc.price_min)}${svc.price_max > svc.price_min ? `–${money(svc.price_max)}` : ""}</p>
+    <div class="field"><label>${T.order_brief}</label><textarea id="ob-brief" rows="4"></textarea></div>
+    <div class="msg bad" id="ob-err" hidden></div>
+    <button class="btn primary" id="ob-go" style="width:100%;justify-content:center;margin-top:8px">${T.order_send}</button>`);
+  $("#ob-go").onclick = async () => {
+    const r = await api("/api/bridge/orders", "POST", { service_id: svc.id, brief: $("#ob-brief").value.trim() });
+    if (!r.ok) { $("#ob-err").hidden = false; $("#ob-err").textContent = errText(r.data.error); return; }
+    document.getElementById("modal").hidden = true;
+    toast(T.order_created);
+    const pay = await api(`/api/bridge/orders/${r.data.id}/pay`, "POST", {});
+    if (pay.ok) { toast(T.order_pay); location.hash = "#/dashboard"; }
+    else location.hash = "#/wallet";
+  };
+}
 async function viewPricing() {
   const r = await api("/api/plans");
   const plans = r.data.plans || [];
@@ -1518,13 +1614,15 @@ async function viewPricing() {
     <div class="spread"><b style="font-family:var(--display);font-size:18px">${esc(pl.name)}</b>${pl.active ? `<span class="chip ok">●</span>` : `<span class="chip warn">${T.coming_soon}</span>`}</div>
     <div><span class="price" style="font-size:28px">${pl.price_dzd ? money(pl.price_dzd) : T.free_forever}</span><span class="tiny muted">${pl.price_dzd ? " " + T.per_month : ""}</span></div>
     <div style="font-size:13px;color:var(--dim);line-height:2">${(() => { try { return JSON.parse(pl.features || "[]").map((f) => `<div>✓ ${esc(f)}</div>`).join(""); } catch { return ""; } })()}</div>
-    ${pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "client" ? "#/request/new" : "#/dashboard"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "client" ? T.cta_free_client : T.cta_free_freelancer}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
+    ${pl.active && pl.buyable && pl.price_dzd ? `<button class="btn primary" style="justify-content:center" data-buy="${esc(pl.id)}">${T.mem_buy}</button>`
+      : pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "client" ? "#/request/new" : "#/dashboard"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "client" ? T.cta_free_client : T.cta_free_freelancer}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
   </div>`;
   shell(`<div class="wrap page-head"><h1>${T.pricing}</h1><p>${T.pricing_sub}</p></div>
   <div class="wrap"><div class="t-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
     ${plans.map(card).join("") || `<div class="skel"></div>`}
   </div></div>`, "");
   $("#free-go")?.addEventListener("click", (e) => { e.preventDefault(); authModal("register"); });
+  $$("[data-buy]").forEach((b) => b.addEventListener("click", () => buyPlan(b.dataset.buy)));
 }
 
 // ═══════════ الموجّه ═══════════
@@ -1559,6 +1657,7 @@ async function route() {
     if (parts[0] === "request") return parts[1] === "new" ? viewRequestNew() : viewRequest(parts[1]);
     if (parts[0] === "projects") return parts[1] ? viewProject(parts[1]) : viewDashboard();
     if (parts[0] === "ads") return viewAds();
+    if (parts[0] === "wallet") return viewWallet();
     if (parts[0] === "pricing") return viewPricing();
     if (parts[0] === "setup") return viewSetup();
     if (parts[0] === "about") return viewAbout();

@@ -602,15 +602,37 @@ const AD_STYLES = [
   { id: "intro", base: 5900, dur: "30-45s" },
 ];
 const AD_DISCOUNT: Record<Plan, number> = { free: 0, pro: 0.3, vip: 0.5 };
-const adPrice = (base: number, plan: Plan) => Math.round(base * (1 - (AD_DISCOUNT[plan] ?? 0)));
+const MEMBER_EXTRA: Record<string, number> = { "bridge-weekly": 0.10, "bridge-monthly": 0.20 };
+/* خصم العضوية الجسرية: نتحقق من ناكساب مباشرة (كاش 60 ثانية) — بلا ثقة بكلام العميل */
+async function memberExtra(env: Env, username: string): Promise<number> {
+  const u = clip(username.trim().toLowerCase(), 30);
+  if (!u) return 0;
+  const ck = `bmem:${u}`;
+  const cached = await env.CACHE_KV.get(ck);
+  if (cached) return Number(cached);
+  let pct = 0;
+  try {
+    const res = await fetch(`${env.NAKSAB_ORIGIN || "https://naksab.vitobytestudio.workers.dev"}/api/bridge/member/${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const j = (await res.json()) as any;
+      if (j?.active) pct = MEMBER_EXTRA[j.plan] ?? 0;
+    }
+  } catch { pct = 0; }
+  await env.CACHE_KV.put(ck, String(pct), { expirationTtl: 60 });
+  return pct;
+}
+const adPrice = (base: number, plan: Plan, extra = 0) => Math.round(base * (1 - (AD_DISCOUNT[plan] ?? 0)) * (1 - extra));
 
-route("GET", "/api/ads", async (_r, env, s) => {
+route("GET", "/api/ads", async (req, env, s) => {
   const u = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(s!.userId).first<UserRow>();
   const plan = (u?.plan ?? "free") as Plan;
+  const nk = new URL(req.url).searchParams.get("nk") ?? "";
+  const extra = await memberExtra(env, nk);
   const { results } = await env.DB.prepare("SELECT * FROM ad_orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 20").bind(s!.userId).all();
   return json({
     discount: AD_DISCOUNT[plan] ?? 0,
-    styles: AD_STYLES.map((st) => ({ id: st.id, dur: st.dur, base: st.base, price: adPrice(st.base, plan) })),
+    member_extra: extra,
+    styles: AD_STYLES.map((st) => ({ id: st.id, dur: st.dur, base: st.base, price: adPrice(st.base, plan, extra) })),
     orders: results ?? [],
   });
 }, { auth: true });
@@ -627,7 +649,8 @@ route("POST", "/api/ads/order", async (req, env, s) => {
     if (!p) return bad("invalid_product");
   }
   const u = await env.DB.prepare("SELECT plan FROM users WHERE id = ?").bind(s!.userId).first<UserRow>();
-  const price = adPrice(st.base, (u?.plan ?? "free") as Plan);
+  const extra = await memberExtra(env, str(b, "nk_user"));
+  const price = adPrice(st.base, (u?.plan ?? "free") as Plan, extra);
   const oid = id("ad");
   await env.DB.prepare("INSERT INTO ad_orders (id, user_id, style, product_id, status, price, note, created_at, updated_at) VALUES (?,?,?,?, 'new', ?,?,?,?)")
     .bind(oid, s!.userId, st.id, pid || null, price, note, now(), now()).run();
@@ -736,6 +759,29 @@ route("POST", "/api/agent/organize", async (req, env, s) => {
   };
   return json({ ok: true, ...out });
 }, { auth: true, csrf: true });
+
+// ═══ جسر المحترفين: كتالوج الموثقين من ناكساب (كاش 5 دقائق) ═══
+route("GET", "/api/pro/services", async (_r, env) => {
+  const ck = "pro:cat";
+  const cached = await env.CACHE_KV.get(ck);
+  if (cached) return json({ services: JSON.parse(cached), cached: true });
+  let services: any[] = [];
+  try {
+    const res = await fetch(`${env.NAKSAB_ORIGIN || "https://naksab.vitobytestudio.workers.dev"}/api/bridge/catalog`, { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      const j = (await res.json()) as any;
+      services = Array.isArray(j?.services) ? j.services : [];
+      await env.CACHE_KV.put(ck, JSON.stringify(services), { expirationTtl: 300 });
+    }
+  } catch { services = []; }
+  return json({ services, cached: false });
+});
+
+route("GET", "/api/pro/member", async (req, env) => {
+  const uname = new URL(req.url).searchParams.get("u") ?? "";
+  const pct = await memberExtra(env, uname);
+  return json({ active: pct > 0, extra_pct: pct });
+});
 
 // ═══ الموجّه ═══
 export default {
