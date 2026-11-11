@@ -642,11 +642,34 @@ route("POST", "/api/admin/users/:id/flags", async (req, env, s, p) => {
   const binds: any[] = [];
   if (typeof b.verified === "boolean") { sets.push("verified = ?"); binds.push(b.verified ? 1 : 0); }
   if (typeof b.banned === "boolean") { sets.push("banned = ?"); binds.push(b.banned ? 1 : 0); }
-  if (!sets.length) return bad("invalid_input");
-  binds.push(p.id);
-  await env.DB.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).bind(...binds).run();
-  await audit(env, s.userId, "user_flags", `${p.id}: ${JSON.stringify(b)}`);
-  return json({ ok: true });
+  /* منحة الباقة بيد المدير — بلا دفع: قرار المالك أن المدير يمنح PRO/VIP متى شاء */
+  let grantedPlan = "";
+  if (typeof b.plan === "string" && b.plan.trim()) {
+    const pid = clip(String(b.plan).trim(), 30);
+    const exists = await env.DB.prepare("SELECT id, name FROM plans WHERE id = ?").bind(pid).first<any>();
+    if (!exists) return bad("invalid_plan");
+    sets.push("plan_id = ?"); binds.push(pid);
+    grantedPlan = exists.name || pid;
+  }
+  let grantedCredits = 0;
+  if (b.credits != null) {
+    grantedCredits = Math.max(-9999, Math.min(9999, Math.trunc(Number(b.credits)) || 0));
+    if (grantedCredits !== 0) {
+      await env.DB.prepare("INSERT INTO credit_ledger (id, user_id, delta, reason, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta),0) FROM credit_ledger WHERE user_id = ?2) + ?3, ?6)")
+        .bind(id("cl"), p.id, grantedCredits, "admin_grant", s.userId, now()).run();
+    }
+  }
+  if (!sets.length && !grantedCredits) return bad("invalid_input");
+  if (sets.length) {
+    binds.push(p.id);
+    await env.DB.prepare(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).bind(...binds).run();
+  }
+  if (grantedPlan || grantedCredits) {
+    await notify(env, p.id, "plan", [grantedPlan ? `رُقّيت باقتك إلى ${grantedPlan} من الإدارة` : "", grantedCredits ? `${grantedCredits > 0 ? "+" : ""}${grantedCredits} رصيد ذكاء من الإدارة` : ""].filter(Boolean).join(" — "));
+    await finAudit(env, s.userId, "plan_grant", p.id, `plan=${grantedPlan} credits=${grantedCredits}`);
+  }
+  await audit(env, s.userId, "user_flags", `${p.id}: ${JSON.stringify({ ...b, plan: grantedPlan, credits: grantedCredits })}`);
+  return json({ ok: true, plan: grantedPlan, credits: grantedCredits });
 }, { auth: true, csrf: true });
 
 route("GET", "/api/admin/reviews/flagged", async (_r, env, s) => {
@@ -1089,8 +1112,8 @@ async function walletBalance(env: Env, userId: string): Promise<number> {
 }
 async function walletTx(env: Env, userId: string, delta: number, kind: string, refId: string): Promise<void> {
   await env.DB.prepare(
-    "INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)"
-  ).bind(id("wt"), userId, delta, kind, refId, delta, now()).run();
+    "INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?6)"
+  ).bind(id("wt"), userId, delta, kind, refId, now()).run();
 }
 export async function baridiScan(env: Env): Promise<{ scanned: number; credited: number; review: number; error?: string }> {
   if (!baridiConfigured(env)) return { scanned: 0, credited: 0, review: 0, error: "not_configured" };
@@ -1112,8 +1135,8 @@ export async function baridiScan(env: Env): Promise<{ scanned: number; credited:
     if (!row || !canTransit(row.status, "confirmed")) { review++; continue; }
     await env.DB.batch([
       env.DB.prepare("UPDATE payments SET status = 'confirmed', provider = 'baridimob', provider_ref = ? WHERE id = ?").bind(t.id, order.id),
-      env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)")
-        .bind(id("wt"), row.user_id, row.amount_dzd, "topup", order.id, row.amount_dzd, now()),
+      env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?6)")
+        .bind(id("wt"), row.user_id, row.amount_dzd, "topup", order.id, now()),
     ]);
     await notify(env, row.user_id, "payment", `تم تأكيد شحن محفظتك: ${row.amount_dzd} دج — المرجع ${order.reference}`, order.id);
     await finAudit(env, "baridi", "auto_confirm", order.id, `transfer=${t.id} amount=${t.amount}`);
@@ -1205,8 +1228,8 @@ route("POST", "/api/bridge/orders/:id/pay", async (req, env, s, p) => {
   const bal = await walletBalance(env, s.userId);
   if (bal < total) return json({ error: "insufficient", balance: bal, needed: total }, 402);
   await env.DB.batch([
-    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) - ?3, ?4)")
-      .bind(id("wt"), s.userId, -total, "hold", o.id, total, now()),
+    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?6)")
+      .bind(id("wt"), s.userId, -total, "hold", o.id, now()),
     env.DB.prepare("UPDATE bridge_orders SET status = 'active', updated_at = ? WHERE id = ? AND status = 'awaiting_payment'").bind(now(), o.id),
   ]);
   await notify(env, o.freelancer_id, "bridge", "طلب خدمة جديد مدفوع — ابدأ العمل", o.id);
@@ -1232,10 +1255,10 @@ route("POST", "/api/bridge/orders/:id/confirm", async (req, env, s, p) => {
   if (!o || o.buyer_id !== s.userId) return bad("not_found", 404);
   if (o.status !== "delivered") return bad("invalid_state");
   await env.DB.batch([
-    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)")
-      .bind(id("wt"), o.freelancer_id, o.amount_dzd, "release", o.id, o.amount_dzd, now()),
-    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?,?,?,?,?,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?4)")
-      .bind(id("wt"), "PLATFORM", o.fee_dzd, "fee", o.id, o.fee_dzd, now()),
+    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?6)")
+      .bind(id("wt"), o.freelancer_id, o.amount_dzd, "release", o.id, now()),
+    env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?6)")
+      .bind(id("wt"), "PLATFORM", o.fee_dzd, "fee", o.id, now()),
     env.DB.prepare("UPDATE bridge_orders SET status = 'released', updated_at = ? WHERE id = ? AND status = 'delivered'").bind(now(), o.id),
     env.DB.prepare("UPDATE users SET completed = completed + 1 WHERE id = ?").bind(o.freelancer_id),
   ]);

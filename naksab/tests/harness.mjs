@@ -236,6 +236,24 @@ check("إحصائيات الإدارة عبر اللوحة", (stats.data.users ?
 const flagged = await call("str", "/api/admin/reviews/flagged");
 check("قائمة المراجعة الإدارية تعمل", Array.isArray(flagged.data.reviews));
 
+// ─── 14-أ2) منحة الباقة والرصيد بيد المدير (بلا دفع — بأمر المالك) ───
+{
+  const gEmail = `grantee-${suffix}@nk.test`;
+  const gReg = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: gEmail, k0: await k0Of(gEmail, "Secret-99"), name: "Grantee", username: "gr" + suffix, role: "client" }) });
+  const gD = await gReg.json().catch(() => ({}));
+  check("تسجيل المستلم (201)", gReg.status === 201);
+  const grant = await call("str", `/api/admin/users/${gD.user.id}/flags`, "POST", { plan: "pro", credits: 250 });
+  check("منحة PRO + 250 رصيد", grant.ok && grant.data.ok && grant.data.plan === "PRO" && grant.data.credits === 250, JSON.stringify(grant.data).slice(0, 100));
+  const gMe = await fetch(`${BASE}/api/me`, { headers: { cookie: (gReg.headers.get("set-cookie") || "").split(";")[0] } });
+  const gMeD = await gMe.json().catch(() => ({}));
+  check("المستلم يرى PRO ورصيده", gMe.status === 200 && gMeD.plan?.id === "pro" && gMeD.ai?.balance === 250, JSON.stringify({ p: gMeD.plan, b: gMeD.ai?.balance }).slice(0, 100));
+  const badPlan = await call("str", `/api/admin/users/${gD.user.id}/flags`, "POST", { plan: "ghost" });
+  check("باقة وهمية مرفوضة (400)", !badPlan.ok && badPlan.data.error === "invalid_plan");
+  const gNotif = await fetch(`${BASE}/api/notifications`, { headers: { cookie: (gReg.headers.get("set-cookie") || "").split(";")[0] } });
+  const gNj = await gNotif.json().catch(() => ({}));
+  check("إشعار المنحة وصل", (gNj.notifications || []).some((n) => n.type === "plan"));
+}
+
 // ═══ 14-ب) الدفع الخامل + حماية Webhook + التدقيق المالي ═══
 const meC = await call("cli", "/api/me");
 check("رصيد الذكاء في /api/me", !!meC.data.ai && meC.data.ai.limit_daily >= 1 && !!meC.data.plan);
