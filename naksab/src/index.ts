@@ -8,7 +8,7 @@ import {
 } from "./lib";
 import { runTask, STRUCTURE_SYSTEM } from "./ai";
 import { renderSite, renderDocPrint, templateAllowed } from "./sites";
-import { paymentsEnabled, canTransit, genReference, REF_RE, amountExact, verifyWebhookSig, finAudit, idemKeyOf, riskFlags, type PayState } from "./payments";
+import { paymentsEnabled, canTransit, genReference, REF_RE, finAudit, idemKeyOf, type PayState } from "./payments";
 import { baridiConfigured, ccpConfigured, ccpParts, collectTransfers, pickMatch, WINDOW_MS, type RawTransfer, type PendingOrder } from "./baridi";
 
 type Route = { m: string; pat: string; h: (r: Request, e: Env, s: Session, p: Record<string, string>) => Promise<Response>; auth?: boolean; admin?: boolean; csrf?: boolean };
@@ -782,6 +782,9 @@ route("POST", "/api/payments/checkout", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
   if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
+  if (!(await rl(env, `chk:${s.userId}`, 10, 3600))) return bad("too_many", 429);
+  const pendN = await env.DB.prepare("SELECT COUNT(*) AS c FROM payments WHERE user_id = ? AND status = 'pending'").bind(s.userId).first<any>();
+  if (Number(pendN?.c ?? 0) >= 6) return bad("too_many_pending", 429);
   const b = (await req.json().catch(() => ({}))) as any;
   const kind = b.kind === "credits" ? "credits" : "plan";
   const planId = String(b.plan_id ?? "");
@@ -803,8 +806,7 @@ route("POST", "/api/payments/checkout", async (req, env, s) => {
   return json({ ok: true, payment_id: pid, reference: ref, amount_dzd: amount, pay_url: null });
 }, { auth: true, csrf: true });
 
-// Webhook: موقّع HMAC — بلا توقيع صحيح: رفض 401 + سطر تدقيق مالي
-// تطبيق عملية مؤكدة: باقة → plan_id، أو رصيد → credit_ledger — يستخدمه الـwebhook والتأكيد اليدوي معاً
+// تطبيق عملية مؤكدة: باقة → plan_id، أو رصيد → credit_ledger — يستخدمه التأكيد اليدوي والماسح الآلي معاً
 async function applyConfirmedPay(env: Env, pay: any): Promise<void> {
   if (pay.kind === "plan") {
     await env.DB.prepare("UPDATE users SET plan_id = ? WHERE id = ?").bind(pay.plan_id, pay.user_id).run();
@@ -817,55 +819,6 @@ async function applyConfirmedPay(env: Env, pay: any): Promise<void> {
   }
 }
 
-route("POST", "/api/payments/webhook/:provider", async (req, env, _s, p) => {
-  if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
-  const raw = await req.text();
-  const secret = await getSetting(env, `webhook_secret_${p.provider}`, "");
-  const sig = req.headers.get("x-signature") ?? "";
-  if (!(await verifyWebhookSig(raw, sig, secret))) {
-    await finAudit(env, `webhook:${p.provider}`, "webhook_rejected", "", `bad signature (${sig.length} chars)`);
-    return bad("invalid_signature", 401);
-  }
-  let b: any = {};
-  try { b = JSON.parse(raw); } catch { return bad("invalid_payload", 400); }
-  const ref = String(b.reference ?? "");
-  if (!REF_RE.test(ref)) return bad("invalid_reference");
-  const pay = await env.DB.prepare("SELECT * FROM payments WHERE reference = ?").bind(ref).first<any>();
-  if (!pay) { await finAudit(env, `webhook:${p.provider}`, "unknown_reference", "", ref); return bad("invalid_reference", 404); }
-  // المكرر: مرجع مزود سبق استخدامه
-  const provRef = String(b.provider_ref ?? "");
-  if (provRef) {
-    const dupl = await env.DB.prepare("SELECT id FROM payments WHERE provider_ref = ? AND id != ?").bind(provRef, pay.id).first<any>();
-    if (dupl) { await finAudit(env, `webhook:${p.provider}`, "duplicate_provider_ref", pay.id, provRef); return bad("duplicate_transaction", 409); }
-  }
-  if (pay.status !== "pending") return json({ ok: true, already: pay.status }); // idempotency الردود المتكررة
-  const amount = Number(b.amount_dzd ?? 0);
-  const to: PayState = String(b.status) === "paid" ? "confirmed" : "rejected";
-  // المبلغ المضبوط + القواعد الحتمية
-  if (to === "confirmed" && !amountExact(amount, pay.amount_dzd)) {
-    await finAudit(env, `webhook:${p.provider}`, "amount_mismatch", pay.id, `got=${amount} want=${pay.amount_dzd}`);
-    await env.DB.prepare("UPDATE payments SET risk_flags = ?, provider = ?, provider_ref = ? WHERE id = ?")
-      .bind(JSON.stringify(["amount_mismatch"]), p.provider, provRef, pay.id).run();
-    return bad("amount_mismatch", 409);
-  }
-  if (!canTransit(pay.status, to)) return bad("invalid_transition", 409);
-  // عمر الحساب من users.created_at (وليس عمر العملية!) — العلم account_fresh يعني حساباً حديث الإنشاء
-  const u0 = await env.DB.prepare("SELECT created_at FROM users WHERE id = ?").bind(pay.user_id).first<any>();
-  const ageH = Math.max(0, (now() - Number(u0?.created_at ?? pay.created_at)) / 36e5);
-  const v24 = await env.DB.prepare("SELECT COUNT(*) AS c FROM payments WHERE user_id = ? AND created_at > ?").bind(pay.user_id, now() - 864e5).first<any>();
-  const flags = riskFlags({ userPayments24h: Number(v24?.c ?? 0), userConfirmedTotal: 0, amount: pay.amount_dzd, accountAgeH: ageH });
-  if (to === "confirmed" && flags.length >= 2) {
-    await env.DB.prepare("UPDATE payments SET status = 'pending', provider = ?, provider_ref = ?, risk_flags = ? WHERE id = ?")
-      .bind(p.provider, provRef, JSON.stringify(flags), pay.id).run();
-    await finAudit(env, `webhook:${p.provider}`, "held_for_review", pay.id, flags.join(","));
-    return json({ ok: true, held: true, flags });
-  }
-  await env.DB.prepare("UPDATE payments SET status = ?, provider = ?, provider_ref = ?, confirmed_at = ? WHERE id = ?")
-    .bind(to, p.provider, provRef, to === "confirmed" ? now() : null, pay.id).run();
-  if (to === "confirmed") await applyConfirmedPay(env, pay);
-  await finAudit(env, `webhook:${p.provider}`, to, pay.id, `ref=${ref} amount=${pay.amount_dzd}`);
-  return json({ ok: true, status: to });
-});
 
 // ═══ العقود والفواتير: أدوات المقاول الذاتي — Devis/Facture بالدينار (طبقة SaaS للفريلانسر) ═══
 // كل المبالغ تُحسب في الخادم حصراً؛ الحصرة: FREE ‏2 شهرياً (قابلة للضبط من الإدارة)، PRO لاحقاً بلا حد.
@@ -1036,7 +989,7 @@ route("PUT", "/api/admin/settings", async (req, env, s) => {
   if (!s) return bad("not_found", 404);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
   const b = (await req.json().catch(() => ({}))) as any;
-  const allow = ["payments_enabled", "ai_free_daily", "ai_free_monthly", "credits_price_dzd_per_100", "webhook_secret_chargily", "webhook_secret_sofizpay", "docs_free_monthly"];
+  const allow = ["payments_enabled", "ai_free_daily", "ai_free_monthly", "credits_price_dzd_per_100", "docs_free_monthly"];
   let n = 0;
   for (const [k, v] of Object.entries(b)) {
     if (!allow.includes(k)) continue;
@@ -1159,6 +1112,9 @@ route("POST", "/api/wallet/topup", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if ((req.headers.get("x-csrf") ?? "") !== s.csrf) return bad("csrf", 403);
   if (!(await paymentsEnabled(env))) return bad("payments_disabled", 503);
+  if (!(await rl(env, `top:${s.userId}`, 8, 3600))) return bad("too_many", 429);
+  const pendT = await env.DB.prepare("SELECT COUNT(*) AS c FROM payments WHERE user_id = ? AND status = 'pending' AND kind = 'topup'").bind(s.userId).first<any>();
+  if (Number(pendT?.c ?? 0) >= 3) return bad("too_many_pending", 429);
   const cp = ccpParts(env);
   if (!cp) return bad("gateway_configuring", 503);
   const b = (await req.json().catch(() => ({}))) as any;

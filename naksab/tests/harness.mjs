@@ -300,9 +300,12 @@ check("الباقات: PRO بأسعار دج غير مفتوح (Coming Soon)", !
 const co2 = await call("cli", "/api/payments/checkout", "POST", { kind: "plan", plan_id: "pro" });
 check("checkout لباقة غير مفتوحة مرفوض (400)", co2.status === 400);
 const wh = await fetch(`${BASE}/api/payments/webhook/chargily`, { method: "POST", headers: { "content-type": "application/json", "x-signature": "deadbeef" }, body: JSON.stringify({ reference: "NK-TEST123", amount_dzd: 1900, status: "paid" }) });
-check("Webhook بتوقيع خاطئ مرفوض (401)", wh.status === 401);
-const fa = await call("str", "/api/admin/audit-financial");
-check("سطر تدقيق مالي لرفض التوقيع", (fa.data.audit || []).some((a) => a.action === "webhook_rejected"));
+check("باب الـwebhook الخارجي ملحوم تماماً (404) — بريدي موب حصراً", wh.status === 404);
+const wh2 = await fetch(`${BASE}/api/payments/webhook/sofizpay`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reference: "NK-TEST123", amount_dzd: 1900, status: "paid" }) });
+check("باب SofizPay ملحوم أيضاً (404)", wh2.status === 404);
+const setK = await call("str", "/api/admin/settings", "PUT", { webhook_secret_chargily: "hacker-tries", webhook_secret_sofizpay: "hacker-tries" });
+const stAfter = await call("str", "/api/admin/settings");
+check("مفاتيح webhook الخارجية تُرفض من الإعدادات", setK.ok === true && !(stAfter.data.settings || []).some((x) => String(x.k).includes("webhook_secret")));
 await call("str", "/api/admin/settings", "PUT", { payments_enabled: "0" });
 const co3 = await call("cli", "/api/payments/checkout", "POST", { kind: "plan", plan_id: "pro" });
 check("إعادة التعطيل: النظام خاملاً مجدداً (503)", co3.status === 503);

@@ -25,14 +25,6 @@ async function call(as, path, method = "GET", body, extra = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 const su = Date.now().toString(36);
-const sign = async (body, secret) => {
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
-  return [...new Uint8Array(sig)].map((x) => x.toString(16).padStart(2, "0")).join("");
-};
-const webhook = async (payload, sig, provider = "chargily") =>
-  fetch(`${BASE}/api/payments/webhook/${provider}`, { method: "POST", headers: { "content-type": "application/json", ...(sig ? { "x-signature": sig } : {}) }, body: payload });
-
 // ═══ 0) تصفير عدادات المعدل (KV تبقى بين الجولات) + إعادة تهيئة الإدارة + مالك جديد ═══
 let rkeys = []; try { rkeys = JSON.parse(execSync("./node_modules/.bin/wrangler kv key list --binding CACHE_KV --local", { cwd: CWD, stdio: ["ignore", "pipe", "ignore"] }).toString()); } catch {}
 for (const k of rkeys.filter((x) => x.name.startsWith("rl:"))) try { execSync(`./node_modules/.bin/wrangler kv key delete --binding CACHE_KV --local "${k.name}"`, { cwd: CWD, stdio: ["ignore", "ignore", "ignore"] }); } catch {}
@@ -59,11 +51,11 @@ const malloryMe = await call(mallory, "/api/me");
 check("جلسة مالوري بلا صلاحيات إدارية", malloryMe.data.user?.role !== "admin");
 const co0 = await call(mallory, "/api/payments/checkout", "POST", { kind: "credits", credits: 100 });
 check("checkout والدفع معطل (503)", co0.status === 503, JSON.stringify(co0.data));
-const wh0 = await webhook(JSON.stringify({ reference: "NK-X", amount_dzd: 1, status: "paid" }), "aa");
-check("webhook والدفع معطل (503)", wh0.status === 503);
+const wh0 = await fetch(`${BASE}/api/payments/webhook/chargily`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reference: "NK-X", amount_dzd: 1, status: "paid" }) });
+check("باب الـwebhook ملحوم حتى مع تعطيل الدفع (404)", wh0.status === 404);
 
 // ═══ 2) التفعيل من اللوحة + سر التوقيع ═══
-const setOn = await call(own, "/api/admin/settings", "PUT", { payments_enabled: "1", webhook_secret_chargily: "advsecret123", credits_price_dzd_per_100: "300" });
+const setOn = await call(own, "/api/admin/settings", "PUT", { payments_enabled: "1", credits_price_dzd_per_100: "300" });
 check("تفعيل الدفع من اللوحة", setOn.ok === true);
 
 // ═══ 3) بوابة الإدارة: لا جلسة/جلسة غير مدير/رابط خاطئ ═══
@@ -94,55 +86,37 @@ check("شحن 100 رصيد = 300 دج + مرجع NK-*", c4.ok === true && c4.dat
 const c5 = await call(mallory, "/api/payments/checkout", "POST", { kind: "credits", credits: 100 });
 check("idempotency: نفس اليوم = نفس العملية", c5.data.payment_id === c4.data.payment_id, JSON.stringify({ a: c4.data.payment_id, b: c5.data.payment_id }));
 
-// ═══ 6) Webhook: التوقيع أولاً ثم كل القواعد ═══
-const ref1 = c4.data.reference, pid1 = c4.data.payment_id;
-const wBad = await webhook(JSON.stringify({ reference: ref1, amount_dzd: 300, status: "paid" }), "deadbeef");
-check("توقيع خاطئ → 401", wBad.status === 401);
-const wNone = await webhook(JSON.stringify({ reference: ref1, amount_dzd: 300, status: "paid" }), "");
-check("بلا توقيع → 401", wNone.status === 401);
-const wUnk = await webhook(JSON.stringify({ reference: "NK-UNKNOWNREF1", amount_dzd: 300, status: "paid" }), await sign(JSON.stringify({ reference: "NK-UNKNOWNREF1", amount_dzd: 300, status: "paid" }), "advsecret123"));
-check("مرجع مجهول بتوقيع صحيح → 404", wUnk.status === 404);
-const bodyWrong = JSON.stringify({ reference: ref1, amount_dzd: 500, status: "paid" });
-const wWrong = await webhook(bodyWrong, await sign(bodyWrong, "advsecret123"));
-check("مبلغ غير مطابق تماماً → 409 وتبقى معلقة", wWrong.status === 409, JSON.stringify(await wWrong.json().catch(() => ({}))));
-const bodyOk = JSON.stringify({ reference: ref1, amount_dzd: 300, status: "paid", provider_ref: "CHG-PR-1" });
-const wOk = await webhook(bodyOk, await sign(bodyOk, "advsecret123"));
-check("webhook صحيح → confirmed آلي", wOk.status === 200 && (await wOk.json()).status === "confirmed");
-const meBal = await call(mallory, "/api/me");
-check("رصيد العمليات = 100 بعد التأكيد", meBal.data.ai?.balance === 100, JSON.stringify(meBal.data.ai));
-const wReplay = await webhook(bodyOk, await sign(bodyOk, "advsecret123"));
-check("إعادة إرسال نفس الـwebhook → idempotent", wReplay.status === 200);
-const meBal2 = await call(mallory, "/api/me");
-check("الرصيد لم يتضاعف (100 ما زال)", meBal2.data.ai?.balance === 100);
-const bodyDup = JSON.stringify({ reference: ref1, amount_dzd: 300, status: "paid", provider_ref: "CHG-PR-1", id: "second" });
-// مرجع جديد لكن provider_ref مكرر: نصنع معلقة ثانية أولاً
-const c6 = await call(mallory, "/api/payments/checkout", "POST", { kind: "credits", credits: 200 });
-const bodyDup2 = JSON.stringify({ reference: c6.data.reference, amount_dzd: 600, status: "paid", provider_ref: "CHG-PR-1" });
-const wDup = await webhook(bodyDup2, await sign(bodyDup2, "advsecret123"));
-check("provider_ref مكرر (عملية مزدوجة) → 409", wDup.status === 409);
-const bodyFail = JSON.stringify({ reference: c6.data.reference, amount_dzd: 600, status: "failed", provider_ref: "CHG-PR-2" });
-const wFail = await webhook(bodyFail, await sign(bodyFail, "advsecret123"));
-check("فشل الدفع → rejected", wFail.status === 200 && (await wFail.json()).status === "rejected");
+// ═══ 6) البوابات الخارجية مغلقة بالكامل — بريدي موب حصراً (قرار مؤسس) ═══
+const ref1 = c4.data.reference;
+for (const prov of ["chargily", "sofizpay", "unknown-provider"]) {
+  const w = await fetch(`${BASE}/api/payments/webhook/${prov}`, { method: "POST", headers: { "content-type": "application/json", "x-signature": "deadbeef" }, body: JSON.stringify({ reference: ref1, amount_dzd: 300, status: "paid" }) });
+  check(`باب ${prov} ملحوم → 404 لا تأكيد مطلقاً`, w.status === 404);
+}
+const stK = await call(own, "/api/admin/settings", "PUT", { webhook_secret_chargily: "injected" });
+const stR = await call(own, "/api/admin/settings");
+check("حقن سر webhook عبر الإعدادات مرفوض", stK.ok === true && !(stR.data.settings || []).some((x) => String(x.k).includes("webhook_secret")));
+const paySt = await call(own, "/api/admin/payments?status=pending");
+const stillPend = (paySt.data.payments || []).find((x) => x.reference === ref1);
+check("محاولة التزوير لم تغير حالة العملية (معلقة كما هي)", !!stillPend && stillPend.status === "pending");
 const fa = await call(own, "/api/admin/audit-financial");
-const actions = (fa.data.audit || []).map((a) => a.action);
-check("التدقيق المالي يسجل كل الأحداث", actions.includes("webhook_rejected") && actions.includes("amount_mismatch") && actions.includes("confirmed") && actions.includes("rejected"), actions.join(","));
+check("التدقيق المالي يسجل الإنشاء بلا أي تأكيد خارجي", (fa.data.audit || []).some((a) => a.action === "checkout_created"));
 
-// ═══ 7) قواعد المخاطرة: حساب حديث ومبلغ كبير → تعليق للمراجعة ═══
+// ═══ 7) قناة التأكيد الوحيدة: مراجعة المالك يدوياً (بريدي موب حصراً) ═══
 const newbie = `fresh-${su}@nk.test`;
 await atk(newbie, "FreshPass99", "Fresh", `fresh-${su}`, "client");
 const cBig = await call(newbie, "/api/payments/checkout", "POST", { kind: "credits", credits: 5000 });
-const bodyBig = JSON.stringify({ reference: cBig.data.reference, amount_dzd: 15000, status: "paid", provider_ref: "CHG-PR-BIG" });
-const wBig = await webhook(bodyBig, await sign(bodyBig, "advsecret123"));
-const wBigD = await wBig.json().catch(() => ({}));
-check("حديث العهد + مبلغ كبير → held للمراجعة", wBig.status === 200 && wBigD.held === true && (wBigD.flags || []).length >= 1, JSON.stringify(wBigD));
+check("شحن كبير يُنشأ معلقاً للمراجعة", cBig.ok === true && cBig.data.amount_dzd === 15000 && /^NK-/.test(cBig.data.reference || ""));
+const forge = await fetch(`${BASE}/api/payments/webhook/chargily`, { method: "POST", headers: { "content-type": "application/json", "x-signature": "forged" }, body: JSON.stringify({ reference: cBig.data.reference, amount_dzd: 15000, status: "paid", provider_ref: "FAKE-1" }) });
+check("تزوير تأكيد العملية الكبيرة عبر باب ملحوم → 404", forge.status === 404);
+const meForged = await call(newbie, "/api/me");
+check("الرصيد صفر بعد محاولة التزوير", Number(meForged.data.ai?.balance ?? 0) === 0, JSON.stringify(meForged.data.ai));
 const adminPays = await call(own, "/api/admin/payments");
-const heldRow = (adminPays.data.payments || []).find((x) => x.reference === cBig.data.reference);
-check("المعلقة المعلَّمة في طابور الإدارة", !!heldRow && heldRow.status === "pending" && String(heldRow.risk_flags).includes("account_fresh"));
-// الإدارة تؤكدها يدوياً (مراجعة مبررة) → الرصيد يُضاف
-const man = await call(own, `/api/admin/payments/${heldRow.id}/status`, "POST", { status: "confirmed" });
-check("تأكيد يدوي بعد المراجعة يعمل", man.ok === true);
+const pendRow = (adminPays.data.payments || []).find((x) => x.reference === cBig.data.reference);
+check("العملية الكبيرة في طابور مراجعة المالك", !!pendRow && pendRow.status === "pending");
+const man = await call(own, `/api/admin/payments/${pendRow.id}/status`, "POST", { status: "confirmed" });
+check("تأكيد المالك يدوياً بعد مراجعته يعمل", man.ok === true);
 const meNew = await call(newbie, "/api/me");
-check("رصيد الحديث العهد = 5000 بعد المراجعة", meNew.data.ai?.balance === 5000, JSON.stringify(meNew.data.ai));
+check("رصيد الحديث العهد = 5000 بعد مراجعة المالك", meNew.data.ai?.balance === 5000, JSON.stringify(meNew.data.ai));
 
 // ═══ 8) IDOR: عبور الحدود بين المستخدمين ═══
 const victim = `victim-${su}@nk.test`;
