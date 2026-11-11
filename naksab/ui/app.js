@@ -1433,15 +1433,13 @@ async function viewAdmin() {
         </div>
         <div class="field"><label>${T.credits_price_l}</label><input id="st-cp" type="number" min="100" value="${g("credits_price_dzd_per_100") || "300"}" /></div>
         <div class="form-2">
-          <div class="field"><label>${T.webhook_secret_l} — Chargily</label><input id="st-wc" dir="ltr" value="${g("webhook_secret_chargily")}" /></div>
-          <div class="field"><label>${T.webhook_secret_l} — SofizPay</label><input id="st-ws" dir="ltr" value="${g("webhook_secret_sofizpay")}" /></div>
         </div>
         <div class="spread"><button class="btn primary" id="st-save">${T.save_settings}</button><button class="btn danger sm" id="st-rot">${T.rotate_panel}</button></div>
         <div class="msg" id="st-msg" hidden></div></div>`;
       $("#st-save").onclick = async () => {
         const r2 = await api("/api/admin/settings", "PUT", {
           payments_enabled: $("#st-pay").value, ai_free_daily: $("#st-ad").value, ai_free_monthly: $("#st-am").value,
-          credits_price_dzd_per_100: $("#st-cp").value, webhook_secret_chargily: $("#st-wc").value.trim(), webhook_secret_sofizpay: $("#st-ws").value.trim(),
+          credits_price_dzd_per_100: $("#st-cp").value,
         });
         const m = $("#st-msg"); m.hidden = false; m.className = `msg ${r2.ok ? "ok" : "bad"}`; m.textContent = r2.ok ? T.settings_saved : errText(r2.data.error);
       };
