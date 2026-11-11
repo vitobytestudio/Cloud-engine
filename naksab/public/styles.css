@@ -437,3 +437,42 @@ html[dir="rtl"] .foot-col a:hover { transform: translateX(-3px); }
   .mock-match .bar i { width: var(--w, 70%); }
   .mock-ok { opacity: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   الهاتف أولاً — الشاشة الصغيرة هي الأساس والحاسوب يتمدد تلقائياً
+   ═══════════════════════════════════════════════════════════════ */
+/* تقسيمات الصفحات: عمود واحد على الهاتف، عمودان من 861px */
+.grid.split-a, .grid.split-b { grid-template-columns: 1fr; }
+@media (min-width: 861px) {
+  .grid.split-a { grid-template-columns: 2fr 1fr; align-items: start; }
+  .grid.split-b { grid-template-columns: 1.6fr 1fr; align-items: start; }
+}
+/* أهداف لمس مريحة (≥44px) على الشاشات اللمسية */
+@media (max-width: 860px) {
+  .btn { min-height: 44px; }
+  .btn.sm { min-height: 40px; padding: 8px 14px; }
+  .nav-links a { padding: 11px 14px; font-size: 14px; }
+  .burger { width: 42px; height: 42px; }
+  .tabs button { padding: 11px 15px; }
+  .hero-cta .btn { min-height: 48px; }
+}
+/* أمان الشاشات المنحوتة + منع تكبير iOS عند التركيز */
+.toast { bottom: calc(24px + env(safe-area-inset-bottom)); }
+@media (max-width: 560px) {
+  input, textarea, select { font-size: 16px; }
+  .toolbar input, .toolbar select { width: 100%; min-width: 0; }
+  .modal-bg { padding: 0; align-items: end; }
+  .modal {
+    max-width: 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; border-bottom: 0;
+    max-height: 92dvh; padding: 26px 18px calc(26px + env(safe-area-inset-bottom));
+    animation: sheetUp .34s var(--ease);
+  }
+  @keyframes sheetUp { from { opacity: 0; transform: translateY(46px) } }
+  .page-head { padding: 30px 0 18px; }
+  .page-head h1 { font-size: 25px; }
+  .panel { padding: 20px 16px; }
+  .stat-card b { font-size: 21px; }
+  .hero { padding: 48px 0 40px; }
+  .doors .door { padding: 13px 14px; }
+  .foot-bottom { flex-direction: column; align-items: center; text-align: center; }
+}

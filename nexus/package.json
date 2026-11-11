@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build && wrangler dev --port 8792 --local",
-    "build": "esbuild ui/app.js --minify --charset=utf8 --outfile=public/app.js",
+    "build": "esbuild ui/app.js --minify --charset=utf8 --outfile=public/app.js && esbuild public/styles.css --minify --charset=utf8 --outfile=public/styles.min.css",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {

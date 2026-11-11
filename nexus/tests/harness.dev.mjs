@@ -39,7 +39,7 @@ const cat = (r) => r.status + ":" + JSON.stringify(r.data).slice(0, 90);
   ok("health ok:true", h.status === 200 && h.data.ok === true && h.data.app === "nexus");
   const page = await fetch(BASE + "/");
   const html = await page.text();
-  ok("الصفحة تُخدم (html)", page.status === 200 && html.includes("NEXUS") && html.includes("styles.css"));
+  ok("الصفحة تُخدم (html)", page.status === 200 && html.includes("NEXUS") && html.includes("styles.min.css"));
   ok("RTL عربي افتراضي", html.includes('dir="rtl"') && html.includes('lang="ar"'));
   const appjs = await fetch(BASE + "/app.js");
   ok("app.js يُخدم", appjs.status === 200 && (await appjs.text()).length > 20000);

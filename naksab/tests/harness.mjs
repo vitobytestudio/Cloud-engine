@@ -53,8 +53,8 @@ async function call(as, path, method = "GET", body) {
 const h = await (await fetch(`${BASE}/api/health`)).json();
 check("الخادم حي", h.ok === true, JSON.stringify(h));
 const homeHtml = await (await fetch(`${BASE}/`)).text();
-check("الصفحة الرئيسية تُخدم", homeHtml.includes("NAKSAB") && homeHtml.includes("styles.css"));
-check("CSS حقيقي يُخدم", (await (await fetch(`${BASE}/styles.css`)).text()).includes("--brand1"));
+check("الصفحة الرئيسية تُخدم", homeHtml.includes("NAKSAB") && homeHtml.includes("styles.min.css"));
+check("CSS حقيقي يُخدم", (await (await fetch(`${BASE}/styles.min.css`)).text()).includes("--brand1"));
 check("app.js يُخدم", (await (await fetch(`${BASE}/app.js`)).text()).includes("viewHome"));
 
 // ═══ 2) المصادقة ═══
