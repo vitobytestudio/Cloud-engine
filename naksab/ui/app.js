@@ -1367,12 +1367,18 @@ async function viewAdmin() {
       $$("[data-ad]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/ads/${b2.dataset.ad}/moderate`, "POST", { status: b2.dataset.s }); render("ads"); }));
     }
     if (t === "users") {
-      const r = await api("/api/admin/users");
+      const [r, pl] = await Promise.all([api("/api/admin/users"), api("/api/admin/plans")]);
+      const plans = (pl.data.plans || []).filter((x) => x.id);
       body.innerHTML = `<div class="card" style="overflow-x:auto"><table style="width:100%;font-size:13px;border-collapse:collapse">
         ${(r.data.users || []).map((u) => `<tr style="border-bottom:1px solid var(--line)">
           <td style="padding:10px">@${esc(u.username)}</td><td class="muted">${esc(u.email)}</td><td><span class="chip">${u.role}</span></td>
+          <td><select class="input sm" data-up="${u.id}" style="min-width:110px;padding:5px 8px">${plans.map((x) => `<option value="${esc(x.id)}" ${(u.plan_id || "free") === x.id ? "selected" : ""}>${esc(x.name || x.id)}</option>`).join("")}</select></td>
           <td><button class="btn ghost sm" data-uv="${u.id}" data-v="${u.verified ? 0 : 1}">${u.verified ? T.verified : T.verify}</button></td>
           <td><button class="btn ghost sm ${u.banned ? "danger" : ""}" data-ub="${u.id}" data-b="${u.banned ? 0 : 1}">${u.banned ? T.unban : T.ban}</button></td></tr>`).join("")}</table></div>`;
+      $$("[data-up]", body).forEach((sel) => sel.addEventListener("change", async () => {
+        const r2 = await api(`/api/admin/users/${sel.dataset.up}/flags`, "POST", { plan: sel.value });
+        toast(r2.ok ? T.saved : errText(r2.data.error)); if (r2.ok) render("users");
+      }));
       $$("[data-uv]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/users/${b2.dataset.uv}/flags`, "POST", { verified: b2.dataset.v === "1" }); render("users"); }));
       $$("[data-ub]", body).forEach((b2) => b2.addEventListener("click", async () => { await api(`/api/admin/users/${b2.dataset.ub}/flags`, "POST", { banned: b2.dataset.b === "1" }); render("users"); }));
     }
