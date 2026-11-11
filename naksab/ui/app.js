@@ -573,7 +573,7 @@ async function viewHome() {
         <h1 class="reveal">${T.h1a}<br><span class="grad">${T.h1b}</span></h1>
         <p class="lead reveal">${T.lead}</p>
         <div class="hero-cta reveal">
-          <a class="btn primary" href="#/request/new">${T.post_project} →</a>
+          <a class="btn primary" href="${S.user && S.user.role !== "client" ? "#/dashboard" : "#/request/new"}">${S.user && S.user.role !== "client" ? T.dashboard : T.post_project} →</a>
           <a class="btn" href="#/talent">${T.explore}</a>
         </div>
         ${!S.user ? `<div class="doors reveal" aria-label="Choose your path">
@@ -875,7 +875,7 @@ function portfolioModal() {
 // ═══════════ لوحة التحكم ═══════════
 async function viewDashboard() {
   if (!S.user) return authModal("register");
-  const isFreelancer = S.user.role === "freelancer";
+  const isFreelancer = S.user.role === "freelancer" || S.user.role === "admin"; /* المدير يستعمل أدوات المستقل أيضاً — استوديو المنصة من حسابه */
   const aiCard = S.ai ? `<div class="panel" style="margin-bottom:16px"><div class="spread" style="flex-wrap:wrap;gap:10px">
     <div><b style="font-size:14px">${T.ai_credits}</b><div class="tiny muted">${T.plan_l}: <span class="chip brand">${S.plan?.name ?? "FREE"}</span></div></div>
     <div class="row" style="gap:18px">
@@ -1057,7 +1057,7 @@ function serviceModal() {
 // ═══════════ طلب جديد (هيكلة ذكية + يدوي) ═══════════
 async function viewRequestNew() {
   if (!S.user) return authModal("register");
-  if (S.user.role === "freelancer") {
+  if (S.user.role === "freelancer" || S.user.role === "admin") {
     return shell(`<div class="wrap" style="max-width:560px;padding-top:70px">
       <div class="panel center">
         <div style="font-size:34px;margin-bottom:10px">↔</div>
@@ -1512,7 +1512,7 @@ async function viewPricing() {
     <div class="spread"><b style="font-family:var(--display);font-size:18px">${esc(pl.name)}</b>${pl.active ? `<span class="chip ok">●</span>` : `<span class="chip warn">${T.coming_soon}</span>`}</div>
     <div><span class="price" style="font-size:28px">${pl.price_dzd ? money(pl.price_dzd) : T.free_forever}</span><span class="tiny muted">${pl.price_dzd ? " " + T.per_month : ""}</span></div>
     <div style="font-size:13px;color:var(--dim);line-height:2">${(() => { try { return JSON.parse(pl.features || "[]").map((f) => `<div>✓ ${esc(f)}</div>`).join(""); } catch { return ""; } })()}</div>
-    ${pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "freelancer" ? "#/dashboard" : "#/request/new"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "freelancer" ? T.cta_free_freelancer : T.cta_free_client}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
+    ${pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "client" ? "#/request/new" : "#/dashboard"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "client" ? T.cta_free_client : T.cta_free_freelancer}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
   </div>`;
   shell(`<div class="wrap page-head"><h1>${T.pricing}</h1><p>${T.pricing_sub}</p></div>
   <div class="wrap"><div class="t-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
