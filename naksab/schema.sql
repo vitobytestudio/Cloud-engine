@@ -346,3 +346,11 @@ CREATE TABLE IF NOT EXISTS bridge_orders (
 );
 CREATE INDEX IF NOT EXISTS idx_bridge_buyer ON bridge_orders(buyer_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bridge_free ON bridge_orders(freelancer_id, created_at DESC);
+
+-- ═══ عضوية الجسر (أسبوعية/شهرية — امتيازات المنصتين) ═══
+CREATE TABLE IF NOT EXISTS bridge_member (
+  user_id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);

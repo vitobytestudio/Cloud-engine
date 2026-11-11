@@ -58,7 +58,10 @@ const T = {
     s_intro: "افتتاح المتجر", d_intro: "تعريف بمتجرك كامل ومنتجاتك الأقوى في فيديو واحد",
     recep: "مساعد المنصة", recep_hello: "أهلاً! أنا استقبال نيكسوس — اسألني: كيف تفتح متجراً؟ إيش الباقات؟ كيف يوصل الطلب؟",
     org_btn: "رتّب منتجي بالوكيل", orging: "الوكيل يرتب…", org_ok: "اقتراحات الوكيل طُبقت", org_tips: "نصائح الوكيل",
-    ready: "جاهزية النشر", apply_org: "طبّق الاقتراحات",
+    ready: "جاهزية النشر", pro_tab: "المحترفون", pro_hero: "محترفو ناكساب في خدمة متجرك",
+    pro_sub: "كتالوج موثّق من ناكساب: هويات ومواقع ومونتاج — الطلب والدفع عبر محفظة ناكساب المؤتمتة.",
+    pro_open: "اطلب من ناكساب", pro_empty: "الكتالوج ينبض قريباً — موثقو ناكساب أول من يظهر",
+    nk_field: "اسمك في ناكساب (لخصم العضوية)", nk_check: "تحقق", nk_ok: "خصم العضوية مطبق", nk_no: "لا عضوية نشطة بهذا الاسم", apply_org: "طبّق الاقتراحات",
   },
   en: {
     tagline: "Merchant Market", home: "Home", explore: "Explore", mystore: "My Store", account: "Account",
@@ -115,7 +118,10 @@ const T = {
     s_intro: "Store intro", d_intro: "Introduce your whole store and top products in one video",
     recep: "Platform assistant", recep_hello: "Hi! I'm NEXUS reception — ask me: how to open a store? What are the plans? How does delivery work?",
     org_btn: "Organize my product with AI", orging: "Agent organizing…", org_ok: "Agent suggestions applied", org_tips: "Agent tips",
-    ready: "Publish readiness", apply_org: "Apply suggestions",
+    ready: "Publish readiness", pro_tab: "Pros", pro_hero: "NAKSAB pros for your store",
+    pro_sub: "Verified catalog from NAKSAB: branding, websites, video editing — order & pay via the automated NAKSAB wallet.",
+    pro_open: "Order on NAKSAB", pro_empty: "Catalog awakens soon — verified NAKSAB pros appear first",
+    nk_field: "Your NAKSAB username (member discount)", nk_check: "Check", nk_ok: "Member discount applied", nk_no: "No active membership for this name", apply_org: "Apply suggestions",
   },
 };
 
@@ -839,19 +845,32 @@ async function me() {
 const DASH_TABS = [
   { id: "overview", r: "#/dash" }, { id: "products", r: "#/dash/products" },
   { id: "orders", r: "#/dash/orders" }, { id: "finance", r: "#/dash/finance" },
-  { id: "agent_tab", r: "#/dash/agent" }, { id: "ads_tab", r: "#/ads" }, { id: "settings", r: "#/dash/settings" },
+  { id: "agent_tab", r: "#/dash/agent" }, { id: "ads_tab", r: "#/ads" }, { id: "pro_tab", r: "#/dash/pro" }, { id: "settings", r: "#/dash/settings" },
 ];
 async function openAdsOrder(style, price) {
   let prods = [];
   try { prods = (await api("/api/products")).products || []; } catch {}
   const sh = sheet(`<b style="font-size:16px;display:block;margin-bottom:4px">${esc(t("s_" + style))}</b>
     <span class="price-now" style="font-size:15px">${new Intl.NumberFormat(S.lang === "ar" ? "ar-DZ" : "en-US").format(price)} ${esc(S.lang === "ar" ? "دج" : "DZD")}</span>
+    <div class="field" style="margin-top:10px"><label>${esc(t("nk_field"))}</label>
+      <div style="display:flex;gap:6px"><input class="input" id="ao-nk" dir="ltr" value="${esc(nkUser)}" placeholder="vito-studio"/>
+      <button class="btn ghost" id="ao-nkc" type="button">${esc(t("nk_check"))}</button></div>
+      <div class="hint" id="ao-nkmsg" style="min-height:16px">${nkExtra > 0 ? "−" + Math.round(nkExtra * 100) + "%" : ""}</div></div>
     <div class="field" style="margin-top:10px"><label>${esc(t("vid_product"))}</label>
       <select class="input" id="ao-prod"><option value="">${esc(t("pick_product"))}</option>
         ${prods.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("")}</select></div>
     <div class="field"><label>${esc(t("vid_note"))}</label><textarea class="input" id="ao-note" rows="2"></textarea></div>
     <div id="ao-err" style="min-height:18px"></div>
     <button class="btn wa wide" id="ao-send">${esc(t("send_order"))}</button>`);
+  $("#ao-nkc", sh.wrap).onclick = async () => {
+    const u = $("#ao-nk", sh.wrap).value.trim();
+    const rr2 = await api(`/api/pro/member?u=${encodeURIComponent(u)}`);
+    nkUser = u; nkExtra = rr2.extra_pct || 0;
+    $("#ao-nkmsg", sh.wrap).textContent = nkExtra > 0 ? `−${Math.round(nkExtra * 100)}%` : "";
+    $("#ao-nkmsg", sh.wrap).style.color = nkExtra > 0 ? "var(--cyan)" : "var(--muted)";
+    toast(nkExtra > 0 ? t("nk_ok") : t("nk_no"));
+  };
+
   $("#ao-send", sh.wrap).onclick = async () => {
     try {
       const stTitle = t("s_" + style), prodSel = $("#ao-prod", sh.wrap);
@@ -866,7 +885,7 @@ async function openAdsOrder(style, price) {
         prodName && prodName !== t("pick_product") ? `- المنتج المميز: ${prodName}` : "",
         note ? `- ملاحظات: ${note}` : "",
       ].filter(Boolean).join("\n");
-      await api("/api/ads/order", { method: "POST", body: { style, product_id: prodSel.value, note } });
+      await api("/api/ads/order", { method: "POST", body: { style, product_id: prodSel.value, note, nk_user: $("#ao-nk", sh.wrap).value.trim() } });
       sh.close(); toast(t("order_ok")); vibrate([10, 40, 10]);
       const wa = window.open(`https://wa.me/213777845635?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
       if (!wa) toast(t("wa_open_fail"));
@@ -913,6 +932,32 @@ rr("/ads", async (v) => {
     <h3 style="margin:16px 0 4px;font-size:14px">${esc(t("my_vids"))}</h3>
     ${stOrders || `<p class="hint">${esc(t("no_vids"))}</p>`}`;
   $$("#ads-body [data-adstyle]").forEach((b) => (b.onclick = () => openAdsOrder(b.dataset.adstyle, Number(b.dataset.adprice))));
+});
+
+let nkUser = "", nkExtra = 0;
+async function loadPro() {
+  const el = $("#pro-body");
+  el.innerHTML = `<div class="skel"></div>`;
+  const r = await api("/api/pro/services");
+  const list = r.services || [];
+  el.innerHTML = list.length ? `<div class="ad-grid">${list.map((sv) => `
+    <div class="ad-card">
+      <div class="adp adp-intro" style="height:64px"><span class="dur">${sv.delivery_days || 7} ${S.lang === "ar" ? "يوم" : "days"}</span>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2-6.4-4.8L5.6 21.2 8 14 2 9.2h7.6z"/></svg></div>
+      <div class="ad-meta"><div class="ad-name">${esc(sv.title)}</div>
+        <p class="hint" style="margin:2px 0 4px;line-height:1.6">${esc((sv.description || "").slice(0, 90))}</p>
+        <div class="chips" style="gap:4px"><span class="chip brand">${esc(sv.category || "general")}</span></div>
+        <div class="ad-price"><span class="price-now">${new Intl.NumberFormat(S.lang === "ar" ? "ar-DZ" : "en-US").format(sv.price_min)} ${S.lang === "ar" ? "دج" : "DZD"}</span></div>
+        <a class="btn primary wide" style="margin-top:8px;padding:9px 0" href="https://naksab.vitobytestudio.workers.dev/#/service/${esc(sv.id)}" target="_blank" rel="noopener">${t("pro_open")} →</a>
+      </div></div>`).join("")}</div>` : `<p class="hint">${t("pro_empty")}</p>`;
+}
+rr("/dash/pro", async (v) => {
+  buildTabbar(true);
+  if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
+  v.innerHTML = `${topbar(t("pro_tab"))}<div class="page" style="padding-top:6px" id="pro-body">
+    <div class="ad-hero"><b style="font-size:16px;display:block">${t("pro_hero")}</b>
+      <p style="font-size:12.5px;margin:4px 0 8px;opacity:.92;line-height:1.8">${t("pro_sub")}</p></div></div>`;
+  loadPro();
 });
 
 async function openBell() {

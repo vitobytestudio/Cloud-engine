@@ -97,7 +97,8 @@ route("GET", "/api/me", async (_r, env, s) => {
   const daily = Number(plan?.ai_quota_daily ?? 10), monthly = Number(plan?.ai_quota_monthly ?? 100);
   const kv = await env.CACHE_KV.get(`rl:ai:${s.userId}`); const kvm = await env.CACHE_KV.get(`rl:aim:${s.userId}`);
   const bal = await env.DB.prepare("SELECT COALESCE(SUM(delta),0) AS b FROM credit_ledger WHERE user_id = ?").bind(s.userId).first<any>();
-  return json({ user: u, csrf: s.csrf, plan: { id: plan?.id ?? "free", name: plan?.name ?? "FREE" }, ai: { used_daily: Number(kv ?? 0), limit_daily: daily, used_monthly: Number(kvm ?? 0), limit_monthly: monthly, balance: Number(bal?.b ?? 0), price_dzd_per_100: Number(await getSetting(env, "credits_price_dzd_per_100", "300")) } });
+  const mem = await memberOf(env, s.userId);
+  return json({ user: u, csrf: s.csrf, plan: { id: plan?.id ?? "free", name: plan?.name ?? "FREE" }, member: mem, ai: { used_daily: Number(kv ?? 0), limit_daily: daily, used_monthly: Number(kvm ?? 0), limit_monthly: monthly, balance: Number(bal?.b ?? 0), price_dzd_per_100: Number(await getSetting(env, "credits_price_dzd_per_100", "300")) } });
 });
 
 // ═══ التصنيفات العامة ═══
@@ -807,6 +808,7 @@ route("POST", "/api/payments/checkout", async (req, env, s) => {
 async function applyConfirmedPay(env: Env, pay: any): Promise<void> {
   if (pay.kind === "plan") {
     await env.DB.prepare("UPDATE users SET plan_id = ? WHERE id = ?").bind(pay.plan_id, pay.user_id).run();
+    await activatePlanPerk(env, pay);
   } else {
     const bal = await env.DB.prepare("SELECT COALESCE(SUM(delta),0) AS b FROM credit_ledger WHERE user_id = ?").bind(pay.user_id).first<any>();
     const nb = Number(bal?.b ?? 0) + Number(pay.credits);
@@ -1131,8 +1133,9 @@ export async function baridiScan(env: Env): Promise<{ scanned: number; credited:
     ).bind(now() - WINDOW_MS - 3600_000).all<PendingOrder & { id: string }>();
     const order = pickMatch(t, pend.results ?? []);
     if (!order) { review++; continue; }
-    const row = await env.DB.prepare("SELECT status, user_id, amount_dzd FROM payments WHERE id = ?").bind(order.id).first<{ status: PayState; user_id: string; amount_dzd: number }>();
+    const row = await env.DB.prepare("SELECT status, user_id, amount_dzd, kind, plan_id FROM payments WHERE id = ?").bind(order.id).first<{ status: PayState; user_id: string; amount_dzd: number; kind: string; plan_id: string | null }>();
     if (!row || !canTransit(row.status, "confirmed")) { review++; continue; }
+    if (row.kind === "plan") await activatePlanPerk(env, { kind: "plan", plan_id: row.plan_id, user_id: row.user_id, id: order.id });
     await env.DB.batch([
       env.DB.prepare("UPDATE payments SET status = 'confirmed', provider = 'baridimob', provider_ref = ? WHERE id = ?").bind(t.id, order.id),
       env.DB.prepare("INSERT INTO wallet_tx (id, user_id, delta_dzd, kind, ref_id, balance_after, created_at) VALUES (?1,?2,?3,?4,?5,(SELECT COALESCE(SUM(delta_dzd),0) FROM wallet_tx WHERE user_id = ?2) + ?3, ?6)")
@@ -1183,10 +1186,30 @@ route("POST", "/api/admin/baridi/scan", async (req, env, s) => {
 });
 
 // ═══ جسر الخدمات: كتالوج الموثقين + الإشراك ═══
-const bridgeFee = async (env: Env, amount: number): Promise<number> => {
-  const pct = Number(await getSetting(env, "bridge_fee_pct", "5"));
+/* عضوية الجسر: نسبة الثمن بحسب العضوية النشطة (5% أساس، 3% أسبوعية، 2% شهرية — قابلة للضبط من اللوحة) */
+async function memberOf(env: Env, userId: string): Promise<{ active: boolean; plan_id: string; expires_at: number }> {
+  const m = await env.DB.prepare("SELECT plan_id, expires_at FROM bridge_member WHERE user_id = ? AND expires_at > ?").bind(userId, now()).first<any>();
+  return m ? { active: true, plan_id: m.plan_id, expires_at: m.expires_at } : { active: false, plan_id: "", expires_at: 0 };
+}
+const bridgeFee = async (env: Env, amount: number, userId = ""): Promise<number> => {
+  const m = userId ? await memberOf(env, userId) : { active: false, plan_id: "", expires_at: 0 };
+  const dflt = Number(await getSetting(env, "bridge_fee_pct", "5"));
+  const pct = m.active ? Number(await getSetting(env, `bridge_fee_${m.plan_id.replace("bridge-", "")}_pct`, m.plan_id === "bridge-monthly" ? "2" : "3")) : dflt;
   return Math.max(100, Math.round((amount * pct) / 100));
 };
+/* الإفراج الآلي عن العضوية عند تأكيد أي دفع باقة أسبوعية/شهرية — يدوياً أو آلياً */
+async function activatePlanPerk(env: Env, pay: any): Promise<void> {
+  if (pay?.kind !== "plan" || !pay.plan_id) return;
+  const plan = await env.DB.prepare("SELECT period FROM plans WHERE id = ?").bind(pay.plan_id).first<any>();
+  const days = plan?.period === "weekly" ? 7 : plan?.period === "monthly" ? 30 : 0;
+  if (!days) return;
+  const base = await env.DB.prepare("SELECT expires_at FROM bridge_member WHERE user_id = ?").bind(pay.user_id).first<any>();
+  const from = base && base.expires_at > now() ? base.expires_at : now();
+  await env.DB.prepare("INSERT INTO bridge_member (user_id, plan_id, expires_at, updated_at) VALUES (?1,?2,?3,?4) ON CONFLICT(user_id) DO UPDATE SET plan_id = ?2, expires_at = ?3, updated_at = ?4")
+    .bind(pay.user_id, pay.plan_id, from + days * 86400_000, now()).run();
+  await notify(env, pay.user_id, "plan", `عضويتك الجسرية نشطة ${days} يوماً — امتيازات ناكساب ونيكسوس معاً`, pay.id);
+  await finAudit(env, "system", "bridge_member_activate", pay.id, `plan=${pay.plan_id} days=${days}`);
+}
 
 route("GET", "/api/bridge/catalog", async (_r, env) => {
   const { results } = await env.DB.prepare(
@@ -1210,7 +1233,7 @@ route("POST", "/api/bridge/orders", async (req, env, s) => {
   if (!svc || !svc.active || !svc.verified || svc.banned) return bad("service_unavailable", 404);
   const brief = clip(String(b.brief ?? "").trim(), 800);
   if (brief.length < 10) return bad("invalid_brief");
-  const fee = await bridgeFee(env, svc.price_min);
+  const fee = await bridgeFee(env, svc.price_min, s.userId);
   const oid = id("bo");
   await env.DB.prepare(
     "INSERT INTO bridge_orders (id, buyer_id, freelancer_id, service_id, amount_dzd, fee_dzd, status, brief, source, created_at, updated_at) VALUES (?,?,?,?,?,?, 'awaiting_payment', ?, ?, ?, ?)"
@@ -1284,6 +1307,15 @@ route("GET", "/api/admin/bridge/orders", async (req, env, s) => {
     "SELECT b.*, u1.username AS buyer_username, u2.username AS freelancer_username FROM bridge_orders b JOIN users u1 ON u1.id = b.buyer_id JOIN users u2 ON u2.id = b.freelancer_id ORDER BY b.created_at DESC LIMIT 100"
   ).all();
   return json({ orders: results ?? [] });
+});
+
+// ═══ بوابة عامة لجسر نيكسوس: حالة العضوية بالاسم العام ═══
+route("GET", "/api/bridge/member/:username", async (_r, env, _s, p) => {
+  const uname = clip(String(p.username ?? "").toLowerCase(), 30);
+  const u = await env.DB.prepare("SELECT id, verified, banned FROM users WHERE username = ?").bind(uname).first<any>();
+  if (!u || u.banned) return json({ active: false });
+  const m = await memberOf(env, u.id);
+  return json({ active: m.active, plan: m.active ? m.plan_id : "", expires_at: m.expires_at, pct: m.active ? Number(await getSetting(env, `bridge_fee_${m.plan_id.replace("bridge-", "")}_pct`, m.plan_id === "bridge-monthly" ? "2" : "3")) : Number(await getSetting(env, "bridge_fee_pct", "5")) });
 });
 
 export default {

@@ -254,6 +254,39 @@ check("قائمة المراجعة الإدارية تعمل", Array.isArray(fla
   check("إشعار المنحة وصل", (gNj.notifications || []).some((n) => n.type === "plan"));
 }
 
+// ─── 14-أ3) العضوية الجسرية: شراء → إفراج → ثمن متدرج → بوابة عامة ───
+{
+  await call("str", "/api/admin/settings", "PUT", { payments_enabled: "1" });
+  const wEmail = `bridge-${suffix}@nk.test`;
+  const wReg = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: wEmail, k0: await k0Of(wEmail, "Secret-99"), name: "BridgeBuyer", username: "bb" + suffix, role: "client" }) });
+  const wD = await wReg.json().catch(() => ({}));
+  const wCookie = (wReg.headers.get("set-cookie") || "").split(";")[0];
+  const wCsrf = wD.csrf;
+  const co = await fetch(`${BASE}/api/payments/checkout`, { method: "POST", headers: { "content-type": "application/json", cookie: wCookie, "x-csrf": wCsrf }, body: JSON.stringify({ kind: "plan", plan_id: "bridge-weekly" }) });
+  const coD = await co.json().catch(() => ({}));
+  check("شراء عضوية الأسبوع (مرجع + مبلغ)", (co.status === 200 || co.status === 201) && coD.reference && coD.amount_dzd === 199, JSON.stringify(coD).slice(0, 100));
+  /* تأكيد يدوي من المالك → إفراج العضوية */
+  const wPid = await fetch(`${BASE}/api/me`, { headers: { cookie: wCookie } }).then((r) => r.json());
+  const conf = await call("str", `/api/admin/payments/${coD.payment_id}/status`, "POST", { status: "confirmed" });
+  check("تأكيد المالك للدفع (200)", conf.ok, JSON.stringify(conf.data));
+  const memPub = await fetch(`${BASE}/api/bridge/member/bb${suffix}`).then((r) => r.json());
+  check("البوابة العامة: العضوية نشطة 3%", memPub.active === true && memPub.pct === 3, JSON.stringify(memPub));
+  const memMe = await fetch(`${BASE}/api/me`, { headers: { cookie: wCookie } }).then((r) => r.json());
+  check("العضو يرى عضويته في /api/me", memMe.member?.active === true && memMe.member?.plan_id === "bridge-weekly");
+  /* ثمن الجسر المتدرج: نوثق كل المستخدمين محلياً فيمتلئ كتالوج الجسر ثم نطلب */
+  const users = await call("str", "/api/admin/users");
+  for (const uu of users.data.users || []) if (!uu.verified) await call("str", `/api/admin/users/${uu.id}/flags`, "POST", { verified: true });
+  const cat = await fetch(`${BASE}/api/bridge/catalog`).then((r) => r.json());
+  const wSvc = (cat.services || [])[0];
+  if (wSvc) {
+    const ord = await fetch(`${BASE}/api/bridge/orders`, { method: "POST", headers: { "content-type": "application/json", cookie: wCookie, "x-csrf": wCsrf }, body: JSON.stringify({ service_id: wSvc.id, brief: "طلب اختبار ثمن العضوية الجسرية" }) });
+    const ordD = await ord.json().catch(() => ({}));
+    check("ثمن الجسر بخصم العضوية (3%)", ord.status === 201 && ordD.fee_dzd === Math.max(100, Math.round(wSvc.price_min * 0.03)), JSON.stringify({ got: ordD.fee_dzd, want: Math.max(100, Math.round(wSvc.price_min * 0.03)), price: wSvc.price_min }));
+  } else check("ثمن العضوية (تخطي — الكتالوج فارغ محلياً)", true);
+  /* نعيد الخمول لقسم الدفع التالي */
+  await call("str", "/api/admin/settings", "PUT", { payments_enabled: "0" });
+}
+
 // ═══ 14-ب) الدفع الخامل + حماية Webhook + التدقيق المالي ═══
 const meC = await call("cli", "/api/me");
 check("رصيد الذكاء في /api/me", !!meC.data.ai && meC.data.ai.limit_daily >= 1 && !!meC.data.plan);
