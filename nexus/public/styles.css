@@ -127,11 +127,14 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1px solid var(--line);
 }
 
-.top .brand { font-weight: 700; letter-spacing: 0.3em; font-size: 15px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.top .brand { font-weight: 700; letter-spacing: 0.3em; font-size: 15px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; flex: none; }
 
 .top .title { font-weight: 700; font-size: 17px; }
 
-.top .sp { flex: 1; }
+.top .sp { flex: 1 1 0; min-width: 0; }
+/* الشريط العلوي لا يفيض: العنوان ينكمش بنقاط الحذف والأيقونات ثابتة */
+.top .title { flex: 0 1 auto; min-width: 0; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top .icon-btn { flex: none; }
 
 .icon-btn {
   width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center;
