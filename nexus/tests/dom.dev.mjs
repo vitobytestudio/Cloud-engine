@@ -122,7 +122,12 @@ ok("زر الوكيل العائم موجود في المتجر", !!d.getElement
 d.getElementById("agent-fab")?.click();
 await sleep(700);
 ok("ورقة الوكيل تفتح برسالة ترحيب", !!d.getElementById("ag-log") && d.getElementById("ag-log").textContent.length > 10);
-ok("ورقة الوكيل: أسئلة سريعة بضغطة واحدة", d.querySelectorAll(".qchip").length >= 3);
+const agIn = d.getElementById("ag-in");
+if (agIn && !agIn.disabled) {
+  ok("ورقة الوكيل: أسئلة سريعة بضغطة واحدة", d.querySelectorAll(".sheet .qchip").length >= 3);
+} else {
+  ok("ورقة الوكيل: أسئلة سريعة (الوكيل معطّل بلا مفاتيح — الإدخال مقفول)", !!agIn && agIn.disabled === true);
+}
 ok("ورقة الوكيل: متابعة واتساب متاحة", !!d.querySelector(".sheet .btn.wa"));
 d.querySelector(".sheet-bd")?.click();
 await sleep(500);
