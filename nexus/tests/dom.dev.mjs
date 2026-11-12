@@ -116,10 +116,14 @@ await sleep(600);
 /* 8د) الوكيل والشارات في متجر العرض */
 await nav("#/s/vito-store");
 ok("متجر pro يحمل شارة التوثيق", !!d.querySelector(".vbadge") && !!d.querySelector(".planbadge.pro"));
+ok("المتجر: قالب بريمي بهيرو وشعار عائم وشهادات", !!d.querySelector(".stx") && !!d.querySelector(".stx-hero") && !!d.querySelector(".stx-logo") && d.querySelectorAll(".stx-chips span").length === 3);
+ok("المتجر: زر واتساب يظهر للزوار", !!d.querySelector(".stx-actions .btn.wa"));
 ok("زر الوكيل العائم موجود في المتجر", !!d.getElementById("agent-fab"));
 d.getElementById("agent-fab")?.click();
 await sleep(700);
 ok("ورقة الوكيل تفتح برسالة ترحيب", !!d.getElementById("ag-log") && d.getElementById("ag-log").textContent.length > 10);
+ok("ورقة الوكيل: أسئلة سريعة بضغطة واحدة", d.querySelectorAll(".qchip").length >= 3);
+ok("ورقة الوكيل: متابعة واتساب متاحة", !!d.querySelector(".sheet .btn.wa"));
 d.querySelector(".sheet-bd")?.click();
 await sleep(500);
 

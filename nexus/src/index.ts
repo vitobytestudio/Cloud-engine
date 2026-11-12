@@ -153,6 +153,8 @@ route("PUT", "/api/me", async (req, env, s) => {
   const banner = clip(str(b, "banner").trim(), 600);
   const whatsapp = clip(str(b, "whatsapp").replace(/[^\d+]/g, ""), 15);
   const color = clip(str(b, "color").trim(), 20);
+  // قوالب المتجر الثلاثة (أو لون hex قديم) — لا شيء آخر يمر
+  if (color && !["aurora", "onyx", "emerald"].includes(color) && !/^#[0-9a-fA-F]{3,8}$/.test(color)) return bad("invalid_color");
   if (logo && !isHttpsUrl(logo)) return bad("invalid_logo");
   if (banner && !isHttpsUrl(banner)) return bad("invalid_banner");
   await env.DB.prepare("UPDATE users SET store_name = ?, bio = ?, logo = ?, banner = ?, whatsapp = ?, color = ? WHERE id = ?")

@@ -328,6 +328,20 @@ let pid = "", pid2 = "";
   ok("طلب فيديو باسم وهمي: بلا خصم إضافي (سعر الباقة)", adsNk.status === 201 && adsNk.data.price === 2500, JSON.stringify(adsNk.data));
 }
 
+/* ─── 8خ. قوالب المتجر وواتساب ─── */
+{
+  const meR = await j("/api/me", { cookie });
+  const mySlug = meR.data.user?.slug;
+  const up = await j("/api/me", { method: "PUT", cookie, csrf, body: { store_name: "متجر الهارنس", bio: "نبذة", logo: "", banner: "", whatsapp: "213777845635", color: "onyx" } });
+  ok("PUT /api/me: قالب onyx + واتساب يُحفظان", up.status === 200 && up.data.user?.color === "onyx" && up.data.user?.whatsapp === "213777845635", JSON.stringify(up.data).slice(0, 120));
+  const pub = await j("/api/store/" + mySlug);
+  ok("المتجر العام يعرض القالب وواتساب للزوار", pub.status === 200 && pub.data.store?.color === "onyx" && pub.data.store?.whatsapp === "213777845635");
+  const badc = await j("/api/me", { method: "PUT", cookie, csrf, body: { color: "javascript:alert(1)" } });
+  ok("قالب غريب يُرفض (400)", badc.status === 400 && badc.data.error === "invalid_color");
+  const hex = await j("/api/me", { method: "PUT", cookie, csrf, body: { color: "#7a5cff" } });
+  ok("لون hex القديم ما زال مقبولاً", hex.status === 200);
+}
+
 /* ─── 9. حذف وتنظيف ─── */
 {
   const del = await j("/api/products/" + pid2, { method: "DELETE", cookie, csrf });
