@@ -19,6 +19,12 @@ const T = {
     hero_sub: "أنشئ متجرك، اعرض منتجاتك، واستقبل طلبات الدفع عند الاستلام من كل ولايات الوطن — بلوحة واحدة بسيطة.",
     hero_c1: "دفع عند الاستلام", hero_c2: "58 ولاية", hero_c3: "بريدي موب آمن",
     hero_b1: "اكتشف المنتجات", hero_b2: "افتح متجرك",
+    bio_l: "نبذة عن المتجر", wa_hint: "رقم واتساب يظهر للزوار لتأكيد الطلبات مباشرة",
+    tpl_pick: "قالب متجرك", tpl_aurora: "أورورا", tpl_onyx: "أونيكس الذهبي", tpl_emerald: "الزمرد",
+    up_logo: "تغيير الشعار", up_banner: "تغيير الغلاف", up_fail: "فشل الرفع — صورة حتى 550KB",
+    wa_confirm: "أكد طلبك عبر واتساب", follow_wa: "متابعة عبر واتساب", wa_order_t: "طلب جديد من NEXUS",
+    aq_price: "كم السعر؟", aq_delivery: "التوصيل متاح؟", aq_order: "أريد الطلب",
+    stx_cod: "دفع عند الاستلام", stx_ship: "توصيل 58 ولاية", stx_products_n: "منتج",
     wrong_creds: "بيانات غير صحيحة", exists: "البريد أو الرابط مستعمل مسبقاً", logged_in: "مرحباً بك في NEXUS",
     logged_out: "تم الخروج", saved: "تم الحفظ", copied: "تم النسخ",
     dash: "لوحة متجري", overview: "نظرة عامة", products: "المنتجات", orders: "الطلبيات", finance: "المالية", settings: "الإعدادات",
@@ -83,6 +89,12 @@ const T = {
     hero_sub: "Create your store, showcase products, and receive cash-on-delivery orders from every wilaya — one simple dashboard.",
     hero_c1: "Cash on delivery", hero_c2: "58 wilayas", hero_c3: "Secure BaridiMob",
     hero_b1: "Browse products", hero_b2: "Open your store",
+    bio_l: "Store bio", wa_hint: "Your WhatsApp number shown to buyers to confirm orders instantly",
+    tpl_pick: "Store template", tpl_aurora: "Aurora", tpl_onyx: "Golden Onyx", tpl_emerald: "Emerald",
+    up_logo: "Change logo", up_banner: "Change cover", up_fail: "Upload failed — image up to 550KB",
+    wa_confirm: "Confirm via WhatsApp", follow_wa: "Continue on WhatsApp", wa_order_t: "New NEXUS order",
+    aq_price: "What is the price?", aq_delivery: "Is delivery available?", aq_order: "I want to order",
+    stx_cod: "Cash on delivery", stx_ship: "Delivery in 58 wilayas", stx_products_n: "products",
     wrong_creds: "Invalid credentials", exists: "Email or link already used", logged_in: "Welcome to NEXUS",
     logged_out: "Signed out", saved: "Saved", copied: "Copied",
     dash: "My store", overview: "Overview", products: "Products", orders: "Orders", finance: "Finance", settings: "Settings",
@@ -562,7 +574,8 @@ async function runSearch(q) {
     : `<div class="empty"><h3>${esc(t("no_results"))}</h3><p>${esc(t("no_results_sub"))}</p></div>`;
 }
 
-/* المتجر */
+/* المتجر — قوالب بريمية متعددة بأسلوب العلامات العالمية */
+const TPL_IDS = ["aurora", "onyx", "emerald"];
 rr("/s/:slug", async (v, p) => {
   buildTabbar(true);
   v.innerHTML = `${topbar()}<div id="store-body">${skeletons(2)}</div>`;
@@ -570,30 +583,37 @@ rr("/s/:slug", async (v, p) => {
   try { data = await api("/api/store/" + encodeURIComponent(p.slug)); }
   catch { $("#store-body").innerHTML = `<div class="empty"><h3>404</h3><p>${esc(t("no_results"))}</p></div>`; return; }
   const st = data.store;
+  const tpl = TPL_IDS.includes(st.color) ? st.color : "aurora";
   const link = location.origin + "/#/s/" + st.slug;
+  const waN = (st.whatsapp || "").replace(/\D/g, "");
   $("#store-body").innerHTML = `
-    <div class="store-hero">
-      <div class="store-banner">${st.banner ? imgTag(st.banner) : ""}</div>
-      <div class="store-id">
-        ${st.logo ? imgTag(st.logo, "store-logo") : `<div class="store-logo empty-logo">${esc((st.store_name || "N")[0])}</div>`}
-        <div><div class="n">${esc(st.store_name)}
-          ${st.verified ? `<span class="vbadge ${st.plan === "vip" ? "gold" : ""}" title="${esc(t("verified_badge"))}"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
-          ${st.plan === "vip" ? `<span class="planbadge">VIP</span>` : st.plan === "pro" ? `<span class="planbadge pro">PRO</span>` : ""}
-        </div><div class="s">@${esc(st.slug)}</div></div>
+    <div class="stx stx-${tpl}">
+      <div class="stx-hero">
+        <div class="stx-banner">${st.banner ? imgTag(st.banner) : ""}<i class="stx-scrim"></i></div>
+        <div class="stx-id">
+          <div class="stx-logo">${st.logo ? imgTag(st.logo) : `<b>${esc((st.store_name || "N")[0])}</b>`}</div>
+          <div class="stx-name">
+            <span>${esc(st.store_name)}</span>
+            ${st.verified ? `<span class="vbadge ${st.plan === "vip" ? "gold" : ""}" title="${esc(t("verified_badge"))}"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
+            ${st.plan === "vip" ? `<span class="planbadge">VIP</span>` : st.plan === "pro" ? `<span class="planbadge pro">PRO</span>` : ""}
+          </div>
+          <div class="stx-slug" dir="ltr">@${esc(st.slug)}</div>
+          ${st.bio ? `<p class="stx-bio">${esc(st.bio)}</p>` : ""}
+          <div class="stx-chips"><span>${data.products.length} ${esc(t("stx_products_n"))}</span><span>${esc(t("stx_cod"))}</span><span>${esc(t("stx_ship"))}</span></div>
+          <div class="stx-actions">
+            <button class="btn primary" id="share-store" style="flex:1">${esc(t("share_store"))}</button>
+            ${waN ? `<a class="btn wa" href="https://wa.me/${esc(waN)}" target="_blank" rel="noopener" style="min-width:52px;padding:0 16px"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5 13.9c-.2.6-1.2 1.1-1.7 1.2-.4 0-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.2 1c.3.2.5.3.6.4.1.2.1.7-.1 1.2z"/></svg></a>` : ""}
+          </div>
+          <div style="margin-top:10px"><span class="link-pill" id="link-pill" dir="ltr">${esc(link.replace(/^https?:\/\//, ""))}</span></div>
+        </div>
       </div>
       <button class="agent-fab ${data.agent_enabled ? "" : "off"}" id="agent-fab" title="${esc(t("ask_agent"))}">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a7 7 0 0 1 7 7c0 1.2-.3 2.3-.9 3.3L19 17l-3-.6A7 7 0 1 1 12 3z"/><circle cx="9.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="12.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="15.5" cy="10.5" r=".8" fill="currentColor"/></svg>
       </button>
-      ${st.bio ? `<div class="store-bio">${esc(st.bio)}</div>` : ""}
-      <div class="store-actions">
-        <button class="btn primary" id="share-store" style="flex:1">${esc(t("share_store"))}</button>
-        ${st.whatsapp ? `<a class="btn" href="https://wa.me/${esc(st.whatsapp.replace(/\D/g, ""))}" target="_blank" rel="noopener" style="min-width:50px;padding:0 16px"><svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5 13.9c-.2.6-1.2 1.1-1.7 1.2-.4 0-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.2.2-.3.4-.1.7.2.3.9 1.4 1.9 2.3 1.3 1.2 2.4 1.5 2.7 1.7.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.2 1c.3.2.5.3.6.4.1.2.1.7-.1 1.2z"/></svg></a>` : ""}
-      </div>
-      <div style="padding:12px 16px 0"><span class="link-pill" id="link-pill" dir="ltr">${esc(link.replace(/^https?:\/\//, ""))}</span></div>
-    </div>
-    <div class="section-title" style="margin:8px 18px 8px">${esc(t("products"))}</div>
-    ${data.products.length ? `<div class="grid">${data.products.map((x, i) => productCard({ ...x, store_slug: null }, i)).join("")}</div>`
-      : `<div class="empty"><h3>${esc(t("no_products"))}</h3></div>`}`;
+      <div class="section-title" style="margin:12px 18px 8px">${esc(t("products"))}</div>
+      ${data.products.length ? `<div class="grid">${data.products.map((x, i) => productCard({ ...x, store_slug: null }, i)).join("")}</div>`
+        : `<div class="empty"><h3>${esc(t("no_products"))}</h3></div>`}
+    </div>`;
   $("#share-store").onclick = async () => {
     vibrate(10);
     try { await navigator.clipboard.writeText(link); toast(t("copied_link")); }
@@ -623,7 +643,8 @@ async function agentChat(st, enabled) {
       <button class="btn primary" id="ag-send" style="min-width:52px;padding:0 14px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
       </button>
-    </div>`);
+    </div>
+    ${st.whatsapp ? `<a class="btn wa wide" style="margin-top:10px" href="https://wa.me/${esc(String(st.whatsapp).replace(/\D/g, ""))}" target="_blank" rel="noopener">${esc(t("follow_wa"))}</a>` : ""}`);
   const log = $("#ag-log", sh.wrap);
   const bubble = (text, me = false, typing = false) => {
     const el = document.createElement("div");
@@ -637,6 +658,16 @@ async function agentChat(st, enabled) {
   };
   if (!enabled) { bubble(t("agent_off")); $("#ag-in", sh.wrap).disabled = true; $("#ag-send", sh.wrap).disabled = true; return; }
   bubble(t("agent_welcome"));
+  /* أسئلة سريعة بضغطة واحدة */
+  const qrow = document.createElement("div");
+  qrow.className = "qrow"; qrow.style.marginTop = "8px";
+  [t("aq_price"), t("aq_delivery"), t("aq_order")].forEach((q) => {
+    const c = document.createElement("button");
+    c.className = "qchip"; c.textContent = q;
+    c.onclick = () => { const i = $("#ag-in", sh.wrap); i.value = q; $("#ag-send", sh.wrap).click(); };
+    qrow.appendChild(c);
+  });
+  $("#ag-in", sh.wrap).closest("div").before(qrow);
   const send = async () => {
     const input = $("#ag-in", sh.wrap);
     const msg = input.value.trim();
@@ -667,7 +698,7 @@ rr("/p/:id", async (v, p) => {
   let prod = null;
   try {
     const r = await api("/api/product/" + encodeURIComponent(p.id));
-    prod = { ...r.product, store_slug: r.store.slug, store_name: r.store.store_name, store_logo: r.store.logo };
+    prod = { ...r.product, store_slug: r.store.slug, store_name: r.store.store_name, store_logo: r.store.logo, store_whatsapp: r.store.whatsapp || "" };
   } catch {}
   if (!prod) {
     v.innerHTML = `${topbar()}<div class="empty"><h3>404</h3><p>${esc(t("no_results"))}</p></div>`;
@@ -769,7 +800,12 @@ async function orderSheet(prod) {
           <div class="success-ring"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
           <h3 style="margin-bottom:6px">${esc(t("order_success"))}</h3>
           <p style="color:var(--muted);font-size:13.5px;line-height:1.9">${esc(t("order_success_sub"))}</p>
-          <div class="hint" style="margin:12px 0 20px" dir="ltr">${esc(t("order_id"))}: ${esc(r.id)}</div>
+          <div class="hint" style="margin:12px 0 16px" dir="ltr">${esc(t("order_id"))}: ${esc(r.id)}</div>
+          ${prod.store_whatsapp ? (() => {
+            const wilName = $("#o-wil", wrap).selectedOptions[0]?.textContent || "";
+            const msg = `${t("wa_order_t")}\n${t("order_id")}: ${r.id}\n${prod.title} ×${qty} = ${money(prod.price * qty)}\n${cname} — ${phone}\n${wilName} — ${commune}${delivery === "home" && address ? ` — ${address}` : ""}`;
+            return `<a class="btn wa wide" id="o-wa" style="margin-bottom:10px" href="https://wa.me/${esc(String(prod.store_whatsapp).replace(/\D/g, ""))}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${esc(t("wa_confirm"))}</a>`;
+          })() : ""}
           <button class="btn primary wide" id="o-close">${esc(t("done"))}</button>
         </div>`;
       $("#o-close", wrap).onclick = close;
@@ -1373,38 +1409,67 @@ rr("/dash/finance", async (v) => {
   }));
 });
 
-/* الإعدادات */
+/* الإعدادات — محرر المتجر: رفع الشعار والغلاف + القوالب + واتساب */
 rr("/dash/settings", async (v) => {
   buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
   const u = S.user;
+  const TPLS = [
+    ["aurora", "tpl_aurora", "linear-gradient(135deg,#7a5cff,#2ad4f6)"],
+    ["onyx", "tpl_onyx", "linear-gradient(135deg,#26262e,#ffd166)"],
+    ["emerald", "tpl_emerald", "linear-gradient(135deg,#0ea5a4,#7ce7c1)"],
+  ];
+  let logo = u.logo || "", banner = u.banner || "";
+  let tpl = TPLS.some((x) => x[0] === u.color) ? u.color : "aurora";
   dashShell(v, "settings", `
+    <div class="set-hero" id="set-hero" style="background-image:${banner ? `url(${esc(banner)})` : TPLS.find((x) => x[0] === tpl)[2]}">
+      <div class="set-ava" id="set-ava">${logo ? `<img src="${esc(logo)}" alt=""/>` : `<b>${esc((u.store_name || "N")[0])}</b>`}</div>
+      <button class="set-up" id="up-ava">${esc(t("up_logo"))}</button>
+    </div>
+    <input type="file" id="f-ava" accept="image/jpeg,image/png,image/webp" hidden/>
+    <button class="btn ghost wide" id="up-ban" style="margin-bottom:14px">${esc(t("up_banner"))}</button>
+    <input type="file" id="f-ban" accept="image/jpeg,image/png,image/webp" hidden/>
     <div class="field"><label>${esc(t("store_name"))}</label><input class="input" id="s-name" value="${esc(u.store_name)}"/></div>
-    <div class="field"><label>Bio</label><textarea class="input" id="s-bio">${esc(u.bio)}</textarea></div>
-    <div class="field"><label>Logo URL</label><input class="input" id="s-logo" dir="ltr" value="${esc(u.logo)}"/></div>
-    <div class="field"><label>Banner URL</label><input class="input" id="s-banner" dir="ltr" value="${esc(u.banner)}"/></div>
-    <div class="field"><label>WhatsApp</label><input class="input" id="s-wa" dir="ltr" placeholder="213XXXXXXXXX" value="${esc(u.whatsapp)}"/></div>
-    <div class="field"><label>${esc(t("category"))}</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="s-colors">
-        ${["", "#7a5cff", "#2ad4f6", "#3ddc97", "#ff6b6b", "#ffb454"].map((c) => `<button class="chip col-pick ${u.color === c ? "on" : ""}" data-c="${c}" style="${c ? `background:${c}22;border-color:${c}"` : ""}">${c ? `<i style="width:12px;height:12px;border-radius:50%;background:${c}"></i>` : esc(t("all"))}</button>`).join("")}
-      </div></div>
+    <div class="field"><label>${esc(t("bio_l"))}</label><textarea class="input" id="s-bio">${esc(u.bio)}</textarea></div>
+    <div class="field"><label>WhatsApp</label><input class="input" id="s-wa" dir="ltr" inputmode="tel" placeholder="213XXXXXXXXX" value="${esc(u.whatsapp)}"/><span class="hint">${esc(t("wa_hint"))}</span></div>
+    <div class="field"><label>${esc(t("tpl_pick"))}</label>
+      <div class="tpl-row">${TPLS.map(([id, k, g]) => `<button type="button" class="tpl-card ${tpl === id ? "on" : ""}" data-t="${id}"><i style="background:${g}"></i><span>${esc(t(k))}</span></button>`).join("")}</div>
+    </div>
     <div id="s-err" style="min-height:18px"></div>
     <button class="btn primary wide" id="s-save">${esc(t("save"))}</button>`);
-  let color = u.color || "";
-  $$("#s-colors .col-pick").forEach((b) => (b.onclick = () => { color = b.dataset.c; $$("#s-colors .col-pick").forEach((x) => x.classList.toggle("on", x === b)); }));
-  $("#s-save", v).onclick = async (e) => {
+  const upload = async (file) => {
+    if (!file) throw new Error("nofile");
+    if (file.size > 550000) throw new Error("too_large");
+    const r = await fetch("/api/media", { method: "POST", headers: { "content-type": file.type || "image/jpeg", "x-csrf": S.csrf }, body: await file.arrayBuffer() });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.url) throw new Error(d.error || "fail");
+    return d.url;
+  };
+  $("#up-ava", v).onclick = () => $("#f-ava", v).click();
+  $("#up-ban", v).onclick = () => $("#f-ban", v).click();
+  $("#f-ava", v).onchange = async (e) => {
     try {
-      await api("/api/me", { method: "PUT", body: {
-        store_name: $("#s-name", v).value.trim(), bio: $("#s-bio", v).value.trim(),
-        logo: $("#s-logo", v).value.trim(), banner: $("#s-banner", v).value.trim(),
-        whatsapp: $("#s-wa", v).value.trim(), color,
-      } });
-      await me(); toast(t("saved")); vibrate(10);
+      logo = await upload(e.target.files[0]) || logo;
+      $("#set-ava", v).innerHTML = `<img src="${esc(logo)}" alt=""/>`;
+      toast(t("saved")); vibrate(8);
+    } catch { $("#s-err", v).innerHTML = `<span class="err-text">${esc(t("up_fail"))}</span>`; }
+  };
+  $("#f-ban", v).onchange = async (e) => {
+    try {
+      banner = await upload(e.target.files[0]) || banner;
+      $("#set-hero", v).style.backgroundImage = `url(${esc(banner)})`;
+      toast(t("saved")); vibrate(8);
+    } catch { $("#s-err", v).innerHTML = `<span class="err-text">${esc(t("up_fail"))}</span>`; }
+  };
+  $$(".tpl-card", v).forEach((b) => (b.onclick = () => { tpl = b.dataset.t; $$(".tpl-card", v).forEach((x) => x.classList.toggle("on", x === b)); vibrate(4); }));
+  $("#s-save", v).onclick = async () => {
+    try {
+      await api("/api/me", { method: "PUT", body: { store_name: $("#s-name", v).value.trim(), bio: $("#s-bio", v).value.trim(), logo, banner, whatsapp: $("#s-wa", v).value.trim(), color: tpl } });
+      toast(t("saved")); vibrate([10, 30, 10]); await me();
     } catch (ex) { $("#s-err", v).innerHTML = `<span class="err-text">${esc(ex.error || "error")}</span>`; }
   };
 });
 
-/* الحساب */
 rr("/account", async (v) => {
   buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }

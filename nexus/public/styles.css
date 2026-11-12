@@ -834,3 +834,80 @@ html[dir="rtl"] .seg.r .seg-ind { transform: translateX(-100%); }
 .seg button.on { color: #fff; }
 @keyframes afIn { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: none; } }
 .af-in { animation: afIn .45s var(--spring) both; }
+
+/* ═══════════ المتجر البريمي: ثلاثة قوالب بحركات العلامات العالمية ═══════════ */
+.stx { position: relative; --s1: #7a5cff; --s2: #2ad4f6; }
+.stx-onyx { --s1: #26262e; --s2: #ffd166; }
+.stx-emerald { --s1: #0ea5a4; --s2: #7ce7c1; }
+.stx-hero { animation: fadeUp .5s var(--spring) both; }
+.stx-banner {
+  position: relative; height: 172px; overflow: hidden;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--s1) 55%, #0d0f16), color-mix(in srgb, var(--s2) 28%, #0d0f16));
+  animation: stxZoom 1.3s var(--ease-out) both;
+}
+@keyframes stxZoom { from { transform: scale(1.09); opacity: .35; } to { transform: none; opacity: 1; } }
+.stx-banner img { width: 100%; height: 100%; object-fit: cover; }
+.stx-scrim { position: absolute; inset: 0; background: linear-gradient(to top, var(--bg) 4%, transparent 62%), linear-gradient(120deg, color-mix(in srgb, var(--s1) 30%, transparent), transparent 60%); }
+.stx-id { position: relative; padding: 0 16px; margin-top: -40px; z-index: 2; }
+.stx-logo {
+  width: 86px; height: 86px; border-radius: 26px; background: var(--card2); border: 3px solid var(--bg);
+  display: grid; place-items: center; font-size: 30px; font-weight: 800; color: #fff; overflow: hidden;
+  box-shadow: var(--shadow-2), 0 0 36px -8px color-mix(in srgb, var(--s1) 75%, transparent);
+  animation: bootPop .7s var(--spring) .15s both;
+}
+.stx-logo img { width: 100%; height: 100%; object-fit: cover; }
+.stx-name {
+  display: flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 800; margin-top: 10px; width: fit-content; max-width: 100%;
+  background: linear-gradient(120deg, #fff 45%, var(--s2)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stx-slug { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.stx-bio { color: var(--muted); font-size: 13px; line-height: 1.9; margin-top: 8px; animation: fadeUp .6s .18s var(--spring) both; }
+.stx-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+.stx-chips span {
+  font-size: 11px; font-weight: 700; color: var(--text);
+  background: color-mix(in srgb, var(--s1) 20%, var(--card)); border: 1px solid color-mix(in srgb, var(--s2) 38%, transparent);
+  padding: 6px 12px; border-radius: 99px; animation: fadeUp .55s var(--spring) both;
+}
+.stx-chips span:nth-child(2) { animation-delay: .1s; }
+.stx-chips span:nth-child(3) { animation-delay: .2s; }
+.stx-actions { display: flex; gap: 10px; margin-top: 14px; animation: fadeUp .6s .26s var(--spring) both; }
+.stx .agent-fab { top: 128px; }
+.stx .grid { padding-bottom: 120px; }
+@media (min-width: 720px) {
+  .stx-hero { max-width: 1128px; margin: 18px auto 0; width: calc(100% - 32px); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow-2); }
+  .stx-banner { height: 280px; }
+  .stx-id { padding: 0 30px 28px; margin-top: -48px; }
+  .stx-logo { width: 106px; height: 106px; border-radius: 30px; }
+  .stx .section-title, .stx .grid { max-width: 1128px; margin-inline: auto; width: calc(100% - 32px); }
+  .stx .grid { padding-inline: 0; }
+  .stx .agent-fab { inset-inline-end: calc((100% - 1128px) / 2 + 24px); }
+}
+
+/* ═══ محرر المتجر في الإعدادات ═══ */
+.set-hero {
+  position: relative; height: 132px; border-radius: 20px; border: 1px solid var(--line);
+  background-size: cover; background-position: center; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: space-between; padding: 12px; margin-bottom: 14px;
+  animation: fadeUp .5s var(--spring) both;
+}
+.set-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(2, 3, 8, .6), transparent 58%); }
+.set-ava {
+  width: 64px; height: 64px; border-radius: 20px; background: var(--card2); border: 2px solid rgba(255, 255, 255, .25);
+  display: grid; place-items: center; font-size: 24px; font-weight: 800; color: #fff; overflow: hidden; position: relative; z-index: 1;
+}
+.set-ava img { width: 100%; height: 100%; object-fit: cover; }
+.set-up {
+  position: relative; z-index: 1; background: rgba(2, 3, 8, .55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line); color: #fff; font-size: 11.5px; font-weight: 700; padding: 7px 12px; border-radius: 99px;
+  transition: transform .3s var(--spring);
+}
+.set-up:active { transform: scale(.94); }
+.tpl-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tpl-card {
+  background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-size: 11.5px; font-weight: 700; color: var(--muted); transition: all .35s var(--spring);
+}
+.tpl-card i { width: 100%; height: 44px; border-radius: 11px; display: block; }
+.tpl-card.on { border-color: var(--violet); color: var(--text); box-shadow: var(--glow); transform: translateY(-2px); }
+.tpl-card.on i { outline: 2px solid rgba(255, 255, 255, .35); outline-offset: 2px; }
