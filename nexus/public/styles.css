@@ -770,3 +770,67 @@ html[dir="ltr"] select.input { background-position: right 16px center; }
   .grid { grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .pd-head h1 { font-size: 27px; }
 }
+
+/* ═══════════════ الهيرو البريمي — واجهة شركات عالمية ═══════════════ */
+@keyframes gradShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.hero-nx {
+  position: relative; overflow: hidden; margin: 12px 16px 4px;
+  border-radius: 24px; border: 1px solid var(--line);
+  background: linear-gradient(160deg, rgba(122, 92, 255, .16), rgba(42, 212, 246, .07) 55%, transparent 80%);
+  padding: 30px 20px 26px;
+}
+.hero-nx::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image: linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, #000 30%, transparent 75%);
+  animation: heroGrid 24s linear infinite;
+}
+@keyframes heroGrid { from { background-position: 0 0; } to { background-position: 38px 38px; } }
+.hero-orbs i { position: absolute; border-radius: 50%; filter: blur(48px); opacity: .55; pointer-events: none; }
+.hero-orbs i:nth-child(1) { width: 230px; height: 230px; background: rgba(122, 92, 255, .55); top: -80px; inset-inline-start: -50px; animation: floatOrb 7s ease-in-out infinite; }
+.hero-orbs i:nth-child(2) { width: 180px; height: 180px; background: rgba(42, 212, 246, .4); top: -40px; inset-inline-end: -40px; animation: floatOrb 9s -3s ease-in-out infinite; }
+.hero-orbs i:nth-child(3) { width: 150px; height: 150px; background: rgba(255, 107, 107, .2); bottom: -70px; inset-inline-start: 38%; animation: floatOrb 11s -6s ease-in-out infinite; }
+.hero-in { position: relative; z-index: 1; text-align: center; }
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .14em;
+  color: var(--cyan); border: 1px solid rgba(42, 212, 246, .32); background: rgba(42, 212, 246, .08);
+  padding: 6px 14px; border-radius: 99px; animation: fadeUp .6s var(--spring) both;
+}
+.hero-tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: pulseDot 1.8s ease-in-out infinite; }
+.hero-title { font-size: clamp(27px, 6.6vw, 44px); line-height: 1.24; font-weight: 800; margin: 14px 0 10px; animation: fadeUp .7s .08s var(--spring) both; }
+.hero-title b { background: var(--grad); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: gradShift 6s ease infinite; }
+.hero-sub { color: var(--muted); font-size: 13.5px; line-height: 1.95; max-width: 430px; margin: 0 auto 18px; animation: fadeUp .8s .16s var(--spring) both; }
+.hero-chips { display: flex; gap: 7px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; animation: fadeUp .8s .24s var(--spring) both; }
+.hero-chips span { font-size: 11px; font-weight: 700; color: var(--muted); background: color-mix(in srgb, var(--card) 76%, transparent); border: 1px solid var(--line); padding: 6px 13px; border-radius: 99px; transition: border-color .3s, color .3s; }
+.hero-chips span:hover { color: var(--text); border-color: rgba(122, 92, 255, .4); }
+.hero-cta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; animation: fadeUp .85s .32s var(--spring) both; }
+.hero-cta .btn { min-width: 150px; }
+@media (min-width: 720px) {
+  .hero-nx { margin: 20px auto 6px; max-width: 1128px; width: calc(100% - 32px); padding: 60px 44px 54px; border-radius: 30px; }
+  .hero-title { font-size: 54px; }
+  .hero-sub { font-size: 16px; max-width: 520px; }
+  .hero-chips span { font-size: 12px; padding: 8px 16px; }
+}
+
+/* ═══ لمسات بريمي: لمعان الزر الأساسي + نبض CTA ═══ */
+.btn.primary::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -70%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .28), transparent);
+  transform: skewX(-18deg); animation: sheen 4.6s var(--ease-io) infinite; pointer-events: none;
+}
+html[dir="rtl"] .btn.primary::after { left: auto; right: -70%; animation-name: sheenR; }
+@keyframes sheen { 0%, 52% { left: -70%; } 78%, 100% { left: 135%; } }
+@keyframes sheenR { 0%, 52% { right: -70%; } 78%, 100% { right: 135%; } }
+.cta-dock .btn.primary { animation: ctaGlow 3.2s ease-in-out infinite; }
+@keyframes ctaGlow { 0%, 100% { box-shadow: var(--glow); } 50% { box-shadow: 0 10px 38px rgba(122, 92, 255, .62); } }
+
+/* ═══ مفتاح المصادقة المنزلق + دخول النموذج ═══ */
+.seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 4px; margin-bottom: 18px; }
+.seg-ind { position: absolute; top: 4px; bottom: 4px; inset-inline-start: 4px; width: calc(50% - 4px); border-radius: 12px; background: var(--grad); box-shadow: var(--glow); transition: transform .5s var(--spring); }
+.seg.r .seg-ind { transform: translateX(100%); }
+html[dir="rtl"] .seg.r .seg-ind { transform: translateX(-100%); }
+.seg button { position: relative; z-index: 1; min-height: 44px; font-size: 13.5px; font-weight: 700; color: var(--muted); background: none; border: 0; border-radius: 12px; transition: color .35s; }
+.seg button.on { color: #fff; }
+@keyframes afIn { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: none; } }
+.af-in { animation: afIn .45s var(--spring) both; }

@@ -43,6 +43,7 @@ await sleep(900);
 /* 2) الرئيسية/الفيد بمنتجات البذرة */
 ok("الرئيسية: محتوى حي وبطاقات المنتجات", alive() && d.querySelectorAll(".p-card").length >= 4);
 ok("الرئيسية: الشريط السفلي ظاهر", d.querySelectorAll(".tab").length === 4);
+ok("الرئيسية: هيرو بريميوم بعنوان متحرك وCTA", !!d.querySelector(".hero-nx .hero-title b") && d.querySelectorAll(".hero-cta .btn").length === 2 && d.querySelectorAll(".hero-orbs i").length === 3);
 
 /* 3) الاستكشاف */
 await nav("#/explore");
@@ -72,6 +73,22 @@ ok("متجر العرض: الاسم والبانر والمنتجات", alive() 
 /* 7) الحساب يتطلب جلسة → تحويل لنموذج الدخول (لا سوداء) */
 await nav("#/dash");
 ok("اللوحة بلا جلسة: نموذج الدخول يُعرض", alive() && !!d.getElementById("auth-box"));
+
+/* 7-ب) تدفق المستخدم: تبديل الدخول/التسجيل ذهاباً وإياباً — كاشف موت الأزرار بعد إعادة الرسم */
+ok("auth: نموذج الدخول افتراضي بمفتاح منزلق", !!d.getElementById("a-email") && !!d.querySelector(".seg .seg-ind"));
+d.querySelector('[data-m="reg"]')?.click();
+await sleep(200);
+ok("auth: زر حساب جديد يفتح نموذج التسجيل", !!d.getElementById("r-name"));
+d.querySelector('[data-m="login"]')?.click();
+await sleep(200);
+ok("auth: العودة للدخول تعمل", !!d.getElementById("a-email"));
+d.querySelector('[data-m="reg"]')?.click();
+await sleep(200);
+ok("auth: التبديل يعمل بعد تكرار الرسم (لا موت أزرار)", !!d.getElementById("r-name") && !!d.querySelector(".seg.r"));
+const swLink = d.getElementById("r-switch");
+swLink?.click();
+await sleep(200);
+ok("auth: رابط لدي حساب يعود للدخول", !!d.getElementById("a-email"));
 
 /* 8) تبديل اللغة لا يكسر شيئاً */
 w.eval('setLang("en")');

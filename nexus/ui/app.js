@@ -15,6 +15,10 @@ const T = {
     login: "دخول", register: "حساب جديد", email: "البريد الإلكتروني", password: "كلمة السر",
     your_name: "اسمك", store_slug: "رابط متجرك", store_name: "اسم المتجر", create_account: "إنشاء الحساب",
     have_account: "لدي حساب", no_account: "ليس لدي حساب", slug_hint: "أحرف إنجليزية صغيرة وأرقام و- فقط",
+    hero_tag: "منصة التجار الجزائرية", hero_t1: "متجرك الإلكتروني", hero_t2: "جاهز في دقائق",
+    hero_sub: "أنشئ متجرك، اعرض منتجاتك، واستقبل طلبات الدفع عند الاستلام من كل ولايات الوطن — بلوحة واحدة بسيطة.",
+    hero_c1: "دفع عند الاستلام", hero_c2: "58 ولاية", hero_c3: "بريدي موب آمن",
+    hero_b1: "اكتشف المنتجات", hero_b2: "افتح متجرك",
     wrong_creds: "بيانات غير صحيحة", exists: "البريد أو الرابط مستعمل مسبقاً", logged_in: "مرحباً بك في NEXUS",
     logged_out: "تم الخروج", saved: "تم الحفظ", copied: "تم النسخ",
     dash: "لوحة متجري", overview: "نظرة عامة", products: "المنتجات", orders: "الطلبيات", finance: "المالية", settings: "الإعدادات",
@@ -75,6 +79,10 @@ const T = {
     login: "Log in", register: "Sign up", email: "Email", password: "Password",
     your_name: "Your name", store_slug: "Store link", store_name: "Store name", create_account: "Create account",
     have_account: "I have an account", no_account: "Create one", slug_hint: "lowercase letters, numbers and - only",
+    hero_tag: "Algeria's merchant platform", hero_t1: "Your online store", hero_t2: "live in minutes",
+    hero_sub: "Create your store, showcase products, and receive cash-on-delivery orders from every wilaya — one simple dashboard.",
+    hero_c1: "Cash on delivery", hero_c2: "58 wilayas", hero_c3: "Secure BaridiMob",
+    hero_b1: "Browse products", hero_b2: "Open your store",
     wrong_creds: "Invalid credentials", exists: "Email or link already used", logged_in: "Welcome to NEXUS",
     logged_out: "Signed out", saved: "Saved", copied: "Copied",
     dash: "My store", overview: "Overview", products: "Products", orders: "Orders", finance: "Finance", settings: "Settings",
@@ -437,10 +445,23 @@ function recepChat() {
   $("#rec-in", sh.wrap).onkeydown = (e) => { if (e.key === "Enter") { const i = $("#rec-in", sh.wrap); send(i.value); i.value = ""; } };
   $$(".qchip", sh.wrap).forEach((c) => (c.onclick = () => send(c.dataset.q)));
 }
+function heroHtml() {
+  return `<section class="hero-nx">
+    <div class="hero-orbs"><i></i><i></i><i></i></div>
+    <div class="hero-in">
+      <span class="hero-tag">${esc(t("hero_tag"))}</span>
+      <h1 class="hero-title">${esc(t("hero_t1"))} <b>${esc(t("hero_t2"))}</b></h1>
+      <p class="hero-sub">${esc(t("hero_sub"))}</p>
+      <div class="hero-chips"><span>${esc(t("hero_c1"))}</span><span>${esc(t("hero_c2"))}</span><span>${esc(t("hero_c3"))}</span></div>
+      <div class="hero-cta"><a class="btn primary" href="#/explore">${esc(t("hero_b1"))}</a><a class="btn ghost" href="#/auth">${esc(t("hero_b2"))}</a></div>
+    </div>
+  </section>`;
+}
 rr("/", async (v) => {
   buildTabbar(true);
   resetFeed();
   v.innerHTML = `${topbar()}
+    ${heroHtml()}
     <div class="chips-row" id="feed-cats" style="padding-top:12px"></div>
     <div id="feed-list"></div>`;
   renderCats();
@@ -772,11 +793,12 @@ rr("/auth", async (v) => {
         <div class="boot-logo" style="animation:none"><svg viewBox="0 0 64 64" width="58" height="58" fill="none"><defs><linearGradient id="bg2" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#2ad4f6"/></linearGradient></defs><path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" fill="url(#bg2)"/></svg></div>
         <h2 style="margin-top:10px">${esc(mode === "login" ? t("welcome") : t("create_account"))}</h2>
       </div>
-      <div style="display:flex;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:18px">
-        <button class="btn ${mode === "login" ? "primary" : "ghost"}" id="m-login" style="flex:1;min-height:42px;font-size:13.5px">${esc(t("login"))}</button>
-        <button class="btn ${mode === "reg" ? "primary" : "ghost"}" id="m-reg" style="flex:1;min-height:42px;font-size:13.5px">${esc(t("register"))}</button>
+      <div class="seg ${mode === "reg" ? "r" : ""}">
+        <i class="seg-ind"></i>
+        <button type="button" class="${mode === "login" ? "on" : ""}" data-m="login">${esc(t("login"))}</button>
+        <button type="button" class="${mode === "reg" ? "on" : ""}" data-m="reg">${esc(t("register"))}</button>
       </div>
-      <div id="auth-form"></div>`;
+      <div id="auth-form" class="af-in"></div>`;
     const form = box.querySelector("#auth-form");
     if (mode === "login") {
       form.innerHTML = `
@@ -785,7 +807,6 @@ rr("/auth", async (v) => {
         <div id="a-err" style="min-height:20px"></div>
         <button class="btn primary wide" id="a-go">${esc(t("login"))}</button>
         <p class="hint" style="text-align:center;margin-top:14px">${esc(t("no_account"))} — <a href="#/auth" id="a-switch" style="color:var(--cyan)">${esc(t("register"))}</a></p>`;
-      $("#a-switch", form).onclick = (e) => { e.preventDefault(); mode = "reg"; draw(); };
       $("#a-go", form).onclick = async () => {
         const email = $("#a-email", form).value.trim(), pass = $("#a-pass", form).value;
         if (!email || pass.length < 6) return aerr(t("req_field"));
@@ -808,7 +829,6 @@ rr("/auth", async (v) => {
         <div id="a-err" style="min-height:20px"></div>
         <button class="btn primary wide" id="r-go">${esc(t("create_account"))}</button>
         <p class="hint" style="text-align:center;margin-top:14px">${esc(t("have_account"))} — <a href="#/auth" id="r-switch" style="color:var(--cyan)">${esc(t("login"))}</a></p>`;
-      $("#r-switch", form).onclick = (e) => { e.preventDefault(); mode = "login"; draw(); };
       $("#r-go", form).onclick = async () => {
         const name = $("#r-name", form).value.trim(), store_name = $("#r-store", form).value.trim();
         const slug = $("#r-slug", form).value.trim().toLowerCase(), email = $("#r-email", form).value.trim();
@@ -827,9 +847,14 @@ rr("/auth", async (v) => {
   };
   const aerr = (m) => { $("#a-err", box).innerHTML = `<span class="err-text">${esc(m)}</span>`; vibrate([8, 30, 8]); };
   const busy = (b, on) => { b.disabled = on; if (on) b.style.opacity = ".6"; };
-  draw(); /* الرسم أولاً — الأزرار تُنشأ هنا ثم تُربط */
-  $("#m-login", box).onclick = () => { mode = "login"; draw(); };
-  $("#m-reg", box).onclick = () => { mode = "reg"; draw(); };
+  draw();
+  /* تفويض نقر واحد على الحاوية: التبديل يعمل للأبد مهما أعيد رسم النموذج */
+  box.onclick = (e) => {
+    const b = e.target.closest("[data-m]");
+    if (b) { const m = b.dataset.m; if (m !== mode) { mode = m; draw(); } return; }
+    const sw = e.target.closest("#a-switch,#r-switch");
+    if (sw) { e.preventDefault(); mode = sw.id === "a-switch" ? "reg" : "login"; draw(); }
+  };
 });
 
 /* ═══ لوحة المتجر ═══ */
