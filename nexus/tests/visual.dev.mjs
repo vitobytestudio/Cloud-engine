@@ -19,12 +19,13 @@ const lum = (hex) => {
 const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
 const root = css.match(/:root\s*\{([^}]*)\}/)?.[1] ?? "";
 const tok = (name) => root.match(new RegExp("--" + name + ":\\s*(#[0-9a-fA-F]{6})"))?.[1];
-const bg = tok("bg"), text = tok("text"), muted = tok("muted"), dim = tok("dim");
-ok("رموز الألوان الثلاثة معرفة في :root", !!bg && !!text && !!muted && !!dim, `bg=${bg} text=${text} muted=${muted} dim=${dim}`);
-if (bg && text && muted && dim) {
-  ok(`النص الأساسي تباينه ${ratio(text, bg).toFixed(1)}:1 ≥ 7 (AAA)`, ratio(text, bg) >= 7);
-  ok(`الثانوي muted تباينه ${ratio(muted, bg).toFixed(1)}:1 ≥ 4.5 (AA)`, ratio(muted, bg) >= 4.5);
-  ok(`الخافت dim تباينه ${ratio(dim, bg).toFixed(1)}:1 ≥ 3 (حدود الرؤية)`, ratio(dim, bg) >= 3);
+const bg = tok("bg"), text = tok("text"), muted = tok("muted"), dim = tok("dim"), card = tok("card");
+ok("رموز الألوان معرفة في :root", !!bg && !!text && !!muted && !!dim && !!card, `bg=${bg} text=${text} muted=${muted} dim=${dim} card=${card}`);
+if (bg && text && muted && dim && card) {
+  ok(`النص الأساسي على الخلفية ${ratio(text, bg).toFixed(1)}:1 ≥ 7 (AAA)`, ratio(text, bg) >= 7);
+  ok(`الثانوي muted على الخلفية ${ratio(muted, bg).toFixed(1)}:1 ≥ 4.5 (AA صارم)`, ratio(muted, bg) >= 4.5);
+  ok(`الثانوي muted على البطاقة (سطحه الفعلي) ${ratio(muted, card).toFixed(1)}:1 ≥ 4.5 (AA)`, ratio(muted, card) >= 4.5);
+  ok(`الخافت dim على البطاقة ${ratio(dim, card).toFixed(1)}:1 ≥ 3 (نص زخرفي غير جوهري فقط)`, ratio(dim, card) >= 3);
 }
 
 /* ─── 2) أهداف اللمس (إرشاد 44px للموبايل) ─── */
@@ -41,9 +42,12 @@ const missing = [...new Set(usedAnims)].filter((a) => !defined.has(a));
 ok(`كل ${new Set(usedAnims).size} حركة مستعملة معرفة بـ@keyframes`, missing.length === 0, "المفقودة: " + missing.join(", "));
 ["fadeUp", "bootPop", "stxZoom", "gradShift", "sheen"].every((k) => defined.has(k)) && ok("الحركات البريمية الخمس الأساسية حاضرة", true);
 
-/* ─── 4) أرضية القراءة: لا خط أصغر من 10px ─── */
+/* ─── 4) أرضية القراءة: 11px حد قاعي مطلق، وشارات الميتا فقط تحت 12px ─── */
 const sizes = [...css.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
-ok(`أصغر خط ${Math.min(...sizes)}px ≥ 10px`, Math.min(...sizes) >= 10);
+ok(`أصغر خط ${Math.min(...sizes)}px ≥ 11px (قاع صارم)`, Math.min(...sizes) >= 11);
+const under12 = [...css.matchAll(/(?:^|})\s*([^{}@]*?)\{[^}]*font-size:\s*11(?:\.\d+)?px[^}]*\}/g)].map((m) => m[1].trim().split(",").pop().trim()).filter((sel) => sel);
+const LABELISH = /badge|nbadge|hero-tag|pl-rib|tag|tab|pipe|dur|\bst\b|chip|pill|kicker|meta|hint/;
+ok("كل ما هو أصغر من 12px ملصقات ميتا (خط الجسم يبدأ من 12.5px)", under12.length === 0 || under12.every((sel) => LABELISH.test(sel)), "خارج الملصقات: " + under12.filter((sel) => !LABELISH.test(sel)).join(", "));
 
 /* ─── 5) الهيكل: RTL عربي افتراضياً + PWA + منفذ الجوال ─── */
 ok("الوثيقة عربية RTL افتراضياً", /lang="ar"/.test(html) && /dir="rtl"/.test(html));
@@ -68,6 +72,17 @@ const stripMedia = (src) => {
 const baseCss = stripMedia(css);
 const wideFixed = [...baseCss.matchAll(/(?<![-a-z])width:\s*([2-9]\d{2,})px/g)].map((m) => Number(m[1]));
 ok("لا عرض ثابت فوق 500px في قاعدة الموبايل", wideFixed.filter((w) => w > 500).length === 0, "قيم: " + wideFixed.filter((w) => w > 500).join(","));
+
+/* ─── 7) نظام الأنظمة: جسم سطح المكتب لا يقبل أصغر من 13px (القاعدة أساساً للجوال؛ الشارات ميتا) ─── */
+const desktopBlock = (() => {
+  const m = css.match(/@media\s*\(min-width:\s*720px\)\s*\{/);
+  if (!m) return "";
+  let depth = 1, j = m.index + m[0].length;
+  while (depth > 0 && j < css.length) { if (css[j] === "{") depth++; if (css[j] === "}") depth--; j++; }
+  return css.slice(m.index + m[0].length, j - 1);
+})();
+const desktopSizes = [...desktopBlock.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => Number(m[1]));
+ok(desktopSizes.length ? `أصغر خط في نظام سطح المكتب ${Math.min(...desktopSizes)}px ≥ 13px` : "نظام سطح المكتب بلا خطوط أصغر قاعدة", desktopSizes.length === 0 || Math.min(...desktopSizes) >= 13, desktopSizes.length ? "قيم: " + [...new Set(desktopSizes)].sort((a, b) => a - b).slice(0, 6).join(",") : "");
 
 console.log(`\n═══ NEXUS visual gate: ${pass}/${pass + fail} ═══`);
 process.exit(fail ? 1 : 0);
