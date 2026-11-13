@@ -562,7 +562,7 @@ html[dir="ltr"] select.input { background-position: right 16px center; }
 
 .vbadge.gold { background: linear-gradient(135deg,#ffd166,#ff9f43); color: #241500; box-shadow: 0 0 12px rgba(255,209,102,.55); }
 
-.planbadge { display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: .12em; padding: 2.5px 8px; border-radius: 99px; margin-inline-start: 5px; background: linear-gradient(135deg,#ffd166,#ff9f43); color: #241500; vertical-align: 2px; }
+.planbadge { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .12em; padding: 2.5px 8px; border-radius: 99px; margin-inline-start: 5px; background: linear-gradient(135deg,#ffd166,#ff9f43); color: #241500; vertical-align: 2px; }
 
 .planbadge.pro { background: var(--grad); color: #fff; }
 

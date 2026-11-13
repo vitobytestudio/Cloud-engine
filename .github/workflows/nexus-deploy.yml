@@ -6,6 +6,11 @@ on:
     paths:
       - "nexus/**"
       - ".github/workflows/nexus-deploy.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "nexus/**"
+      - ".github/workflows/nexus-deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,6 +30,8 @@ jobs:
       WORKERS_URL: https://nexus.vitobytestudio.workers.dev
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -52,9 +59,26 @@ jobs:
           node tests/harness.dev.mjs
           node tests/harness.dev.mjs
           node tests/dom.dev.mjs
+          node tests/attack.dev.mjs
+          node tests/visual.dev.mjs
           kill $WPID 2>/dev/null || true
 
+      - name: تدقيق الاعتماديات (أمني — الحرجة تسقط البناء)
+        working-directory: nexus
+        run: |
+          npm audit --omit=dev --audit-level=critical || {
+            echo "::error::ثغرات حرجة في الاعتماديات — رفع الحزم إلزامي قبل الدمج"; exit 1; }
+          echo "::notice::لا ثغرات حرجة في اعتماديات الإنتاج"
+
+      - name: المراجع العقلي الثاني (كل مفتاح reviewer= في AI_KEYS يحكم باستقلال — BLOCK يُسقط البناء)
+        working-directory: .
+        run: node .github/scripts/ai-review.mjs
+        env:
+          AI_KEYS: ${{ secrets.AI_KEYS }}
+          GITHUB_BASE_REF: ${{ github.base_ref || 'main' }}
+
       - name: قاعدة NEXUS ومساحة KV (إنشاء برمجي إن لم توجدا)
+        if: github.event_name == 'push'
         working-directory: nexus
         run: |
           ACC="$CLOUDFLARE_ACCOUNT_ID"
@@ -94,6 +118,7 @@ jobs:
           echo "::warning::أُصفّرت إدارة NEXUS وروابط اللوحة — المالك يعيد الإعداد مرة واحدة من /setup"
 
       - name: المخطط والترقية والبذرة (idempotent)
+        if: github.event_name == 'push'
         working-directory: nexus
         run: |
           sed -i 's/ENVIRONMENT = "development"/ENVIRONMENT = "production"/' wrangler.toml
@@ -103,6 +128,7 @@ jobs:
           echo "::notice::مخطط NEXUS وترقيته وبذرة العرض مُطبّقة"
 
       - name: مفتاح أسطول الذكاء الاصطناعي (سر — إن وُجد)
+        if: github.event_name == 'push'
         working-directory: nexus
         run: |
           if [ -n "$AI_KEYS" ]; then
@@ -116,6 +142,7 @@ jobs:
           AI_KEYS: ${{ secrets.AI_KEYS }}
 
       - name: النشر
+        if: github.event_name == 'push'
         working-directory: nexus
         run: |
           set +e
@@ -129,6 +156,7 @@ jobs:
           exit 1
 
       - name: فحص ما بعد النشر
+        if: github.event_name == 'push'
         working-directory: nexus
         run: |
           URL="$WORKERS_URL"
