@@ -230,7 +230,8 @@ route("PUT", "/api/products/:id", async (req, env, s, p) => {
 route("DELETE", "/api/products/:id", async (_r, env, s, p) => {
   if (!s) return bad("auth_required", 401);
   const r = await env.DB.prepare("DELETE FROM products WHERE id = ? AND user_id = ?").bind(p.id, s.userId).run();
-  return json({ ok: true, deleted: r.meta.changes ?? 0 });
+  if ((r.meta.changes ?? 0) === 0) return bad("not_found", 404);
+  return json({ ok: true, deleted: 1 });
 }, { auth: true, csrf: true });
 
 // ═══ الطلبيات (عامة على رابط المتجر) ═══
