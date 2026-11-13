@@ -911,3 +911,38 @@ html[dir="rtl"] .seg.r .seg-ind { transform: translateX(-100%); }
 .tpl-card i { width: 100%; height: 44px; border-radius: 11px; display: block; }
 .tpl-card.on { border-color: var(--violet); color: var(--text); box-shadow: var(--glow); transform: translateY(-2px); }
 .tpl-card.on i { outline: 2px solid rgba(255, 255, 255, .35); outline-offset: 2px; }
+
+/* ═══════════ صفحة الباقات ═══════════ */
+.pl-hero { text-align: center; padding: 26px 16px 10px; animation: fadeUp .5s var(--spring) both; }
+.pl-hero h1 { font-size: clamp(24px, 5.5vw, 36px); font-weight: 800; margin: 12px 0 8px; background: var(--grad); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: gradShift 6s ease infinite; }
+.pl-hero p { color: var(--muted); font-size: 13.5px; line-height: 1.95; max-width: 430px; margin: 0 auto; }
+.pl-grid { display: grid; gap: 14px; padding: 14px 16px 0; }
+@media (min-width: 900px) { .pl-grid { grid-template-columns: repeat(3, 1fr); max-width: 1080px; margin-inline: auto; } }
+.pl-card {
+  position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 22px 18px 18px; overflow: hidden;
+  animation: fadeUp .6s var(--spring) both; transition: transform .4s var(--spring), box-shadow .4s, border-color .4s;
+}
+.pl-card:nth-child(2) { animation-delay: .08s; }
+.pl-card:nth-child(3) { animation-delay: .16s; }
+.pl-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-2); }
+.pl-card.is-pro { border-color: #7a5cff66; box-shadow: 0 0 40px -18px #7a5cff8c; }
+.pl-card.is-vip { border-color: #ffd16659; background: linear-gradient(180deg, #ffd1660d, var(--card) 45%); }
+.pl-card.is-cur { outline: 2px solid var(--violet); outline-offset: -1px; }
+.pl-rib { position: absolute; top: 14px; inset-inline-end: -34px; transform: rotate(45deg); background: linear-gradient(135deg, #ffd166, #ff9f43); color: #1a1200; font-size: 10px; font-weight: 800; padding: 4px 38px; letter-spacing: .08em; font-style: normal; }
+.pl-name { font-size: 15px; font-weight: 800; color: var(--muted); }
+.pl-price { font-size: 26px; font-weight: 800; margin: 8px 0 4px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; width: fit-content; }
+.pl-meta { display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0 12px; }
+.pl-meta span { font-size: 11.5px; color: var(--muted); font-weight: 700; background: var(--card2); border: 1px solid var(--line); padding: 5px 11px; border-radius: 99px; }
+.pl-meta b { color: var(--text); }
+.pl-feats { list-style: none; margin: 0 0 16px; padding: 0; }
+.pl-feats li { position: relative; padding-inline-start: 22px; font-size: 12.5px; color: var(--muted); line-height: 2.1; }
+.pl-feats li:before { content: "✓"; position: absolute; inset-inline-start: 0; color: var(--cyan); font-weight: 800; }
+.pl-cur { text-align: center; font-size: 12.5px; font-weight: 800; color: var(--cyan); background: #2ad4f614; border: 1px solid #2ad4f638; padding: 11px; border-radius: 14px; }
+.btn.gold { background: linear-gradient(135deg, #ffd166, #ff9f43); color: #231500; box-shadow: 0 6px 22px #ffd1664d; }
+
+/* ═══ لوحة الإدارة ═══ */
+.adm-row { display: flex; align-items: center; gap: 10px; padding: 11px 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.adm-row:last-child { border-bottom: 0; }
+.adm-row b { font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.adm-row .hint { display: block; font-size: 11px; margin-top: 2px; }
+.adm-row .chip { min-height: 34px; padding: 0 12px; font-size: 11.5px; }

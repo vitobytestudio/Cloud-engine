@@ -107,3 +107,23 @@ export const RESERVED_SLUGS = new Set([
   "api", "admin", "auth", "dash", "explore", "store", "p", "home", "account", "settings",
   "login", "register", "logout", "me", "orders", "products", "feed", "finance", "data", "assets",
 ]);
+
+export async function sha256hex(s: string): Promise<string> {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function hmacRaw(secret: string, msg: string): Promise<ArrayBuffer> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
+}
+export async function hmacHex(secret: string, msg: string): Promise<string> {
+  const d = new Uint8Array(await hmacRaw(secret, msg));
+  return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+export function b62Of(hexStr: string): string {
+  let n = BigInt("0x" + hexStr);
+  let out = "";
+  while (n > 0n) { out = B62[Number(n % 62n)] + out; n /= 62n; }
+  return out || "0";
+}

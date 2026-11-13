@@ -342,6 +342,71 @@ let pid = "", pid2 = "";
   ok("لون hex القديم ما زال مقبولاً", hex.status === 200);
 }
 
+/* ─── 8ن. الباقات والإدارة وقفل المالك ─── */
+{
+  const mySlug = (await j("/api/me", { cookie })).data.user.slug;
+
+  /* الباقات العامة */
+  const pl = await j("/api/plans");
+  ok("الباقات العامة: ثلاث باقات بلا دفع", pl.status === 200 && pl.data.plans?.length === 3 && pl.data.payments_enabled === 0);
+
+  /* إصلاح الرفع: مسار /media/ يُقبل في logo/banner */
+  const jpeg = new Uint8Array(256);
+  jpeg[0] = 0xff; jpeg[1] = 0xd8; jpeg[2] = 0xff; jpeg[3] = 0xe0;
+  const up = await fetch(BASE + "/api/media", { method: "POST", headers: { "content-type": "image/jpeg", cookie, "x-csrf": csrf }, body: jpeg });
+  const ud = await up.json();
+  const meMedia = await j("/api/me", { method: "PUT", cookie, csrf, body: { logo: ud.url, banner: ud.url, store_name: "متجر الهارنس" } });
+  ok("PUT /api/me: مسار /media/ يُقبل (إصلاح الرفع)", meMedia.status === 200 && meMedia.data.user?.logo === ud.url, JSON.stringify(meMedia.data).slice(0, 120));
+  const pubLogo = await j("/api/store/" + mySlug);
+  ok("المتجر العام يعرض الشعار المرفوع", pubLogo.status === 200 && pubLogo.data.store?.logo === ud.url);
+
+  /* القفل: 404 صامت لغير المالك */
+  ok("إدارة بلا جلسة 404 صامت", (await j("/api/adm/stats")).status === 404);
+  const ss = await j("/api/adm/setup-status");
+  if (ss.data.done) {
+    ok("الإعداد مرة واحدة: 404 بعد إنشاء المالك", (await j("/api/adm/setup", { method: "POST", body: { email: "x" + Date.now() + "@t.test", k0: "a".repeat(64), name: "X" } })).status === 404);
+  } else {
+    const emailA = "owner.nexus@" + Date.now() + ".test";
+    const K0a = await k0(emailA, "Owner-Secret-9");
+    const setup = await fetch(BASE + "/api/adm/setup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: emailA, k0: K0a, name: "Owner" }) });
+    const sd = await setup.json();
+    ok("إعداد المالك 201 + رابط اللوحة", setup.status === 201 && sd.ok && /^\/panel\/[0-9A-Za-z]{20,30}$/.test(sd.panel_url || ""), JSON.stringify(sd).slice(0, 120));
+    const atok = sd.panel_url.slice(7), acsrf = sd.csrf;
+    const admCk = (setup.headers.get("set-cookie") || "").split(";")[0];
+    const A = (path, o = {}) => fetch(BASE + path, { method: o.m || "GET", headers: { "content-type": "application/json", "x-panel": atok, ...(admCk ? { cookie: admCk } : {}), ...((o.b || (o.m && o.m !== "GET")) ? { "x-csrf": acsrf } : {}) }, body: o.b ? JSON.stringify(o.b) : undefined });
+    ok("الرابط السري يخدم التطبيق", (await fetch(BASE + "/panel/" + atok)).status === 200);
+    ok("رابط لوحة خاطئ 404 صامت", (await fetch(BASE + "/panel/deadbeef0000")).status === 404);
+    ok("إدارة بلا ترويسة الرابط 404 صامت", (await fetch(BASE + "/api/adm/stats", { headers: { cookie: admCk } })).status === 404);
+    ok("إدارة بلا جهاز مدير 404 صامت", (await fetch(BASE + "/api/adm/stats", { headers: { "x-panel": atok } })).status === 404);
+    ok("من يأمرني 200", (await A("/api/adm/whoami")).status === 200);
+    const st = await (await A("/api/adm/stats")).json();
+    ok("إحصاءات الإدارة", st.merchants >= 1 && st.products >= 1, JSON.stringify(st).slice(0, 120));
+    const ml = await (await A("/api/adm/merchants?q=" + mySlug)).json();
+    const me0 = (ml.merchants || []).find((m) => m.slug === mySlug);
+    ok("قائمة التجار تجد الهارنس", !!me0);
+    ok("منح برو 200", (await A("/api/adm/merchants/" + me0.id + "/plan", { m: "POST", b: { plan: "pro" } })).status === 200);
+    ok("الباقة وصلت للتاجر", (await j("/api/me", { cookie })).data.plan === "pro");
+    ok("توثيق المتجر 200", (await A("/api/adm/merchants/" + me0.id + "/verify", { m: "POST", b: { v: 1 } })).status === 200);
+    ok("التوثيق وصل للعامة", (await j("/api/store/" + mySlug)).data.store?.verified === 1);
+    ok("إشعار المنحة وصل للتاجر", (await j("/api/notifications", { cookie })).data.notifications?.some((n) => n.type === "plan"));
+    const sv = await A("/api/adm/catalog", { m: "POST", b: { title: "فيديو إعلاني قصير", descr: "15-30ث", price_min: 1900, price_max: 4900, delivery_days: 3 } });
+    ok("إضافة خدمة 201", sv.status === 201);
+    const svcId = (await sv.json()).id;
+    const ps = await (await fetch(BASE + "/api/pro/services")).json();
+    ok("الكتالوج المحلي يغذي pro/services", ps.source === "nexus" && ps.services?.some((x) => x.id === svcId));
+    ok("تعديل الخدمة", (await A("/api/adm/catalog/" + svcId, { m: "PUT", b: { title: "فيديو إعلاني قصير+", price_min: 1900, active: true } })).status === 200);
+    ok("حذف الخدمة", (await A("/api/adm/catalog/" + svcId, { m: "DELETE" })).status === 200);
+    const rot = await (await A("/api/adm/rotate-panel", { m: "POST", b: {} })).json();
+    ok("تدوير اللوحة يصدر رابطاً جديداً", /^\/panel\//.test(rot.panel_url || ""));
+    ok("الرابط القديم مات", (await fetch(BASE + "/panel/" + atok)).status === 404);
+    ok("الرابط الجديد حي", (await fetch(BASE + "/panel/" + (rot.panel_url || "").slice(7))).status === 200);
+    const lg = await fetch(BASE + "/api/adm/login", { method: "POST", headers: { "content-type": "application/json", "x-panel": (rot.panel_url || "").slice(7) }, body: JSON.stringify({ email: emailA, k0: K0a }) });
+    ok("دخول المالك من الرابط السري 200", lg.status === 200);
+    ok("دخول بلا رابط سري 404", (await fetch(BASE + "/api/adm/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: emailA, k0: K0a }) })).status === 404);
+    ok("كلمة خاطئة 401", (await fetch(BASE + "/api/adm/login", { method: "POST", headers: { "content-type": "application/json", "x-panel": (rot.panel_url || "").slice(7) }, body: JSON.stringify({ email: emailA, k0: "b".repeat(64) }) })).status === 401);
+  }
+}
+
 /* ─── 9. حذف وتنظيف ─── */
 {
   const del = await j("/api/products/" + pid2, { method: "DELETE", cookie, csrf });
