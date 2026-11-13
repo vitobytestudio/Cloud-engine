@@ -4,6 +4,7 @@ import { fleetChat, buildSystemPrompt, parseFleet, PLAN_QUOTA, PLAN_PRODUCTS } f
 import {
   json, bad, id, now, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
   destroySession, hex, ctEqual, rl, isEmail, isK0, isSlug, isPhoneDZ, isHttpsUrl, isImagePath, sniffImage, isStr, RESERVED_SLUGS,
+  sha256hex, hmacHex, b62Of,
 } from "./lib";
 
 type Route = {
@@ -155,8 +156,8 @@ route("PUT", "/api/me", async (req, env, s) => {
   const color = clip(str(b, "color").trim(), 20);
   // قوالب المتجر الثلاثة (أو لون hex قديم) — لا شيء آخر يمر
   if (color && !["aurora", "onyx", "emerald"].includes(color) && !/^#[0-9a-fA-F]{3,8}$/.test(color)) return bad("invalid_color");
-  if (logo && !isHttpsUrl(logo)) return bad("invalid_logo");
-  if (banner && !isHttpsUrl(banner)) return bad("invalid_banner");
+  if (logo && !isHttpsUrl(logo) && !isImagePath(logo)) return bad("invalid_logo");
+  if (banner && !isHttpsUrl(banner) && !isImagePath(banner)) return bad("invalid_banner");
   await env.DB.prepare("UPDATE users SET store_name = ?, bio = ?, logo = ?, banner = ?, whatsapp = ?, color = ? WHERE id = ?")
     .bind(store_name, bio, logo, banner, whatsapp, color, s.userId).run();
   const u = await getUser(env, s.userId);
@@ -762,8 +763,28 @@ route("POST", "/api/agent/organize", async (req, env, s) => {
   return json({ ok: true, ...out });
 }, { auth: true, csrf: true });
 
-// ═══ جسر المحترفين: كتالوج الموثقين من ناكساب (كاش 5 دقائق) ═══
+route("GET", "/api/pro/member", async (req, env) => {
+  const uname = new URL(req.url).searchParams.get("u") ?? "";
+  const pct = await memberExtra(env, uname);
+  return json({ active: pct > 0, extra_pct: pct });
+});
+
+// ═══ الباقات العامة (صفر دفع — الترقية طلب واتساب حتى جلسة التسعير) ═══
+route("GET", "/api/plans", async () => {
+  return json({
+    payments_enabled: 0,
+    plans: [
+      { id: "free", price_dzd: 0, quota: PLAN_QUOTA.free, products: PLAN_PRODUCTS.free, features: { ar: ["متجر برابط مستقل", "فيد السوق المشترك", "15 جلسة وكيل يومياً", "3 منتجات"], en: ["Store with its own link", "Shared market feed", "15 agent sessions a day", "3 products"] } },
+      { id: "pro", price_dzd: null, quota: PLAN_QUOTA.pro, products: PLAN_PRODUCTS.pro, features: { ar: ["كل مزايا المجانية", "300 جلسة وكيل يومياً", "10 منتجات", "شارة PRO على متجرك"], en: ["Everything in Free", "300 agent sessions a day", "10 products", "PRO badge on your store"] } },
+      { id: "vip", price_dzd: null, quota: PLAN_QUOTA.vip, products: PLAN_PRODUCTS.vip, features: { ar: ["كل مزايا برو", "1000 جلسة وكيل يومياً", "30 منتجاً", "شارة VIP ذهبية وأولوية الظهور"], en: ["Everything in Pro", "1000 agent sessions a day", "30 products", "Gold VIP badge and top placement"] } },
+    ],
+  });
+});
+
+// ═══ جسر المحترفين: الكتالوج المحلي أولًا ثم الجسر ═══
 route("GET", "/api/pro/services", async (_r, env) => {
+  const local = await env.DB.prepare("SELECT id, title, descr, price_min, price_max, category, delivery_days FROM pro_services WHERE active = 1 ORDER BY sort, created_at").all<any>();
+  if ((local.results ?? []).length) return json({ services: local.results, source: "nexus" });
   const ck = "pro:cat";
   const cached = await env.CACHE_KV.get(ck);
   if (cached) return json({ services: JSON.parse(cached), cached: true });
@@ -779,11 +800,243 @@ route("GET", "/api/pro/services", async (_r, env) => {
   return json({ services, cached: false });
 });
 
-route("GET", "/api/pro/member", async (req, env) => {
-  const uname = new URL(req.url).searchParams.get("u") ?? "";
-  const pct = await memberExtra(env, uname);
-  return json({ active: pct > 0, extra_pct: pct });
+// ═══ إدارة نكسوس: قفل المالك (نسخة قفل ناكساب: رابط خفي، 404 صامت، جهاز موثوق، تدوير، [reset-admin]) ═══
+const ADM_COOKIE = "nx_adm";
+const admCookie = (tok: string, https: boolean) => `${ADM_COOKIE}=${tok}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${https ? "; Secure" : ""}`;
+async function admMeta(env: Env, k: string): Promise<string | null> {
+  const r = await env.DB.prepare("SELECT v FROM admin_meta WHERE k = ?").bind(k).first<any>();
+  return r?.v ?? null;
+}
+async function admAudit(env: Env, action: string, target = "", detail = ""): Promise<void> {
+  await env.DB.prepare("INSERT INTO adm_audit (id, action, target, detail, at) VALUES (?,?,?,?,?)").bind(id("aa"), action, clip(target, 60), clip(detail, 200), now()).run();
+}
+async function mintPanel(env: Env, adminId: string): Promise<string> {
+  let secret = await admMeta(env, "path_secret");
+  if (!secret) {
+    secret = hex(32);
+    await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('path_secret', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(secret).run();
+  }
+  if (env.ADMIN_PATH_SECRET) secret = env.ADMIN_PATH_SECRET;
+  const tok = b62Of(await hmacHex(secret, adminId + hex(16))).slice(0, 28);
+  await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('panel_hash', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(await sha256hex(tok)).run();
+  return tok;
+}
+async function admDevice(env: Env, adminId: string, label: string): Promise<{ tok: string; csrf: string }> {
+  const tok = hex(32), csrf = hex(8);
+  await env.DB.prepare("INSERT INTO admin_devices (id, admin_id, token_hash, csrf, label, created_at, last_seen) VALUES (?,?,?,?,?,?,?)")
+    .bind(id("ad"), adminId, await sha256hex(tok), csrf, clip(label, 60), now(), now()).run();
+  return { tok, csrf };
+}
+async function admFrom(req: Request, env: Env): Promise<{ adminId: string; email: string } | null> {
+  const tok = parseCookies(req)[ADM_COOKIE] ?? "";
+  if (!/^[0-9a-f]{64}$/.test(tok)) return null;
+  const row = await env.DB.prepare("SELECT d.admin_id, a.email FROM admin_devices d JOIN admins a ON a.id = d.admin_id WHERE d.token_hash = ? AND d.revoked = 0")
+    .bind(await sha256hex(tok)).first<any>();
+  return row ? { adminId: row.admin_id, email: row.email } : null;
+}
+
+route("GET", "/api/adm/setup-status", async (_r, env) => json({ done: (await admMeta(env, "setup_done")) === "1" }));
+
+route("POST", "/api/adm/setup", async (req, env) => {
+  if ((await admMeta(env, "setup_done")) === "1") return bad("not_found", 404);
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rl(env, `admsetup:${ip}`, 3, 3600))) return bad("too_many", 429);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const email = clip(String(b.email ?? "").toLowerCase().trim(), 190);
+  const k0 = String(b.k0 ?? "");
+  const name = clip(String(b.name ?? "").trim(), 40);
+  if (!isEmail(email) || !isK0(k0) || name.length < 2) return bad("invalid_setup");
+  const uid = id("adm");
+  await env.DB.prepare("INSERT INTO admins (id, email, k0, name, created_at) VALUES (?,?,?,?,?)").bind(uid, email, k0, name, now()).run();
+  const dev = await admDevice(env, uid, `setup ${ip}`);
+  const tok = await mintPanel(env, uid);
+  await env.DB.prepare("INSERT INTO admin_meta (k, v) VALUES ('setup_done', '1') ON CONFLICT(k) DO UPDATE SET v = '1'").run();
+  await admAudit(env, "admin_setup", uid, `panel minted, ip=${ip}`);
+  const https = new URL(req.url).protocol === "https:";
+  return json({ ok: true, csrf: dev.csrf, panel_url: `/panel/${tok}` }, 201, { "set-cookie": admCookie(dev.tok, https) });
+}, { csrf: false });
+
+route("POST", "/api/adm/login", async (req, env) => {
+  const ph = await admMeta(env, "panel_hash");
+  const xp = req.headers.get("x-panel") ?? "";
+  if (!ph || !xp || (await sha256hex(xp)) !== ph) return bad("not_found", 404); // دخول الإدارة من الرابط السري حصراً
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rl(env, `admlogin:${ip}`, 5, 900))) return bad("too_many", 429);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const email = clip(String(b.email ?? "").toLowerCase().trim(), 190);
+  const k0 = String(b.k0 ?? "");
+  if (!isEmail(email) || !isK0(k0)) return bad("invalid_credentials", 401);
+  const a = await env.DB.prepare("SELECT id, k0, name FROM admins WHERE email = ?").bind(email).first<any>();
+  if (!a || !ctEqual(a.k0, k0)) return bad("invalid_credentials", 401);
+  const dev = await admDevice(env, a.id, `login ${ip}`);
+  await admAudit(env, "admin_login", a.id, ip);
+  const https = new URL(req.url).protocol === "https:";
+  return json({ ok: true, name: a.name, csrf: dev.csrf }, 200, { "set-cookie": admCookie(dev.tok, https) });
+}, { csrf: false });
+
+route("GET", "/api/adm/whoami", async (req, env) => {
+  const me = await admFrom(req, env);
+  if (!me) return bad("not_found", 404);
+  await env.DB.prepare("UPDATE admin_devices SET last_seen = ? WHERE admin_id = ?").bind(now(), me.adminId).run();
+  return json({ ok: true, email: me.email });
 });
+
+route("GET", "/api/adm/stats", async (_r, env) => {
+  const one = async (q: string) => Number((await env.DB.prepare(q).first<any>())?.c ?? 0);
+  const t = now();
+  return json({
+    merchants: await one("SELECT COUNT(*) AS c FROM users"),
+    products: await one("SELECT COUNT(*) AS c FROM products"),
+    orders: await one("SELECT COUNT(*) AS c FROM orders"),
+    orders24: await one(`SELECT COUNT(*) AS c FROM orders WHERE created_at >= ${t - DAY}`),
+    sess24: await one(`SELECT COUNT(*) AS c FROM agent_sessions WHERE created_at >= ${t - DAY}`),
+    revenue: await one("SELECT COALESCE(SUM(total),0) AS c FROM orders WHERE status = 'delivered'"),
+  });
+});
+
+route("GET", "/api/adm/merchants", async (req, env) => {
+  const q = clip(new URL(req.url).searchParams.get("q") ?? "", 40);
+  const like = `%${q}%`;
+  const { results } = await env.DB.prepare(
+    "SELECT u.id, u.slug, u.store_name, u.plan, u.verified, u.created_at, (SELECT COUNT(*) FROM products p WHERE p.user_id = u.id) AS products FROM users u WHERE (? = '' OR u.store_name LIKE ? OR u.slug LIKE ?) ORDER BY u.created_at DESC LIMIT 100"
+  ).bind(q, like, like).all<any>();
+  return json({ merchants: results ?? [] });
+});
+
+route("POST", "/api/adm/merchants/:id/plan", async (req, env, _s, p) => {
+  const b = (await req.json().catch(() => ({}))) as any;
+  const plan = String(b.plan ?? "");
+  if (!["free", "pro", "vip"].includes(plan)) return bad("invalid_plan");
+  const mid = String(p.id);
+  const u = await env.DB.prepare("SELECT id, store_name FROM users WHERE id = ?").bind(mid).first<any>();
+  if (!u) return bad("not_found", 404);
+  await env.DB.prepare("UPDATE users SET plan = ? WHERE id = ?").bind(plan, mid).run();
+  await notify(env, mid, "plan", "تحديث باقتك", `أصبحت باقة متجرك ${plan.toUpperCase()} من فريق NEXUS`);
+  await admAudit(env, "plan_grant", mid, plan);
+  return json({ ok: true, plan });
+});
+
+route("POST", "/api/adm/merchants/:id/verify", async (req, env, _s, p) => {
+  const b = (await req.json().catch(() => ({}))) as any;
+  const v = b.v ? 1 : 0;
+  const mid = String(p.id);
+  const u = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(mid).first<any>();
+  if (!u) return bad("not_found", 404);
+  await env.DB.prepare("UPDATE users SET verified = ? WHERE id = ?").bind(v, mid).run();
+  if (v) await notify(env, mid, "verified", "تم توثيق متجرك", "منحك فريق NEXUS شارة التوثيق — تظهر للزوار في متجرك");
+  await admAudit(env, v ? "verify" : "unverify", mid, "");
+  return json({ ok: true, verified: v });
+});
+
+route("GET", "/api/adm/catalog", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT * FROM pro_services ORDER BY sort, created_at DESC LIMIT 100").all<any>();
+  return json({ services: results ?? [] });
+});
+
+function svcValidate(b: any) {
+  const title = clip(String(b.title ?? "").trim(), 80);
+  const descr = clip(String(b.descr ?? "").trim(), 300);
+  const price_min = Math.max(0, Math.min(10_000_000, Number(b.price_min) || 0));
+  const price_max = Math.max(0, Math.min(10_000_000, Number(b.price_max) || 0));
+  const category = clip(String(b.category ?? "general").trim(), 20) || "general";
+  const delivery_days = Math.max(1, Math.min(30, Number(b.delivery_days) || 7));
+  if (title.length < 3) return null;
+  return { title, descr, price_min, price_max, category, delivery_days };
+}
+async function svcCacheClear(env: Env): Promise<void> { await env.CACHE_KV.delete("pro:cat"); }
+
+route("POST", "/api/adm/catalog", async (req, env) => {
+  const v = svcValidate((await req.json().catch(() => ({}))) as any);
+  if (!v) return bad("invalid_title");
+  const sid = id("svc");
+  await env.DB.prepare("INSERT INTO pro_services (id, title, descr, price_min, price_max, category, delivery_days, active, sort, created_at) VALUES (?,?,?,?,?,?,?,?,100,?)")
+    .bind(sid, v.title, v.descr, v.price_min, v.price_max, v.category, v.delivery_days, 1, now()).run();
+  await svcCacheClear(env);
+  await admAudit(env, "svc_add", sid, v.title);
+  return json({ ok: true, id: sid }, 201);
+});
+
+route("PUT", "/api/adm/catalog/:id", async (req, env, _s, p) => {
+  const row = await env.DB.prepare("SELECT id FROM pro_services WHERE id = ?").bind(p.id).first<any>();
+  if (!row) return bad("not_found", 404);
+  const b = (await req.json().catch(() => ({}))) as any;
+  const v = svcValidate(b);
+  if (!v) return bad("invalid_title");
+  const active = b.active === undefined ? 1 : (b.active ? 1 : 0);
+  await env.DB.prepare("UPDATE pro_services SET title = ?, descr = ?, price_min = ?, price_max = ?, category = ?, delivery_days = ?, active = ? WHERE id = ?")
+    .bind(v.title, v.descr, v.price_min, v.price_max, v.category, v.delivery_days, active, p.id).run();
+  await svcCacheClear(env);
+  await admAudit(env, "svc_edit", p.id, v.title);
+  return json({ ok: true });
+});
+
+route("DELETE", "/api/adm/catalog/:id", async (req, env, _s, p) => {
+  const row = await env.DB.prepare("SELECT id FROM pro_services WHERE id = ?").bind(p.id).first<any>();
+  if (!row) return bad("not_found", 404);
+  await env.DB.prepare("DELETE FROM pro_services WHERE id = ?").bind(p.id).run();
+  await svcCacheClear(env);
+  await admAudit(env, "svc_del", p.id, "");
+  return json({ ok: true });
+});
+
+route("POST", "/api/adm/rotate-panel", async (req, env) => {
+  const me = await admFrom(req, env);
+  if (!me) return bad("not_found", 404);
+  const tok = await mintPanel(env, me.adminId);
+  await admAudit(env, "panel_rotated", me.adminId, "");
+  return json({ ok: true, panel_url: `/panel/${tok}` });
+});
+
+route("POST", "/api/adm/logout", async (req, env) => {
+  const tok = parseCookies(req)[ADM_COOKIE] ?? "";
+  if (/^[0-9a-f]{64}$/.test(tok)) {
+    await env.DB.prepare("UPDATE admin_devices SET revoked = 1 WHERE token_hash = ?").bind(await sha256hex(tok)).run();
+    await admAudit(env, "admin_logout", "", "");
+  }
+  return json({ ok: true }, 200, { "set-cookie": `${ADM_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0` });
+});
+
+route("GET", "/api/adm/audit", async (_r, env) => {
+  const { results } = await env.DB.prepare("SELECT action, target, detail, at FROM adm_audit ORDER BY at DESC LIMIT 100").all<any>();
+  return json({ audit: results ?? [] });
+});
+
+// صفحة الإعداد لمرة واحدة — تختفي نهائياً بعد إنشاء المالك
+function setupPage(origin: string): Response {
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>NEXUS — إعداد الإدارة</title>
+<style>body{font-family:system-ui;background:#05060c;color:#eee;display:grid;place-items:center;min-height:100dvh;margin:0}.b{background:#0d0f18;border:1px solid #262b42;border-radius:20px;padding:30px;max-width:380px;width:calc(100% - 32px)}h1{font-size:19px;margin:0 0 6px}p{color:#8891b0;font-size:13px;line-height:1.8;margin:0 0 18px}label{display:block;font-size:12px;color:#8891b0;margin:12px 0 6px;font-weight:700}input{width:100%;box-sizing:border-box;background:#141726;border:1px solid #262b42;border-radius:12px;color:#fff;padding:12px 14px;font-size:15px}button{width:100%;margin-top:18px;background:linear-gradient(135deg,#7a5cff,#2ad4f6);border:0;border-radius:14px;padding:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer}.e{color:#ff6b7a;font-size:12.5px;margin-top:10px;min-height:16px}.ok{display:none;margin-top:14px;background:#11321f;border:1px solid #34d39955;border-radius:14px;padding:14px;font-size:13px;line-height:1.9;word-break:break-all}.ok a{color:#34d399;font-weight:800}.warn{color:#ffd166;font-size:12px;margin-top:8px}</style></head><body><div class="b">
+<h1>إعداد لوحة الإدارة</h1><p>لمرة واحدة فقط — ينشئ حساب المالك ويرابط اللوحة السرّي. الصفحة تختفي تماماً بعدها.</p>
+<label>البريد الإلكتروني</label><input id="e" type="email" autocomplete="email"/>
+<label>كلمة السر (6 أحرف على الأقل)</label><input id="p" type="password"/>
+<label>الاسم</label><input id="n" value="VITO Owner"/>
+<div class="e" id="err"></div>
+<button id="go">إنشاء حساب المالك</button>
+<div class="ok" id="ok"></div>
+</div><script>
+const K0 = async (email, pass) => {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: enc.encode("nexus:c1:" + email), iterations: 200000 }, key, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+};
+document.getElementById("go").onclick = async () => {
+  const e = document.getElementById("e").value.trim().toLowerCase(), p = document.getElementById("p").value, n = document.getElementById("n").value.trim(), er = document.getElementById("err");
+  if (!e || p.length < 6) { er.textContent = "أكمل البريد وكلمة سر 6 أحرف على الأقل"; return; }
+  er.textContent = "جارٍ الإنشاء…";
+  try {
+    const r = await fetch("${origin}/api/adm/setup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: e, k0: await K0(e, p), name: n }) });
+    const d = await r.json();
+    if (!r.ok) { er.textContent = d.error || "خطأ"; return; }
+    er.textContent = "";
+    const ok = document.getElementById("ok");
+    ok.style.display = "block";
+    ok.innerHTML = "تم. رابط لوحتك السرّي (اعرض مرة واحدة):<br><a href=\"" + d.panel_url + "\" id=\"pu\">" + location.origin + d.panel_url + "</a><div class='warn'>انسخ الرابط الآن وحفظه في مكان آمن — لن يُعرض مجدداً، ويمكن تدويره من اللوحة.</div>";
+    document.getElementById("go").style.display = "none";
+  } catch { er.textContent = "خطأ شبكة"; }
+};
+</script></body></html>`;
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+}
 
 // ═══ الموجّه ═══
 export default {
@@ -799,6 +1052,18 @@ export default {
       return secure(new Response(obj, { headers: { "content-type": ct, "cache-control": "public, max-age=31536000, immutable" } }));
     }
     if (path.startsWith("/api/")) {
+      // بوابة الإدارة المركزية: جهاز مدير صالح + ترويسة الرابط السري — وإلا 404 صامت
+      if (path.startsWith("/api/adm/") && path !== "/api/adm/setup" && path !== "/api/adm/setup-status" && path !== "/api/adm/login") {
+        const ph = await admMeta(env, "panel_hash");
+        const xp = req.headers.get("x-panel") ?? "";
+        const me = await admFrom(req, env);
+        if (!ph || !xp || (await sha256hex(xp)) !== ph || !me) return secure(bad("not_found", 404));
+        if (req.method !== "GET") {
+          const dtk = parseCookies(req)[ADM_COOKIE] ?? "";
+          const d = /^[0-9a-f]{64}$/.test(dtk) ? await env.DB.prepare("SELECT csrf FROM admin_devices WHERE token_hash = ? AND revoked = 0").bind(await sha256hex(dtk)).first<any>() : null;
+          if ((req.headers.get("x-csrf") ?? "") !== (d?.csrf ?? "")) return secure(bad("csrf", 403));
+        }
+      }
       const s = await getSession(env, req);
       for (const r of R) {
         const params = matchPath(r.pat, path);
@@ -815,6 +1080,18 @@ export default {
         }
       }
       return bad("not_found", 404);
+    }
+    // لوحة الإدارة: عنوان مشتق مختلط — غيره 404 صامت
+    if (path.startsWith("/panel/")) {
+      const tok = path.slice("/panel/".length).replace(/\/+$/, "");
+      const ph = await admMeta(env, "panel_hash");
+      if (!tok || !ph || (await sha256hex(tok)) !== ph) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+      return secure(await env.ASSETS.fetch(new Request(new URL("/", req.url).toString())));
+    }
+    // الإعداد لمرة واحدة: يختفي تماماً بعد إنشاء المالك
+    if (path === "/setup") {
+      if ((await admMeta(env, "setup_done")) === "1") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+      return setupPage(new URL(req.url).origin);
     }
     return secure(await env.ASSETS.fetch(req));
   },

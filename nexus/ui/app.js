@@ -37,6 +37,18 @@ const T = {
     customer: "الزبون", order_details: "تفاصيل الطلبية", call: "اتصال", whatsapp: "واتساب", mark: "تحديث الحالة",
     income_note: "الإيرادات تُحسب من الطلبيات المسلَّمة", add_expense: "إضافة مصروف", expense_label: "بيان المصروف",
     amount: "المبلغ", my_store_link: "رابط متجري", language: "اللغة", logout: "تسجيل الخروج",
+    acc_plans: "الباقات والأسعار", prices: "الأسعار",
+    plans_t: "باقات NEXUS", plans_sub: "ابدأ مجاناً وطوّر متجرك حين تحتاج — كل باقة تفتح حصة أكبر من وكيل الذكاء ومنتجات أكثر.",
+    pl_start: "ابدأ مجاناً", pl_current: "باقتك الحالية", pl_request: "اطلب الترقية عبر واتساب", pl_soon: "السعر يُحدد مع الإطلاق — راسلنا مباشرة الآن وترقية تُمنح يدوياً خلال ساعات.",
+    pl_quota: "جلسة وكيل يومياً", pl_products: "منتجات", pl_free_n: "مجاني للأبد", pl_soon_s: "السعر قريباً", pl_wa: "السلام عليكم استوديو VITO، أريد ترقية متجري في NEXUS",
+    adm_t: "لوحة الإدارة", adm_login_t: "دخول الإدارة", adm_email: "البريد الإلكتروني", adm_pass: "كلمة السر", adm_enter: "دخول",
+    adm_m: "تجار", adm_p: "منتجات", adm_o: "طلبيات", adm_o24: "طلبيات 24س", adm_a: "جلسات وكيل 24س", adm_rev: "أرباح المُسلَّم",
+    adm_merchants: "التجار", adm_search: "ابحث بالاسم أو الرابط…", adm_verify: "توثيق", adm_unverify: "إلغاء التوثيق", adm_verified_s: "موثّق",
+    adm_catalog: "كتالوج خدمات الاستوديو", adm_add_svc: "إضافة خدمة", adm_title: "اسم الخدمة", adm_descr: "الوصف", adm_pmin: "أدنى سعر (دج)", adm_pmax: "أعلى سعر (دج)", adm_days: "أيام التسليم",
+    adm_edit: "تعديل", adm_del: "حذف", adm_confirm_del: "تأكيد الحذف؟", adm_active: "مفعّلة",
+    adm_rotate: "تدوير رابط اللوحة", adm_rotate_hint: "التدوير يقتل الرابط القديم فوراً ويصدر جديداً يُعرض مرة واحدة.",
+    copy_link: "نسخ الرابط",
+    adm_new_url: "الرابط الجديد — انسخه الآن، لن يُعرض مجدداً", adm_audit: "سجل الأعمال", adm_none: "لا شيء بعد",
     onb1_t: "سوق يجلب لك الزبائن", onb1_d: "منتجاتك تظهر أمام آلاف المشترين في فيد NEXUS — حركة زوار مشتركة لكل تاجر.",
     onb2_t: "متجرك برابط مستقل", onb2_d: "رابط سريع أنيق توجه إليه زبائن إعلاناتك، مع استمارة طلب سهلة والدفع عند الاستلام.",
     onb3_t: "طلبياتك وأرباحك في مكان", onb3_d: "تابع طلبياتك خطوة بخطوة وراقب أرباحك ومصاريفك بلوحة حية.",
@@ -107,6 +119,18 @@ const T = {
     customer: "Customer", order_details: "Order details", call: "Call", whatsapp: "WhatsApp", mark: "Update status",
     income_note: "Revenue counts delivered orders", add_expense: "Add expense", expense_label: "Expense label",
     amount: "Amount", my_store_link: "My store link", language: "Language", logout: "Log out",
+    acc_plans: "Plans & pricing", prices: "Pricing",
+    plans_t: "NEXUS plans", plans_sub: "Start free and grow when you need — each plan unlocks more AI agent sessions and products.",
+    pl_start: "Start free", pl_current: "Your current plan", pl_request: "Request upgrade on WhatsApp", pl_soon: "Pricing is set at launch — message us now and your upgrade is granted manually within hours.",
+    pl_quota: "agent sessions a day", pl_products: "products", pl_free_n: "Free forever", pl_soon_s: "Price soon", pl_wa: "Hello VITO studio, I want to upgrade my NEXUS store",
+    adm_t: "Admin panel", adm_login_t: "Admin sign-in", adm_email: "Email", adm_pass: "Password", adm_enter: "Enter",
+    adm_m: "merchants", adm_p: "products", adm_o: "orders", adm_o24: "orders 24h", adm_a: "agent sessions 24h", adm_rev: "delivered revenue",
+    adm_merchants: "Merchants", adm_search: "Search by name or slug…", adm_verify: "Verify", adm_unverify: "Unverify", adm_verified_s: "Verified",
+    adm_catalog: "Studio services catalog", adm_add_svc: "Add service", adm_title: "Service title", adm_descr: "Description", adm_pmin: "Min price (DZD)", adm_pmax: "Max price (DZD)", adm_days: "Delivery days",
+    adm_edit: "Edit", adm_del: "Delete", adm_confirm_del: "Confirm delete?", adm_active: "Active",
+    adm_rotate: "Rotate panel URL", adm_rotate_hint: "Rotating kills the old URL instantly and mints a new one shown once.",
+    copy_link: "Copy link",
+    adm_new_url: "New URL — copy it now, it will not be shown again", adm_audit: "Audit log", adm_none: "Nothing yet",
     onb1_t: "A market that brings buyers", onb1_d: "Your products appear to thousands of shoppers in the NEXUS feed — shared traffic for every merchant.",
     onb2_t: "Your own store link", onb2_d: "A fast elegant link for your ad traffic, with an easy order form and cash on delivery.",
     onb3_t: "Orders & profit in one place", onb3_d: "Track every order step by step and watch profit and expenses live.",
@@ -1080,6 +1104,7 @@ rr("/dash", async (v) => {
     <div style="display:flex;gap:10px;margin-top:16px">
       <a class="btn" style="flex:1" href="#/s/${esc(S.user.slug)}">${esc(t("open_store"))}</a>
       <a class="btn primary" style="flex:1" href="#/dash/products">${esc(t("add_product"))}</a>
+      <a class="btn ghost" style="flex:1" href="#/plans">${esc(t("prices"))}</a>
     </div>`;
   $$("#dash-body .v[data-c]").forEach((el) => countUp(el, Number(el.dataset.c)));
   drawChart("ov-chart", fin.rev_series, fin.exp_series);
@@ -1470,6 +1495,194 @@ rr("/dash/settings", async (v) => {
   };
 });
 
+/* الباقات — صفر دفع: الترقية طلب واتساب حتى جلسة التسعير */
+rr("/plans", async (v) => {
+  buildTabbar(true);
+  v.innerHTML = `${topbar()}<div class="page" id="plans-body">${skeletons(2)}</div>`;
+  let d;
+  try { d = await api("/api/plans"); }
+  catch { $("#plans-body").innerHTML = `<div class="empty"><h3>error</h3></div>`; return; }
+  const cur = S.user ? S.user.plan || "free" : "";
+  $("#plans-body").innerHTML = `
+    <div class="pl-hero">
+      <span class="hero-tag">${esc(t("prices"))}</span>
+      <h1>${esc(t("plans_t"))}</h1>
+      <p>${esc(t("plans_sub"))}</p>
+    </div>
+    <div class="pl-grid">
+      ${d.plans.map((p) => `
+      <div class="pl-card ${p.id === "vip" ? "is-vip" : p.id === "pro" ? "is-pro" : ""} ${cur === p.id ? "is-cur" : ""}">
+        ${p.id === "vip" ? `<i class="pl-rib">${esc(S.lang === "ar" ? "الأقوى" : "Most power")}</i>` : ""}
+        <div class="pl-name">${esc(t("plan_" + p.id))}</div>
+        <div class="pl-price">${p.price_dzd === 0 ? esc(t("pl_free_n")) : p.price_dzd == null ? esc(t("pl_soon_s")) : money(p.price_dzd)}</div>
+        <div class="pl-meta"><span><b>${p.quota}</b> ${esc(t("pl_quota"))}</span><span><b>${p.products}</b> ${esc(t("pl_products"))}</span></div>
+        <ul class="pl-feats">${((p.features && (p.features[S.lang] || p.features.ar)) || []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>
+        ${cur === p.id ? `<div class="pl-cur">${esc(t("pl_current"))}</div>`
+          : p.id === "free" ? `<a class="btn ghost wide" href="#/auth">${esc(t("pl_start"))}</a>`
+          : `<button class="btn ${p.id === "vip" ? "gold" : "primary"} wide" data-pl="${p.id}">${esc(t("pl_request"))}</button>`}
+      </div>`).join("")}
+    </div>
+    <p class="hint" style="text-align:center;margin-top:14px;padding:0 12px 110px">${esc(t("pl_soon"))}</p>`;
+  $$("#plans-body [data-pl]").forEach((b) => (b.onclick = () => {
+    vibrate(10);
+    const u = S.user;
+    const msg = `${t("pl_wa")}${u ? `\n- المتجر: ${u.store_name || ""} (@${u.slug})` : ""}\n- الباقة المطلوبة: ${t("plan_" + b.dataset.pl)}`;
+    window.open(`https://wa.me/213777845635?text=${encodeURIComponent(msg)}`, "_blank", "noopener") || toast(t("wa_open_fail"));
+  }));
+});
+
+/* لوحة الإدارة — قفل المالك: لا دخول إلا من الرابط السري /panel/<tok> */
+rr("/adm", async (v) => {
+  buildTabbar(false);
+  const ptok = (location.pathname.startsWith("/panel/") ? location.pathname.slice(7).replace(/\/+$/, "") : "") || sessionStorage.getItem("nx_panel_tok") || "";
+  if (!ptok) { v.innerHTML = `${topbar("")}<div class="page"><div class="empty"><h3>404</h3></div></div>`; return; }
+  v.innerHTML = `${topbar(t("adm_t"))}<div class="page" id="adm-body">${skeletons(2)}</div>`;
+  let csrf = sessionStorage.getItem("nx_adm_csrf") || "";
+  const call = async (path, o = {}) => {
+    const r = await fetch(path, { method: o.m || "GET", headers: { "content-type": "application/json", "x-panel": ptok, ...(o.b ? { "x-csrf": csrf } : {}) }, body: o.b ? JSON.stringify(o.b) : undefined });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw { status: r.status, ...d };
+    return d;
+  };
+  const loginView = () => {
+    $("#adm-body").innerHTML = `
+      <div class="card" style="max-width:420px;margin:40px auto 0">
+        <h3 style="margin:0 0 4px">${esc(t("adm_login_t"))}</h3>
+        <p class="hint" style="margin:0 0 14px">${esc(t("adm_rotate_hint"))}</p>
+        <div class="field"><label>${esc(t("adm_email"))}</label><input class="input" id="ad-e" type="email" dir="ltr" autocomplete="email"/></div>
+        <div class="field"><label>${esc(t("adm_pass"))}</label><input class="input" id="ad-p" type="password" autocomplete="current-password"/></div>
+        <div class="err-text" id="ad-err" style="min-height:18px"></div>
+        <button class="btn primary wide" id="ad-go">${esc(t("adm_enter"))}</button>
+      </div>`;
+    $("#ad-go").onclick = async () => {
+      const email = $("#ad-e").value.trim().toLowerCase();
+      const pass = $("#ad-p").value;
+      if (!email || pass.length < 6) { $("#ad-err").textContent = t("req_field"); return; }
+      try {
+        const d = await call("/api/adm/login", { m: "POST", b: { email, k0: await k0of(email, pass) } });
+        csrf = d.csrf; sessionStorage.setItem("nx_adm_csrf", csrf);
+        toast(t("logged_in")); vibrate([10, 30, 10]);
+        panelView();
+      } catch (e) { $("#ad-err").textContent = e.status === 404 ? "404" : t("wrong_creds"); vibrate([8, 30, 8]); }
+    };
+    $("#ad-p").onkeydown = (e) => { if (e.key === "Enter") $("#ad-go").click(); };
+  };
+  const panelView = async () => {
+    sessionStorage.setItem("nx_panel_tok", ptok);
+    $("#adm-body").innerHTML = `${skeletons(2)}`;
+    const [stats, cat] = await Promise.all([call("/api/adm/stats"), call("/api/adm/catalog").catch(() => ({ services: [] }))]);
+    const openSvc = (svc) => {
+      let svcOn = svc ? (svc.active ? 1 : 0) : 1;
+      const sh = sheet(`
+      <h3 style="margin:0 0 12px">${esc(t(svc ? "adm_edit" : "adm_add_svc"))}</h3>
+      <div class="field"><label>${esc(t("adm_title"))}</label><input class="input" id="sv-t" value="${esc(svc?.title || "")}"/></div>
+      <div class="field"><label>${esc(t("adm_descr"))}</label><textarea class="input" id="sv-d" rows="3">${esc(svc?.descr || "")}</textarea></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label>${esc(t("adm_pmin"))}</label><input class="input" id="sv-mn" type="number" inputmode="numeric" value="${svc?.price_min ?? ""}"/></div>
+        <div class="field" style="flex:1"><label>${esc(t("adm_pmax"))}</label><input class="input" id="sv-mx" type="number" inputmode="numeric" value="${svc?.price_max ?? ""}"/></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label>${esc(t("adm_days"))}</label><input class="input" id="sv-dy" type="number" inputmode="numeric" value="${svc?.delivery_days ?? 7}"/></div>
+        <div class="field" style="flex:1"><label>${esc(t("adm_active"))}</label><button type="button" class="btn ${svcOn ? "primary" : "ghost"}" id="sv-on" style="width:100%">${svcOn ? "ON" : "OFF"}</button></div>
+      </div>
+      <div class="err-text" id="sv-err" style="min-height:18px"></div>
+      <button class="btn primary wide" id="sv-save">${esc(t("save"))}</button>`);
+      $("#sv-on", sh.wrap).onclick = (e) => { svcOn = svcOn ? 0 : 1; e.currentTarget.classList.toggle("primary", !!svcOn); e.currentTarget.classList.toggle("ghost", !svcOn); e.currentTarget.textContent = svcOn ? "ON" : "OFF"; };
+      $("#sv-save", sh.wrap).onclick = async () => {
+        try {
+          const body = { title: $("#sv-t", sh.wrap).value.trim(), descr: $("#sv-d", sh.wrap).value.trim(), price_min: Number($("#sv-mn", sh.wrap).value) || 0, price_max: Number($("#sv-mx", sh.wrap).value) || 0, delivery_days: Number($("#sv-dy", sh.wrap).value) || 7, active: !!svcOn };
+          if (svc) await call("/api/adm/catalog/" + svc.id, { m: "PUT", b: body });
+          else await call("/api/adm/catalog", { m: "POST", b: body });
+          toast(t("saved")); vibrate(10); sh.close(); panelView();
+        } catch (e) { $("#sv-err", sh.wrap).textContent = e.error || "error"; }
+      };
+    };
+    $("#adm-body").innerHTML = `
+      <div class="kpis">
+        <div class="kpi"><div class="v" data-c="${stats.merchants}">0</div><div class="l">${esc(t("adm_m"))}</div></div>
+        <div class="kpi"><div class="v" data-c="${stats.products}">0</div><div class="l">${esc(t("adm_p"))}</div></div>
+        <div class="kpi"><div class="v" data-c="${stats.orders}">0</div><div class="l">${esc(t("adm_o"))}</div></div>
+        <div class="kpi"><div class="v" data-c="${stats.orders24}">0</div><div class="l">${esc(t("adm_o24"))}</div></div>
+        <div class="kpi"><div class="v" data-c="${stats.sess24}">0</div><div class="l">${esc(t("adm_a"))}</div></div>
+        <div class="kpi"><div class="v" data-c="${stats.revenue}">0</div><div class="l">${esc(t("adm_rev"))}</div></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <h3 style="margin:0">${esc(t("adm_merchants"))}</h3>
+          <button class="btn ghost" id="ad-rotate" style="min-height:38px;font-size:12px">${esc(t("adm_rotate"))}</button>
+        </div>
+        <input class="input" id="ad-q" placeholder="${esc(t("adm_search"))}" style="margin-top:10px"/>
+        <div id="ad-list" style="margin-top:6px"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <h3 style="margin:0">${esc(t("adm_catalog"))}</h3>
+          <button class="btn primary" id="ad-addsvc" style="min-height:38px;font-size:12px">+ ${esc(t("adm_add_svc"))}</button>
+        </div>
+        <div id="ad-cat" style="margin-top:6px"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3 style="margin:0 0 8px">${esc(t("adm_audit"))}</h3>
+        <div id="ad-aud" class="hint" style="line-height:2.1"></div>
+      </div>`;
+    $$("#adm-body .v[data-c]").forEach((el) => countUp(el, Number(el.dataset.c)));
+    const merchants = async (q = "") => {
+      const d = await call("/api/adm/merchants?q=" + encodeURIComponent(q));
+      $("#ad-list").innerHTML = (d.merchants || []).map((m) => `
+        <div class="adm-row">
+          <div style="flex:1;min-width:0">
+            <b>${esc(m.store_name || "—")}</b> ${m.verified ? `<span class="vbadge"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
+            <span class="hint" dir="ltr">@${esc(m.slug)} · ${m.products} ${esc(t("pl_products"))}</span>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center">
+            ${["free", "pro", "vip"].map((x) => `<button class="chip ${m.plan === x ? "on" : ""}" data-plan="${x}" data-uid="${m.id}">${esc(t("plan_" + x))}</button>`).join("")}
+            <button class="btn ghost" data-vf="${m.id}" data-v="${m.verified}" style="min-height:34px;padding:0 10px;font-size:11px">${m.verified ? esc(t("adm_unverify")) : esc(t("adm_verify"))}</button>
+          </div>
+        </div>`).join("") || `<p class="hint">${esc(t("adm_none"))}</p>`;
+      $$("#ad-list [data-plan]").forEach((b) => (b.onclick = async () => {
+        try { await call("/api/adm/merchants/" + b.dataset.uid + "/plan", { m: "POST", b: { plan: b.dataset.plan } }); toast(t("saved")); vibrate(10); merchants($("#ad-q").value.trim()); } catch { toast("error", "err"); }
+      }));
+      $$("#ad-list [data-vf]").forEach((b) => (b.onclick = async () => {
+        try { await call("/api/adm/merchants/" + b.dataset.vf + "/verify", { m: "POST", b: { v: b.dataset.v === "0" } }); toast(t("saved")); vibrate(10); merchants($("#ad-q").value.trim()); } catch { toast("error", "err"); }
+      }));
+    };
+    merchants();
+    let qT = null;
+    $("#ad-q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => merchants($("#ad-q").value.trim()), 350); };
+    const cat2 = await call("/api/adm/catalog").catch(() => ({ services: [] }));
+    $("#ad-cat").innerHTML = (cat2.services || []).map((x) => `
+      <div class="adm-row">
+        <div style="flex:1;min-width:0">
+          <b>${esc(x.title)}</b> ${x.active ? "" : `<span class="hint">OFF</span>`}
+          <span class="hint">${money(x.price_min)}${x.price_max && x.price_max !== x.price_min ? "–" + money(x.price_max) : ""} · ${x.delivery_days}${S.lang === "ar" ? " أيام" : " days"} · ${esc(x.category)}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost" data-se="${x.id}" style="min-height:34px;padding:0 12px;font-size:11.5px">${esc(t("adm_edit"))}</button>
+          <button class="btn ghost" data-sx="${x.id}" style="min-height:34px;padding:0 12px;font-size:11.5px;color:var(--danger)">✕</button>
+        </div>
+      </div>`).join("") || `<p class="hint">${esc(t("adm_none"))}</p>`;
+    $("#ad-addsvc").onclick = () => openSvc(null);
+    $$("#ad-cat [data-se]").forEach((b) => (b.onclick = () => openSvc((cat2.services || []).find((x) => x.id === b.dataset.se))));
+    $$("#ad-cat [data-sx]").forEach((b) => (b.onclick = async () => {
+      if (b.dataset.armed) { try { await call("/api/adm/catalog/" + b.dataset.sx, { m: "DELETE" }); toast(t("done")); panelView(); } catch { toast("error", "err"); } return; }
+      b.dataset.armed = "1"; b.textContent = t("adm_confirm_del"); vibrate([8, 30, 8]);
+    }));
+    $("#ad-rotate").onclick = async () => {
+      try {
+        const d = await call("/api/adm/rotate-panel", { m: "POST", b: {} });
+        sessionStorage.setItem("nx_panel_tok", d.panel_url.slice(7));
+        sheet(`<h3 style="margin:0 0 10px">${esc(t("adm_new_url"))}</h3><div class="card" style="direction:ltr;text-align:left;word-break:break-all;font-size:13px">${esc(location.origin + d.panel_url)}</div><button class="btn primary wide" id="rp-copy" style="margin-top:12px">${esc(t("copy_link"))}</button>`);
+        $("#rp-copy").onclick = async () => { try { await navigator.clipboard.writeText(location.origin + d.panel_url); toast(t("copied_link")); } catch {} };
+      } catch { toast("error", "err"); }
+    };
+    call("/api/adm/audit").then((d) => {
+      $("#ad-aud").innerHTML = (d.audit || []).map((a) => `<div><b>${esc(a.action)}</b> <span dir="ltr">${esc(a.target)} ${esc(a.detail)}</span> · ${fdate(a.at)}</div>`).join("") || esc(t("adm_none"));
+    }).catch(() => {});
+  };
+  try { await call("/api/adm/whoami"); await panelView(); }
+  catch { loginView(); }
+});
+
 rr("/account", async (v) => {
   buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
@@ -1501,6 +1714,10 @@ rr("/account", async (v) => {
           <span class="bd"><span class="t">${esc(t("my_store_link"))}</span><span class="s" dir="ltr">${esc(link.replace(/^https?:\/\//, ""))}</span></span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
         </button>
+        <button class="list-item" id="acc-plans" style="width:100%;text-align:start">
+          <span class="bd"><span class="t">${esc(t("acc_plans"))}</span><span class="s">${esc(t("pl_soon_s"))}</span></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 7l-5-5-5 5M17 17l-5 5-5-5"/></svg>
+        </button>
         <div class="list-item">
           <span class="bd"><span class="t">${esc(t("language"))}</span></span>
           <div style="display:flex;background:var(--card2);border-radius:12px;padding:3px;gap:2px">
@@ -1516,6 +1733,7 @@ rr("/account", async (v) => {
       <p class="hint" style="text-align:center">NEXUS · v2.0 · VITO BYTE STUDIO</p>
     </div>`;
   $("#acc-link", v).onclick = async () => { try { await navigator.clipboard.writeText(link); toast(t("copied_link")); } catch { toast(link); } };
+  $("#acc-plans", v).onclick = () => go("#/plans");
   $("#lang-ar", v).onclick = () => setLang("ar");
   $("#lang-en", v).onclick = () => setLang("en");
   $("#acc-out", v).onclick = async () => { await api("/api/auth/logout", { method: "POST" }); S.csrf = ""; sessionStorage.clear(); S.user = null; toast(t("logged_out")); location.hash = "#/auth"; };

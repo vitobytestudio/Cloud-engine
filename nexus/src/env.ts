@@ -7,6 +7,7 @@ export interface Env {
   ASSETS: Fetcher;
   ENVIRONMENT: string;
   ADMIN_K0?: string;
+  ADMIN_PATH_SECRET?: string;
   AI_KEYS?: string;
   NAKSAB_ORIGIN?: string; /* مصدر كتالوج المحترفين — جسر ناكساب */
 }

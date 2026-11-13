@@ -147,6 +147,14 @@ ok("ورقة الاستقبال بترحيب وأسئلة سريعة", !!d.getEl
 d.querySelector(".sheet-bd")?.click();
 await sleep(400);
 
+/* 8ز) صفحة الباقات + القفل السري للإدارة */
+await nav("#/plans");
+await sleep(700);
+ok("صفحة الباقات: ثلاث بطاقات", d.querySelectorAll(".pl-card").length === 3);
+ok("صفحة الباقات: زر طلب ترقية واتساب", !!d.querySelector("#plans-body [data-pl]"));
+ok("القفل السري: رابط لوحة خاطئ 404", (await fetch(BASE + "/panel/deadbeef1234")).status === 404);
+ok("القفل السري: /setup يختفي بعد إنشاء المالك", (await fetch(BASE + "/setup")).status === 404);
+
 /* 9) صفر أخطاء غير الممسوكة في كل الجولة */
 ok("صفر أخطاء JS غير الممسوكة طوال الجولة", errors.length === 0);
 if (errors.length) console.log(errors.join("\n"));

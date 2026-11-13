@@ -84,6 +84,15 @@ jobs:
           sed -i "s/00000000000000000000000000000000/$KV_ID/" wrangler.toml
           echo "::notice::D1 وKV جاهزان"
 
+      - name: تصفير إدارة NEXUS (فقط عند وسم [reset-admin] في رسالة دمج الالتزام النهائية — بأمر المالك)
+        if: ${{ contains(github.event.head_commit.message, '[reset-admin]') }}
+        working-directory: nexus
+        run: |
+          npx wrangler d1 execute DB --remote -y --command "DELETE FROM admin_devices" >/dev/null 2>&1 || true
+          npx wrangler d1 execute DB --remote -y --command "DELETE FROM admins" >/dev/null 2>&1 || true
+          npx wrangler d1 execute DB --remote -y --command "DELETE FROM admin_meta WHERE k IN ('setup_done','panel_hash')" >/dev/null 2>&1 || true
+          echo "::warning::أُصفّرت إدارة NEXUS وروابط اللوحة — المالك يعيد الإعداد مرة واحدة من /setup"
+
       - name: المخطط والترقية والبذرة (idempotent)
         working-directory: nexus
         run: |
