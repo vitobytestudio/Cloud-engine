@@ -76,6 +76,11 @@ jobs:
         env:
           AI_KEYS: ${{ secrets.AI_KEYS }}
           GITHUB_BASE_REF: ${{ github.base_ref || 'main' }}
+          REQUIRE_REVIEW: ${{ vars.REQUIRE_REVIEW || '' }}
+
+      - name: حفر المراجع — ثغرات مزروعة عمداً والرفض إلزامي (المرحلة 1 حتمية، والمرحلة 2 حية بمفتاح المالك)
+        working-directory: nexus
+        run: npm run reviewer-drill
 
       - name: قاعدة NEXUS ومساحة KV (إنشاء برمجي إن لم توجدا)
         if: github.event_name == 'push'
