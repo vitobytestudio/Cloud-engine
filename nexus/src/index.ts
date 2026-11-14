@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.0", app: "nexus", env: e.ENVIRONMENT }));
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.1", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -98,9 +98,15 @@ route("POST", "/api/auth/register", async (req, env) => {
   const dupe = await env.DB.prepare("SELECT id FROM users WHERE email = ? OR slug = ?").bind(email, slug).first();
   if (dupe) return bad("exists", 409);
   const uid = id("u");
-  await env.DB.prepare(
-    "INSERT INTO users (id, email, name, slug, k0, store_name, created_at) VALUES (?,?,?,?,?,?,?)"
-  ).bind(uid, email, name, slug, k0, store_name, now()).run();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO users (id, email, name, slug, k0, store_name, created_at) VALUES (?,?,?,?,?,?,?)"
+    ).bind(uid, email, name, slug, k0, store_name, now()).run();
+  } catch (e: any) {
+    /* التزاحم: فحص SELECT ليس ذرياً — قيد UNIQUE هو الحكم النهائي؛ المخالفة تعني وحدة مأخوذة لحظة الإدخال (لا 500 أبداً) */
+    if (String(e?.message ?? e).includes("UNIQUE")) return bad("exists", 409);
+    throw e;
+  }
   const s = await createSession(env, uid);
   return json({ ok: true, slug, csrf: s.csrf }, 200, { "set-cookie": sessionCookie(s.sid) });
 }, { csrf: false });
