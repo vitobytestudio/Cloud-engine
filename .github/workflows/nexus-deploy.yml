@@ -83,7 +83,7 @@ jobs:
         run: npm run reviewer-drill
 
       - name: قاعدة NEXUS ومساحة KV (إنشاء برمجي إن لم توجدا)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         run: |
           ACC="$CLOUDFLARE_ACCOUNT_ID"
@@ -123,7 +123,7 @@ jobs:
           echo "::warning::أُصفّرت إدارة NEXUS وروابط اللوحة — المالك يعيد الإعداد مرة واحدة من /setup"
 
       - name: المخطط والترقية والبذرة (idempotent)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         run: |
           sed -i 's/ENVIRONMENT = "development"/ENVIRONMENT = "production"/' wrangler.toml
@@ -133,7 +133,7 @@ jobs:
           echo "::notice::مخطط NEXUS وترقيته وبذرة العرض مُطبّقة"
 
       - name: مفتاح أسطول الذكاء الاصطناعي (سر — إن وُجد)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         run: |
           if [ -n "$AI_KEYS" ]; then
@@ -147,7 +147,7 @@ jobs:
           AI_KEYS: ${{ secrets.AI_KEYS }}
 
       - name: توكن رابط إعداد NEXUS السري (سر — إن وُجد؛ بدونه الإعداد مغلق تماماً)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         run: |
           if [ -n "$ADMIN_SETUP_TOKEN" ]; then
@@ -160,7 +160,7 @@ jobs:
           ADMIN_SETUP_TOKEN: ${{ secrets.ADMIN_SETUP_TOKEN }}
 
       - name: النشر
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         run: |
           set +e
@@ -174,7 +174,7 @@ jobs:
           exit 1
 
       - name: فحص ما بعد النشر
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         run: |
           URL="$WORKERS_URL"
