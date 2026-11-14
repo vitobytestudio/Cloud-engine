@@ -175,9 +175,9 @@ jobs:
       - name: النشر
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
-        run: |
         env:
           SETUP_WINDOW_MINUTES: ${{ github.event.inputs.setup_window_minutes || '0' }}
+        run: |
           set +e
           SETUP_END=$(( $(date +%s) * 1000 + ${SETUP_WINDOW_MINUTES:-0} * 60000 ))
           echo "::notice::نافذة الإعداد: ${SETUP_WINDOW_MINUTES:-0} دقيقة (0 = مغلقة — كل نشر افتراضي يغلقها)"
