@@ -214,6 +214,7 @@ check("رابط إعداد بتوكن خاطئ 404", (await fetch(`${BASE}/setup
 const suBad = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": SETUP_TOKEN }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) });
 check("إعداد ببيانات تالفة مرفوض (400)", suBad.status === 400);
 check("إعداد بلا ترويسة الرابط السري 404", (await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) })).status === 404);
+check("ترويسة الإعداد بهوامش تُقبل (تسامح اللصق — 400 تالفة لا 404 مغلق)", (await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": "  " + SETUP_TOKEN + "  " }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) })).status === 400);
 const ownerEmail = `owner-${suffix}@nk.test`;
 const k0o = await k0Of(ownerEmail, "OwnerSecret77x");
 const su = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": SETUP_TOKEN }, body: JSON.stringify({ email: ownerEmail, k0: k0o, name: "Owner" }) });

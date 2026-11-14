@@ -372,6 +372,8 @@ let pid = "", pid2 = "";
   } else {
     const emailA = "owner.nexus@" + Date.now() + ".test";
     const K0a = await k0(emailA, "Owner-Secret-9");
+    ok("ترويسة الإعداد بهوامش تُقبل (تسامح اللصق — 400 تالفة لا 404 مغلق)", (await fetch(BASE + "/api/adm/setup", { method: "POST", headers: { "content-type": "application/json", "x-setup-token": "  " + ST + "  " }, body: JSON.stringify({ email: "x" + Date.now() + "@t.test", k0: "a".repeat(64), name: "X" }) })).status === 400);
+    ok("رابط الإعداد بهوامش (%20) يُقبل — تسامح اللصق", (await fetch(BASE + "/setup/" + encodeURIComponent("  " + ST + "  "))).status === 200);
     const setup = await fetch(BASE + "/api/adm/setup", { method: "POST", headers: { "content-type": "application/json", "x-setup-token": ST }, body: JSON.stringify({ email: emailA, k0: K0a, name: "Owner" }) });
     const sd = await setup.json();
     ok("إعداد المالك 201 + رابط اللوحة", setup.status === 201 && sd.ok && /^\/panel\/[0-9A-Za-z]{20,30}$/.test(sd.panel_url || ""), JSON.stringify(sd).slice(0, 120));
