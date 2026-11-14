@@ -206,17 +206,21 @@ check("الحملة المعلقة لا تظهر للعموم", !(adsPub.data.ad
 const { execSync } = await import("node:child_process");
 // إعادة تهيئة الإعداد لتكرار التشغيل (محلي فقط)
 execSync(`./node_modules/.bin/wrangler d1 execute naksab-db --local --command "DELETE FROM admin_meta; DELETE FROM admin_devices; DELETE FROM users WHERE role='admin'"`, { cwd: new URL("..", import.meta.url).pathname, stdio: "pipe" });
+const SETUP_TOKEN = process.env.SETUP_TOKEN || "nk-drill-token";
 const suSt = await fetch(`${BASE}/api/admin/setup-status`).then((r) => r.json()).catch(() => ({}));
 check("حالة الإعداد قبل الإنشاء", suSt.done === false);
-const suBad = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) });
+check("صفحة /setup العارية 404 دائماً (لا أثر على المنصة الرسمية)", (await fetch(`${BASE}/setup`)).status === 404);
+check("رابط إعداد بتوكن خاطئ 404", (await fetch(`${BASE}/setup/wrong-setup-token-000`)).status === 404);
+const suBad = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": SETUP_TOKEN }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) });
 check("إعداد ببيانات تالفة مرفوض (400)", suBad.status === 400);
+check("إعداد بلا ترويسة الرابط السري 404", (await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) })).status === 404);
 const ownerEmail = `owner-${suffix}@nk.test`;
 const k0o = await k0Of(ownerEmail, "OwnerSecret77x");
-const su = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: ownerEmail, k0: k0o, name: "Owner" }) });
+const su = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": SETUP_TOKEN }, body: JSON.stringify({ email: ownerEmail, k0: k0o, name: "Owner" }) });
 const suD = await su.json().catch(() => ({}));
 check("إنشاء المالك لمرة واحدة (201 + رابط مشتق)", su.status === 201 && /^\/panel\/[A-Za-z0-9]{10,}$/.test(suD.panel_url || ""), JSON.stringify(suD).slice(0, 80));
 eatCookies("str", su); jar["str:csrf"] = suD.csrf; jar.panel = (suD.panel_url || "").replace("/panel/", "");
-const su2 = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: `o2-${suffix}@nk.test`, k0: k0o, name: "O2" }) });
+const su2 = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": SETUP_TOKEN }, body: JSON.stringify({ email: `o2-${suffix}@nk.test`, k0: k0o, name: "O2" }) });
 check("الإعداد الثاني مرفوض (404) — لمرة واحدة", su2.status === 404);
 const pgOk = await fetch(`${BASE}${suD.panel_url}`);
 check("رابط اللوحة الصحيح يخدم الواجهة", pgOk.status === 200 && (await pgOk.text()).includes("NAKSAB"));

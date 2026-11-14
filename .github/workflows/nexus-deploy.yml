@@ -50,7 +50,7 @@ jobs:
         run: |
           npx wrangler d1 execute DB --local -y --file schema.sql >/dev/null
           npx wrangler d1 execute DB --local -y --file seed.sql >/dev/null
-          npx wrangler dev --port 8792 --local > dev.log 2>&1 &
+          npx wrangler dev --port 8792 --local --var "ADMIN_SETUP_TOKEN:ci-drill-token" > dev.log 2>&1 &
           WPID=$!
           for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8792/api/health && break; sleep 2; done
           curl -s http://127.0.0.1:8792/api/health | grep -q '"ok":true' || { echo "::error::الخادم المحلي لم يقلع"; tail -n 20 dev.log; exit 1; }
@@ -145,6 +145,19 @@ jobs:
           fi
         env:
           AI_KEYS: ${{ secrets.AI_KEYS }}
+
+      - name: توكن رابط إعداد NEXUS السري (سر — إن وُجد؛ بدونه الإعداد مغلق تماماً)
+        if: github.event_name == 'push'
+        working-directory: nexus
+        run: |
+          if [ -n "$ADMIN_SETUP_TOKEN" ]; then
+            echo "$ADMIN_SETUP_TOKEN" | npx wrangler secret put ADMIN_SETUP_TOKEN
+            echo "::notice::ADMIN_SETUP_TOKEN نُقل كسر للعامل — رابط الإعداد: $WORKERS_URL/setup/<التوكن> (لا يُطبع التوكن أبداً)"
+          else
+            echo "::warning::ADMIN_SETUP_TOKEN غير مضبوط في أسرار GitHub — الإعداد مغلق تماماً على NEXUS حتى يضبطه المالك"
+          fi
+        env:
+          ADMIN_SETUP_TOKEN: ${{ secrets.ADMIN_SETUP_TOKEN }}
 
       - name: النشر
         if: github.event_name == 'push'

@@ -8,6 +8,7 @@ export type Env = {
   OPENROUTER_API_KEY?: string;
   ADMIN_BOOTSTRAP_EMAIL?: string;
   ADMIN_PATH_SECRET?: string;
+  ADMIN_SETUP_TOKEN?: string;
   /* بوابة بريدي موب المؤتمتة — تُضبط بأسرار المالك حصراً */
   CCP_PAY?: string;            /* "RIP:CLÉ" مثل 00799999004159589:029 */
   BARIDI_USER?: string;        /* دخول موقع بريد الجزائر للقراءة الآلية */

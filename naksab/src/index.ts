@@ -731,6 +731,7 @@ route("GET", "/api/admin/setup-status", async (_r, env) => json({ done: (await g
 
 route("POST", "/api/admin/setup", async (req, env) => {
   if ((await getAdminMeta(env, "setup_done")) === "1") return bad("not_found", 404);
+  if (!env.ADMIN_SETUP_TOKEN || !(await timingSafeEq(req.headers.get("x-setup-token") ?? "", env.ADMIN_SETUP_TOKEN))) return bad("not_found", 404);
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   if (!(await rl(env, `setup:${ip}`, 3, 3600))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
@@ -1303,9 +1304,11 @@ export default {
       }
       return bad("not_found", 404);
     }
-    // الإعداد لمرة واحدة: يختفي تماماً بعد إنشاء المالك
-    if (path === "/setup") {
-      if ((await getAdminMeta(env, "setup_done")) === "1") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
+    // الإعداد لمرة واحدة: بلا أي أثر على المنصة الرسمية — /setup العارية 404 دائماً، والصفحة من الرابط السري حصراً
+    if (path === "/setup") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
+    if (path.startsWith("/setup/")) {
+      const tok = path.slice("/setup/".length).replace(/\/+$/, "");
+      if ((await getAdminMeta(env, "setup_done")) === "1" || !env.ADMIN_SETUP_TOKEN || !tok || !(await timingSafeEq(tok, env.ADMIN_SETUP_TOKEN))) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain" } });
       return env.ASSETS.fetch(new Request(new URL("/", req.url).toString(), { headers: req.headers, method: "GET" }));
     }
     // لوحة الإدارة: العنوان الحقيقي مشتق مختلط — /admin الوهمية وكل مسار آخر 404
