@@ -31,7 +31,7 @@ for (const k of rkeys.filter((x) => x.name.startsWith("rl:"))) try { execSync(`.
 execSync(`./node_modules/.bin/wrangler d1 execute naksab-db --local --command "DELETE FROM admin_meta; DELETE FROM admin_devices; DELETE FROM users WHERE role='admin'; DELETE FROM payments; DELETE FROM credit_ledger; DELETE FROM financial_audit; DELETE FROM settings WHERE k='payments_enabled'"`, { cwd: CWD, stdio: "pipe" });
 const ownerEmail = `adv-owner-${su}@nk.test`;
 const k0o = await k0Of(ownerEmail, "AdvOwnerSecret1");
-const setup = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: ownerEmail, k0: k0o, name: "Adv Owner" }) });
+const setup = await fetch(`${BASE}/api/admin/setup`, { method: "POST", headers: { "content-type": "application/json", "x-setup-token": process.env.SETUP_TOKEN || "nk-drill-token" }, body: JSON.stringify({ email: ownerEmail, k0: k0o, name: "Adv Owner" }) });
 const setupD = await setup.json().catch(() => ({}));
 check("setup المالك يعمل", setup.status === 201 && setupD.panel_url);
 jar["own"] = null; eatCookies("own", setup); jar["own:csrf"] = setupD.csrf; jar.panel = (setupD.panel_url || "").replace("/panel/", "");

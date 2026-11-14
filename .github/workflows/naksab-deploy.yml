@@ -209,6 +209,18 @@ jobs:
           done
           echo "::notice::انتهى تثبيت مفاتيح NAKSAB — $N مزوداً (سلسلة الراوتر: Gemini → Groq → OpenRouter)"
 
+      - name: توكن رابط إعداد NAKSAB السري (سر — إن وُجد؛ بدونه الإعداد مغلق تماماً)
+        working-directory: naksab
+        run: |
+          if [ -n "$ADMIN_SETUP_TOKEN" ]; then
+            echo "$ADMIN_SETUP_TOKEN" | npx wrangler secret put ADMIN_SETUP_TOKEN
+            echo "::notice::ADMIN_SETUP_TOKEN نُقل كسر للعامل — رابط الإعداد: /setup/<التوكن> (لا يُطبع التوكن أبداً)"
+          else
+            echo "::notice::ADMIN_SETUP_TOKEN غير مضبوط — الإعداد مغلق (NAKSAB مُعدّة مسبقاً فلا حاجة)"
+          fi
+        env:
+          ADMIN_SETUP_TOKEN: ${{ secrets.ADMIN_SETUP_TOKEN }}
+
       - name: بناء الواجهة (esbuild minify — المصدر المقروء في المستودع فقط)
         working-directory: naksab
         run: npm run build

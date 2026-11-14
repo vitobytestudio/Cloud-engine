@@ -363,12 +363,16 @@ let pid = "", pid2 = "";
   /* القفل: 404 صامت لغير المالك */
   ok("إدارة بلا جلسة 404 صامت", (await j("/api/adm/stats")).status === 404);
   const ss = await j("/api/adm/setup-status");
+  const ST = "ci-drill-token";
+  ok("صفحة /setup العارية 404 دائماً (لا أثر على المنصة الرسمية)", (await fetch(BASE + "/setup")).status === 404);
+  ok("رابط إعداد بتوكن خاطئ 404", (await fetch(BASE + "/setup/wrong-token-000")).status === 404);
+  ok("إعداد بلا ترويسة الرابط السري 404", (await j("/api/adm/setup", { method: "POST", body: { email: "x" + Date.now() + "@t.test", k0: "a".repeat(64), name: "X" } })).status === 404);
   if (ss.data.done) {
-    ok("الإعداد مرة واحدة: 404 بعد إنشاء المالك", (await j("/api/adm/setup", { method: "POST", body: { email: "x" + Date.now() + "@t.test", k0: "a".repeat(64), name: "X" } })).status === 404);
+    ok("الإعداد مرة واحدة: 404 بعد إنشاء المالك", (await fetch(BASE + "/api/adm/setup", { method: "POST", headers: { "content-type": "application/json", "x-setup-token": ST }, body: JSON.stringify({ email: "x" + Date.now() + "@t.test", k0: "a".repeat(64), name: "X" }) })).status === 404);
   } else {
     const emailA = "owner.nexus@" + Date.now() + ".test";
     const K0a = await k0(emailA, "Owner-Secret-9");
-    const setup = await fetch(BASE + "/api/adm/setup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: emailA, k0: K0a, name: "Owner" }) });
+    const setup = await fetch(BASE + "/api/adm/setup", { method: "POST", headers: { "content-type": "application/json", "x-setup-token": ST }, body: JSON.stringify({ email: emailA, k0: K0a, name: "Owner" }) });
     const sd = await setup.json();
     ok("إعداد المالك 201 + رابط اللوحة", setup.status === 201 && sd.ok && /^\/panel\/[0-9A-Za-z]{20,30}$/.test(sd.panel_url || ""), JSON.stringify(sd).slice(0, 120));
     const atok = sd.panel_url.slice(7), acsrf = sd.csrf;

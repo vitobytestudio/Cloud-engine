@@ -840,6 +840,7 @@ route("GET", "/api/adm/setup-status", async (_r, env) => json({ done: (await adm
 
 route("POST", "/api/adm/setup", async (req, env) => {
   if ((await admMeta(env, "setup_done")) === "1") return bad("not_found", 404);
+  if (!env.ADMIN_SETUP_TOKEN || !ctEqual(req.headers.get("x-setup-token") ?? "", env.ADMIN_SETUP_TOKEN)) return bad("not_found", 404);
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   if (!(await rl(env, `admsetup:${ip}`, 3, 3600))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
@@ -1003,7 +1004,7 @@ route("GET", "/api/adm/audit", async (_r, env) => {
 });
 
 // صفحة الإعداد لمرة واحدة — تختفي نهائياً بعد إنشاء المالك
-function setupPage(origin: string): Response {
+function setupPage(origin: string, setupToken: string): Response {
   const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>NEXUS — إعداد الإدارة</title>
 <style>body{font-family:system-ui;background:#05060c;color:#eee;display:grid;place-items:center;min-height:100dvh;margin:0}.b{background:#0d0f18;border:1px solid #262b42;border-radius:20px;padding:30px;max-width:380px;width:calc(100% - 32px)}h1{font-size:19px;margin:0 0 6px}p{color:#8891b0;font-size:13px;line-height:1.8;margin:0 0 18px}label{display:block;font-size:12px;color:#8891b0;margin:12px 0 6px;font-weight:700}input{width:100%;box-sizing:border-box;background:#141726;border:1px solid #262b42;border-radius:12px;color:#fff;padding:12px 14px;font-size:15px}button{width:100%;margin-top:18px;background:linear-gradient(135deg,#7a5cff,#2ad4f6);border:0;border-radius:14px;padding:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer}.e{color:#ff6b7a;font-size:12.5px;margin-top:10px;min-height:16px}.ok{display:none;margin-top:14px;background:#11321f;border:1px solid #34d39955;border-radius:14px;padding:14px;font-size:13px;line-height:1.9;word-break:break-all}.ok a{color:#34d399;font-weight:800}.warn{color:#ffd166;font-size:12px;margin-top:8px}</style></head><body><div class="b">
 <h1>إعداد لوحة الإدارة</h1><p>لمرة واحدة فقط — ينشئ حساب المالك ويرابط اللوحة السرّي. الصفحة تختفي تماماً بعدها.</p>
@@ -1025,7 +1026,7 @@ document.getElementById("go").onclick = async () => {
   if (!e || p.length < 6) { er.textContent = "أكمل البريد وكلمة سر 6 أحرف على الأقل"; return; }
   er.textContent = "جارٍ الإنشاء…";
   try {
-    const r = await fetch("${origin}/api/adm/setup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: e, k0: await K0(e, p), name: n }) });
+    const r = await fetch("${origin}/api/adm/setup", { method: "POST", headers: { "content-type": "application/json", "x-setup-token": "${setupToken}" }, body: JSON.stringify({ email: e, k0: await K0(e, p), name: n }) });
     const d = await r.json();
     if (!r.ok) { er.textContent = d.error || "خطأ"; return; }
     er.textContent = "";
@@ -1089,10 +1090,12 @@ export default {
       if (!tok || !ph || (await sha256hex(tok)) !== ph) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
       return secure(await env.ASSETS.fetch(new Request(new URL("/", req.url).toString())));
     }
-    // الإعداد لمرة واحدة: يختفي تماماً بعد إنشاء المالك
-    if (path === "/setup") {
-      if ((await admMeta(env, "setup_done")) === "1") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
-      return setupPage(new URL(req.url).origin);
+    // الإعداد لمرة واحدة: بلا أي أثر على المنصة الرسمية — /setup العارية 404 دائماً، والصفحة من الرابط السري حصراً (توكن المالك سر GitHub)
+    if (path === "/setup") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    if (path.startsWith("/setup/")) {
+      const tok = path.slice("/setup/".length).replace(/\/+$/, "");
+      if ((await admMeta(env, "setup_done")) === "1" || !env.ADMIN_SETUP_TOKEN || !tok || !ctEqual(tok, env.ADMIN_SETUP_TOKEN)) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+      return setupPage(new URL(req.url).origin, tok);
     }
     return secure(await env.ASSETS.fetch(req));
   },

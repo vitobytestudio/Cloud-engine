@@ -1530,7 +1530,7 @@ async function viewSetup() {
     btn.disabled = true; btn.textContent = T.securing; msg.hidden = true;
     try {
       const k0 = await k0Of(email, pass);
-      const r = await api("/api/admin/setup", "POST", { email, k0, name });
+      const r = await fetch("/api/admin/setup", { method: "POST", headers: { "content-type": "application/json", "x-setup-token": S.setupTok || "" }, body: JSON.stringify({ email, k0, name }) }).then((x) => x.json().then((d) => ({ ok: x.ok, status: x.status, data: d })));
       if (!r.ok) throw r.data.error || "error";
       S.user = r.data.user; S.csrf = r.data.csrf;
       btn.disabled = false; btn.textContent = T.setup_go;
@@ -1629,7 +1629,7 @@ async function boot() {
   document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
   // رابط اللوحة من المسار حصراً — قرار المالك: الإدارة لا تُفتح إلا من رابطه السري، الذاكرة لا تكفي
   if (location.pathname.startsWith("/panel/")) S.panel = location.pathname.slice("/panel/".length).replace(/\/+$/, "");
-  if (location.pathname === "/setup") location.hash = "#/setup";
+  if (location.pathname.startsWith("/setup/")) { S.setupTok = location.pathname.slice("/setup/".length).replace(/\/+$/, ""); location.hash = "#/setup"; }
   const me = await api("/api/me");
   S.user = me.data.user; S.csrf = me.data.csrf || null;
   S.plan = me.data.plan || null; S.ai = me.data.ai || null;
