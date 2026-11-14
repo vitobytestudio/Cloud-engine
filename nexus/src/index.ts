@@ -840,7 +840,7 @@ route("GET", "/api/adm/setup-status", async (_r, env) => json({ done: (await adm
 
 route("POST", "/api/adm/setup", async (req, env) => {
   if ((await admMeta(env, "setup_done")) === "1") return bad("not_found", 404);
-  if (!env.ADMIN_SETUP_TOKEN || !ctEqual(req.headers.get("x-setup-token") ?? "", env.ADMIN_SETUP_TOKEN)) return bad("not_found", 404);
+  if (!env.ADMIN_SETUP_TOKEN || !ctEqual((req.headers.get("x-setup-token") ?? "").trim(), env.ADMIN_SETUP_TOKEN.trim())) return bad("not_found", 404); /* trim: تسامح اللصق — الهامش لا يفسد السر */
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   if (!(await rl(env, `admsetup:${ip}`, 3, 3600))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
@@ -1093,8 +1093,9 @@ export default {
     // الإعداد لمرة واحدة: بلا أي أثر على المنصة الرسمية — /setup العارية 404 دائماً، والصفحة من الرابط السري حصراً (توكن المالك سر GitHub)
     if (path === "/setup") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
     if (path.startsWith("/setup/")) {
-      const tok = path.slice("/setup/".length).replace(/\/+$/, "");
-      if ((await admMeta(env, "setup_done")) === "1" || !env.ADMIN_SETUP_TOKEN || !tok || !ctEqual(tok, env.ADMIN_SETUP_TOKEN)) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+      let tok = path.slice("/setup/".length).replace(/\/+$/, "");
+      try { tok = decodeURIComponent(tok).trim(); } catch { /* بادئة نسبية غريبة — تُترك كما هي وترفض */ }
+      if ((await admMeta(env, "setup_done")) === "1" || !env.ADMIN_SETUP_TOKEN || !tok || !ctEqual(tok, env.ADMIN_SETUP_TOKEN.trim())) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
       return setupPage(new URL(req.url).origin, tok);
     }
     return secure(await env.ASSETS.fetch(req));
