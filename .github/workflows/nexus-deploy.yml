@@ -12,6 +12,11 @@ on:
       - "nexus/**"
       - ".github/workflows/nexus-deploy.yml"
   workflow_dispatch:
+    inputs:
+      setup_window_minutes:
+        description: "دقائق فتح نافذة /setup للإعداد لمرة واحدة (0 = مغلقة)"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -62,6 +67,14 @@ jobs:
           node tests/attack.dev.mjs
           node tests/visual.dev.mjs
           kill $WPID 2>/dev/null || true
+
+      - name: بوابة نافذة الإعداد (فتح مؤقت/توكن موازٍ/انقضاء ذاتي)
+        working-directory: nexus
+        run: npm run gate:window
+
+      - name: بوابة التشويش العدواني (صفر 5xx + سباق تزامن الوحدات)
+        working-directory: nexus
+        run: npm run gate:fuzz
 
       - name: تدقيق الاعتماديات (أمني — الحرجة تسقط البناء)
         working-directory: nexus
@@ -162,9 +175,13 @@ jobs:
       - name: النشر
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
+        env:
+          SETUP_WINDOW_MINUTES: ${{ github.event.inputs.setup_window_minutes || '0' }}
         run: |
           set +e
-          npx wrangler deploy 2>&1 | tee deploy.log
+          SETUP_END=$(( $(date +%s) * 1000 + ${SETUP_WINDOW_MINUTES:-0} * 60000 ))
+          echo "::notice::نافذة الإعداد: ${SETUP_WINDOW_MINUTES:-0} دقيقة (0 = مغلقة — كل نشر افتراضي يغلقها)"
+          npx wrangler deploy --var "ADMIN_SETUP_WINDOW_END:$SETUP_END" 2>&1 | tee deploy.log
           RC=${PIPESTATUS[0]}
           set -e
           if [ "$RC" -eq 0 ]; then echo "::notice::LIVE=$WORKERS_URL"; exit 0; fi

@@ -6,7 +6,9 @@
     "dev": "npm run build && wrangler dev --port 8792 --local",
     "build": "esbuild ui/app.js --minify --charset=utf8 --outfile=public/app.js && esbuild public/styles.css --minify --charset=utf8 --outfile=public/styles.min.css",
     "deploy": "wrangler deploy",
-    "reviewer-drill": "node tests/reviewer-drill.dev.mjs"
+    "reviewer-drill": "node tests/reviewer-drill.dev.mjs",
+    "gate:window": "node tests/setup-window.dev.mjs",
+    "gate:fuzz": "node tests/fuzz.dev.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261023.1",
