@@ -41,7 +41,12 @@ try {
 
   // 1) الفتح: الصفحة العارية تُخدم أثناء النافذة
   const bare = await fetch(`${BASE}/setup`);
-  check("أثناء النافذة: /setup العارية 200 وتخدم نموذج الإعداد", bare.status === 200 && (await bare.text()).includes("إعداد لوحة الإدارة"));
+  const setupHtml = await bare.text();
+  check("أثناء النافذة: /setup العارية 200 وتخدم نموذج الإعداد", bare.status === 200 && setupHtml.includes("إعداد لوحة الإدارة"));
+  const sm = /<script>([\s\S]*?)<\/script>/.exec(setupHtml);
+  let parses = false, parseErr = "";
+  try { new Function(sm?.[1] ?? ""); parses = true; } catch (e) { parseErr = String(e).slice(0, 80); }
+  check("سكربت صفحة الإعداد يُحلل بلا أخطاء (علة الزر الميت — تُمسح هنا للأبد)", parses, parseErr);
 
   // 2) التوكن الصحيح موازٍ ويعمل أثناء النافذة
   check("أثناء النافذة: /setup/<توكن صحيح> 200", (await fetch(`${BASE}/setup/win-tok`)).status === 200);

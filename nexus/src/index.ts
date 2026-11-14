@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.1", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.2", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -1040,7 +1040,14 @@ document.getElementById("go").onclick = async () => {
     er.textContent = "";
     const ok = document.getElementById("ok");
     ok.style.display = "block";
-    ok.innerHTML = "تم. رابط لوحتك السرّي (اعرض مرة واحدة):<br><a href=\"" + d.panel_url + "\" id=\"pu\">" + location.origin + d.panel_url + "</a><div class='warn'>انسخ الرابط الآن وحفظه في مكان آمن — لن يُعرض مجدداً، ويمكن تدويره من اللوحة.</div>";
+    ok.textContent = "تم. رابط لوحتك السرّي (اعرض مرة واحدة):";
+    const a = document.createElement("a");
+    a.href = d.panel_url; a.id = "pu"; a.textContent = location.origin + d.panel_url;
+    ok.appendChild(a);
+    const w = document.createElement("div");
+    w.className = "warn";
+    w.textContent = "انسخ الرابط الآن وحفظه في مكان آمن — لن يُعرض مجدداً، ويمكن تدويره من اللوحة.";
+    ok.appendChild(w);
     document.getElementById("go").style.display = "none";
   } catch { er.textContent = "خطأ شبكة"; }
 };
