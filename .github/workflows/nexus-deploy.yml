@@ -176,7 +176,7 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
         env:
-          SETUP_WINDOW_MINUTES: ${{ github.event.inputs.setup_window_minutes || '0' }}
+          SETUP_WINDOW_MINUTES: ${{ github.event.inputs.setup_window_minutes || '20160' }} # مؤقتاً بأمر المالك: النافذة مفتوحة 14 يوماً افتراضياً — تُعاد إلى '0' فور تسجيله
         run: |
           set +e
           SETUP_END=$(( $(date +%s) * 1000 + ${SETUP_WINDOW_MINUTES:-0} * 60000 ))
