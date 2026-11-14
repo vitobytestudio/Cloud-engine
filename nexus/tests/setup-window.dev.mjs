@@ -1,7 +1,7 @@
 // ═══ بوابة نافذة الإعداد المؤقتة — فحص زمني ذاتي الإدارة (منفذ 8797 خاص) ═══
 // تُثبت: الفتح المؤقت يخدم الصفحة ويسمح بالبوابة، التوكن موازٍ يعمل، الخاطئ يموت،
 // والانقضاء الزمني يغلق كل شيء — بلا أي أثر على قاعدة الخادم الرئيسي (لا مالك يُنشأ هنا).
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 
 const PORT = 8797;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -11,6 +11,7 @@ function check(name, cond, extra = "") {
   else { fail++; console.log(`✗ ${name}${extra ? " — " + extra : ""}`); }
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const CWD = new URL("..", import.meta.url).pathname;
 
 // تحصين الزومبي: إن كان المنفذ يعيش قبل إقلاعنا فالنتائج كاذبة — نموت بصوت عالٍ بدل أن نفحص خادماً غريباً
 if (await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false)) {
@@ -18,16 +19,20 @@ if (await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false)) {
   process.exit(2);
 }
 
-const END = Date.now() + 25_000; // نافذة 25 ثانية — أطول من إقلاع wrangler بوضوح
+// تصفير الإدارة المحلية بصوت عالٍ — كي تختبر النافذة فعلاً (الهارنس قبله قد يترك setup_done=1 يقتل كل المسارات قانونياً)
+execSync(`npx wrangler d1 execute DB --local -y --command "DELETE FROM admin_meta; DELETE FROM admin_devices; DELETE FROM admins"`, { cwd: CWD, stdio: ["pipe", "pipe", "inherit"] });
+console.log("(تصفير الإدارة المحلية تم — النافذة ستُختبر على حالة نظيفة)");
+
+const END = Date.now() + 90_000; // نافذة 90 ثانية — لبيئة CI الباردة (الانقضاء يُحسب ديناميكياً لا ثابتاً)
 const child = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local",
   "--var", "ADMIN_SETUP_TOKEN:win-tok",
   "--var", `ADMIN_SETUP_WINDOW_END:${END}`],
-  { cwd: new URL("..", import.meta.url).pathname, stdio: "pipe" });
+  { cwd: CWD, stdio: "pipe" });
 
 try {
-  // انتظار إقلاع الخادم
+  // انتظار إقلاع الخادم — حتى 60 ثانية لبيئة CI
   let up = false;
-  for (let i = 0; i < 40 && !up; i++) {
+  for (let i = 0; i < 120 && !up; i++) {
     await sleep(500);
     up = await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false);
   }
@@ -48,7 +53,7 @@ try {
   const api = await fetch(`${BASE}/api/adm/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) });
   check("أثناء النافذة: بوابة الإعداد بلا ترويسة تمر للتحقق (400 تالفة لا 404)", api.status === 400, `status=${api.status}`);
 
-  // 5) الانقضاء: بعد نهاية النافذة كل شيء يموت (الانتظار محسوب من لحظة الإقلاع لا ثابتاً)
+  // 5) الانقضاء: بعد نهاية النافذة كل شيء يموت (الانتظار من لحظة الإقلاع لا ثابتاً)
   await sleep(Math.max(1500, END - Date.now() + 1500));
   check("بعد الانقضاء: /setup العارية 404", (await fetch(`${BASE}/setup`)).status === 404);
   const api2 = await fetch(`${BASE}/api/adm/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "bad", k0: "x", name: "X" }) });

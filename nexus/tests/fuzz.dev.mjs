@@ -1,7 +1,21 @@
 // ═══ بوابة التشويش العدواني — مسبارات عشوائية مبذورة + سباق تزامن ═══
 // العقد: صفر استجابات 5xx على كل المسبارات، وسباق تسجيل نفس اسم المستخدم ينتهي بواحد 201 فقط.
-const BASE = process.env.BASE || "http://127.0.0.1:8792";
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
+const PORT = Number(process.env.FUZZ_PORT || 8796);
+const BASE = process.env.BASE || `http://127.0.0.1:${PORT}`;
+const selfManaged = !process.env.BASE; // بلا BASE: نقلع خادمنا الخاص وندمره — البوابة مستقلة عن أي خطوة أخرى
+const child = selfManaged
+  ? spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local"], { cwd: new URL("..", import.meta.url).pathname, stdio: "pipe" })
+  : null;
+if (selfManaged) {
+  let up = false;
+  for (let i = 0; i < 120 && !up; i++) {
+    await new Promise((r) => setTimeout(r, 500));
+    up = await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false);
+  }
+  if (!up) { console.error("✗ خادم التشويش لم يقلع"); process.exit(2); }
+  console.log("(خادم التشويش أقلع — ذاتي الإدارة)");
+}
 let pass = 0, fail = 0;
 const violations = [];
 function check(name, cond, extra = "") {
@@ -121,5 +135,6 @@ check("السباق: النمط الفائز-واحد/409-للباقي بلا 5x
 
 console.log(`═══ GATE FUZZ: مسبارات ناجحة ${pass} — مخالفات ${violations.length} ═══`);
 if (violations.length) { console.log("المخالفات:"); for (const v of violations) console.log("  ✗ " + v); }
+if (child) { child.kill("SIGTERM"); await new Promise((r) => setTimeout(r, 800)); try { child.kill("SIGKILL"); } catch {} }
 console.log(`═══ GATE FUZZ: ${fail + (violations.length ? 1 : 0)} فشل — الحكم: ${violations.length || fail ? "مرفوض" : "مطموع"} ═══`);
 process.exit(violations.length || fail || created !== 1 ? 1 : 0);
