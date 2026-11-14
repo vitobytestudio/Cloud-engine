@@ -8,7 +8,8 @@ export interface Env {
   ENVIRONMENT: string;
   ADMIN_K0?: string;
   ADMIN_PATH_SECRET?: string;
-  ADMIN_SETUP_TOKEN?: string; /* صفحة الإعداد لا تُعرض على المنصة الرسمية — تُفتح من /setup/<توكن> حصراً بأمر المالك */
+  ADMIN_SETUP_TOKEN?: string;
+  ADMIN_SETUP_WINDOW_END?: string; /* نافذة إعداد مؤقتة بأمر المالك: نهاية النافذة (epoch ms) — تنقضي ذاتياً وتموت نهائياً بعد إنشاء المالك */ /* صفحة الإعداد لا تُعرض على المنصة الرسمية — تُفتح من /setup/<توكن> حصراً بأمر المالك */
   AI_KEYS?: string;
   NAKSAB_ORIGIN?: string; /* مصدر كتالوج المحترفين — جسر ناكساب */
 }

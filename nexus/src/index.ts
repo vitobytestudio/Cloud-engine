@@ -840,7 +840,9 @@ route("GET", "/api/adm/setup-status", async (_r, env) => json({ done: (await adm
 
 route("POST", "/api/adm/setup", async (req, env) => {
   if ((await admMeta(env, "setup_done")) === "1") return bad("not_found", 404);
-  if (!env.ADMIN_SETUP_TOKEN || !ctEqual((req.headers.get("x-setup-token") ?? "").trim(), env.ADMIN_SETUP_TOKEN.trim())) return bad("not_found", 404); /* trim: تسامح اللصق — الهامش لا يفسد السر */
+  const winOpen = !!env.ADMIN_SETUP_WINDOW_END && Number(env.ADMIN_SETUP_WINDOW_END) > Date.now();
+  const tokOk = !!env.ADMIN_SETUP_TOKEN && ctEqual((req.headers.get("x-setup-token") ?? "").trim(), env.ADMIN_SETUP_TOKEN.trim()); /* trim: تسامح اللصق */
+  if (!tokOk && !winOpen) return bad("not_found", 404); /* الرابط السري دائماً، أو نافذة مؤقتة فتحها المالك وتنقضي بذاتها */
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   if (!(await rl(env, `admsetup:${ip}`, 3, 3600))) return bad("too_many", 429);
   const b = (await req.json().catch(() => ({}))) as any;
@@ -1090,8 +1092,12 @@ export default {
       if (!tok || !ph || (await sha256hex(tok)) !== ph) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
       return secure(await env.ASSETS.fetch(new Request(new URL("/", req.url).toString())));
     }
-    // الإعداد لمرة واحدة: بلا أي أثر على المنصة الرسمية — /setup العارية 404 دائماً، والصفحة من الرابط السري حصراً (توكن المالك سر GitHub)
-    if (path === "/setup") return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    // الإعداد لمرة واحدة: بلا أي أثر على المنصة الرسمية — يُفتح من رابط سرّي دائم، أو من نافذة مؤقتة بأمر المالك تنقضي ذاتياً
+    const setupWindowOpen = !!env.ADMIN_SETUP_WINDOW_END && Number(env.ADMIN_SETUP_WINDOW_END) > Date.now();
+    if ((path === "/setup" || path === "/setup/")) {
+      if ((await admMeta(env, "setup_done")) === "1" || !setupWindowOpen) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+      return setupPage(new URL(req.url).origin, ""); /* النافذة: بلا توكن — البوابة تسمح طالما النافذة مفتوحة */
+    }
     if (path.startsWith("/setup/")) {
       let tok = path.slice("/setup/".length).replace(/\/+$/, "");
       try { tok = decodeURIComponent(tok).trim(); } catch { /* بادئة نسبية غريبة — تُترك كما هي وترفض */ }
