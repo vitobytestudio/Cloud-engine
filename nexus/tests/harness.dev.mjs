@@ -4,6 +4,9 @@ import { execSync } from "node:child_process";
 const BASE = "http://127.0.0.1:8792";
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) { pass++; console.log("✓ " + name); } else { fail++; console.log("✗ " + name); } };
+import { readFileSync } from "node:fs";
+const bundle = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+ok("توجيه الرابط السري: /panel/<tok> بلا هاش يهبط على اللوحة لا الواجهة العادية", bundle.includes('location.pathname.startsWith("/panel/")'));
 
 /* تصفير عدادات rl المحلية */
 try {

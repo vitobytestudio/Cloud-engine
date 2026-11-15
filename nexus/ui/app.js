@@ -331,7 +331,7 @@ let renderChain = Promise.resolve(), lastRendered = null;
 function render(force = false) {
   renderChain = renderChain
     .then(async () => {
-      const hash = location.hash.replace(/^#/, "") || "/onb-check";
+      const hash = location.hash.replace(/^#/, "") || (location.pathname.startsWith("/panel/") ? "/adm" : "/onb-check"); /* الرابط السري يفتح اللوحة مباشرة — لا الواجهة العادية */
       if (!force && hash === lastRendered) return;
       lastRendered = hash;
       const parts = hash.split("/").filter(Boolean);
