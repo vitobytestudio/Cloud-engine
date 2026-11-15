@@ -82,6 +82,7 @@ jobs:
           echo "::warning::أُصفّرت حسابات الإدارة وروابط اللوحات — المالك يعيد الإعداد مرة واحدة من /panel"
 
       - name: ترحيلات متسامحة (أعمدة Stage 2 على قاعدة قائمة)
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
           npx wrangler d1 execute DB --remote -y --command "ALTER TABLE users ADD COLUMN plan_id TEXT NOT NULL DEFAULT 'free'" >/dev/null 2>&1 || true
@@ -89,6 +90,7 @@ jobs:
           echo "::notice::الترحيلات المتسامحة انتهت"
 
       - name: المخطط (idempotent — CREATE IF NOT EXISTS) + تصنيفات البذور
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
           npx wrangler d1 execute DB --remote -y --file schema.sql
@@ -97,6 +99,7 @@ jobs:
           echo "::notice::قاعدة naksab-db جاهزة — $TABLES"
 
       - name: أسرار قراءة بريدي موب (تُنقل كسر للعامل إن وُجدت — حساب الاستقبال في wrangler.toml [vars])
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
           for S in BARIDI_USER BARIDI_PASS BARIDI_ANSWER BARIDI_ENDPOINT; do
@@ -115,6 +118,7 @@ jobs:
           BARIDI_ENDPOINT: ${{ secrets.BARIDI_ENDPOINT }}
 
       - name: بريد المدير الأولي (من متغيرات GitHub إن عُرِّف)
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         env:
           BOOTSTRAP_EMAIL: ${{ vars.NAKSAB_ADMIN_BOOTSTRAP_EMAIL || secrets.NAKSAB_ADMIN_BOOTSTRAP_EMAIL }}
@@ -214,6 +218,7 @@ jobs:
           echo "::notice::انتهى تثبيت مفاتيح NAKSAB — $N مزوداً (سلسلة الراوتر: Gemini → Groq → OpenRouter)"
 
       - name: توكن رابط إعداد NAKSAB السري (سر — إن وُجد؛ بدونه الإعداد مغلق تماماً)
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
           if [ -n "$ADMIN_SETUP_TOKEN" ]; then
@@ -246,6 +251,7 @@ jobs:
         run: npm run build
 
       - name: النشر
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
           npx wrangler deploy 2>&1 | tee deploy.log
@@ -253,6 +259,7 @@ jobs:
           if [ -n "$URL" ]; then echo "::notice::LIVE=$URL"; else echo "::notice::تم النشر — راجع عنوان workers.dev في السجل"; fi
 
       - name: فحص ما بعد النشر (ثابت + مصادقة كاملة بكوكي وCSRF)
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
           URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
