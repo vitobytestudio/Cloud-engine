@@ -1662,7 +1662,7 @@ async function route() {
     if (parts[0] === "discover") return viewDiscover();
     if (parts[0] === "dashboard") return viewDashboard();
     if (parts[0] === "request") return parts[1] === "new" ? viewRequestNew() : viewRequest(parts[1]);
-    if (parts[0] === "projects") return parts[1] ? viewProject(parts[1]) : viewDashboard();
+    if (parts[0] === "project" || parts[0] === "projects") return parts[1] ? viewProject(parts[1]) : viewDashboard(); /* المفرد: أزرار القبول وفتح الغرفة ولوحة المشاريع كلها تنقّل إليه */
     if (parts[0] === "ads") return viewAds();
     if (parts[0] === "wallet") return viewWallet();
     if (parts[0] === "pricing") return viewPricing();

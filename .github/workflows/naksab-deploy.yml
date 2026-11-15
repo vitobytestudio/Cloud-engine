@@ -245,6 +245,7 @@ jobs:
           node tests/adversary.mjs
           node tests/wallet.dev.mjs
           node tests/ui-boot.mjs
+          node tests/journey.dev.mjs
 
       - name: بناء الواجهة (esbuild minify — المصدر المقروء في المستودع فقط)
         working-directory: naksab
