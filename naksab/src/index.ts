@@ -250,7 +250,8 @@ route("POST", "/api/requests", async (req, env, s) => {
   const b = (await req.json().catch(() => ({}))) as any;
   const title = clip(String(b.title ?? "").trim(), 120);
   const description = clip(String(b.description ?? "").trim(), 3000);
-  if (title.length < 6 || description.length < 20) return bad("invalid_input");
+  if (title.length < 6) return bad("title_short"); /* كود مخصص: الزبون يعرف السبب بدل invalid_input عامة */
+  if (description.length < 20) return bad("desc_short");
   const rid = id("rq");
   await env.DB.prepare("INSERT INTO requests (id, client_id, title, description, category, skills, budget_min, budget_max, currency, structured, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
     .bind(rid, s.userId, title, description, clip(String(b.category ?? ""), 40),

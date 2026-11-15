@@ -56,6 +56,10 @@ const homeHtml = await (await fetch(`${BASE}/`)).text();
 check("الصفحة الرئيسية تُخدم", homeHtml.includes("NAKSAB") && homeHtml.includes("styles.min.css"));
 check("CSS حقيقي يُخدم", (await (await fetch(`${BASE}/styles.min.css`)).text()).includes("--brand1"));
 check("app.js يُخدم", (await (await fetch(`${BASE}/app.js`)).text()).includes("viewHome"));
+{
+  const bundle = await (await fetch(`${BASE}/app.js`)).text();
+  check("بوابة النشر للزبون: رسائل السبب العربية والحدود (≥6/≥20) حية في البناء المصغّر", bundle.includes("r_title_short") && bundle.includes("r_desc_short") && bundle.includes("(≥6)") && bundle.includes("(≥20)"));
+}
 
 // ═══ 2) المصادقة ═══
 const badReg = await reg("bad", "x", "N", "u", "freelancer");
@@ -120,6 +124,10 @@ const rqFre = await call("fre", "/api/requests", "POST", { title: "Freelancer tr
 check("المستقل لا ينشر طلبات مشاريع (403)", rqFre.status === 403);
 const rqBad = await call("cli", "/api/requests", "POST", { title: "x", description: "y" });
 check("طلب ناقص مرفوض (400)", rqBad.status === 400);
+const rqBadT = await call("cli", "/api/requests", "POST", { title: "x", description: "وصف كافٍ للاختبار يتجاوز العشرين محرفاً بكل تأكيد" });
+check("عنوان قصير → title_short (الزبون يعرف السبب)", rqBadT.status === 400 && rqBadT.data.error === "title_short", JSON.stringify(rqBadT.data));
+const rqBadD = await call("cli", "/api/requests", "POST", { title: "عنوان صالح للاختبار", description: "y" });
+check("وصف قصير → desc_short (الزبون يعرف السبب)", rqBadD.status === 400 && rqBadD.data.error === "desc_short", JSON.stringify(rqBadD.data));
 const ai = await call("cli", "/api/requests/structure", "POST", { text: "I need a modern landing page for my SaaS product with pricing and a contact form, budget around 300 dollars, two weeks timeline." });
 check("الهيكلة الذكية: محلياً بلا مفاتيح تسقط برشاقة (503 ai_unavailable)", ai.status === 503 && ai.data.error === "ai_unavailable", JSON.stringify(ai.data));
 const rq = await call("cli", "/api/requests", "POST", { title: "Build a SaaS landing page", description: "Need a modern responsive landing page with pricing section, testimonials and contact form. React preferred.", category: "programming", skills: ["react", "landing-page"], budget_min: 250, budget_max: 400, currency: "USD" });
