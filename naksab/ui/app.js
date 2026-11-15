@@ -133,6 +133,8 @@ en: {
   free_forever: "Free forever", per_month: "/month", coming_soon: "Coming soon",
   choose_free: "Start free", current_plan: "Your plan",
   cta_free_freelancer: "Complete your profile & offer services", cta_free_client: "Post a project",
+  title_ph: "e.g. Online store for handmade crafts", desc_ph: "Describe your project: what you need, details, deadline…",
+  r_title_short: "Title too short — write at least 6 characters.", r_desc_short: "Description too short — write at least 20 characters.",
   req_clients_t: "This page is for clients posting projects", req_clients_d: "As a freelancer, your flow is the opposite: browse open requests ranked for your skills and send a proposal.",
   browse_open: "Browse open requests", client_only_err: "Only client accounts can post project requests.",
   setup_title: "Owner setup — one time", setup_sub: "Create the administrator account and set your secret code. Your private panel link is minted once and shown a single time.",
@@ -169,6 +171,7 @@ en: {
     invalid_credentials: "Wrong email or password.", csrf: "Session expired — try again.",
     auth_required: "Please sign in first.", freelancer_only: "Only freelancer accounts can do this.",
     too_many: "Too many attempts — wait a moment.", ai_unavailable: "Vito AI is busy right now — use the manual form below.",
+    title_short: "Title too short — write at least 6 characters.", desc_short: "Description too short — write at least 20 characters explaining your project.",
     project_not_completed: "You can review after both sides confirm completion.",
     already_reviewed: "You already reviewed this project.", already_proposed: "You already sent a proposal here.",
     invalid_url: "Enter a valid https:// link.", forbidden: "Not allowed.",
@@ -314,6 +317,8 @@ ar: {
   free_forever: "مجاني للأبد", per_month: "/شهر", coming_soon: "قريباً",
   choose_free: "ابدأ مجاناً", current_plan: "باقتك",
   cta_free_freelancer: "أكمل ملفك واعرض خدماتك", cta_free_client: "اعرض مشروعك",
+  title_ph: "مثال: متجر إلكتروني للحرف اليدوية", desc_ph: "اشرح مشروعك: ماذا تحتاج، التفاصيل، الموعد…",
+  r_title_short: "العنوان قصير — اكتب 6 أحرف على الأقل.", r_desc_short: "الوصف قصير — اكتب 20 محرفاً على الأقل.",
   req_clients_t: "هذه الصفحة للعملاء لنشر المشاريع", req_clients_d: "بوصفك مستقلاً، مسارك معاكس: تصفح الطلبات المفتوحة المرتبة لمهاراتك وأرسل عرضاً.",
   browse_open: "تصفح الطلبات المفتوحة", client_only_err: "نشر طلبات المشاريع لحسابات العملاء فقط.",
   setup_title: "إعداد المالك — مرة واحدة", setup_sub: "أنشئ حساب المدير وضع رمزك السري. رابط لوحتك الخاصة يُشتق مرة واحدة ويُعرض مرة واحدة فقط.",
@@ -350,6 +355,7 @@ ar: {
     invalid_credentials: "بريد أو كلمة مرور خاطئة.", csrf: "انتهت الجلسة — حاول مجدداً.",
     auth_required: "سجّل دخولك أولاً.", freelancer_only: "هذا الإجراء لحسابات المستقلين فقط.",
     too_many: "محاولات كثيرة — انتظر قليلاً.", ai_unavailable: "Vito AI مشغول الآن — استخدم النموذج اليدوي أدناه.",
+    title_short: "العنوان قصير — اكتب 6 أحرف على الأقل.", desc_short: "الوصف قصير — اكتب 20 محرفاً على الأقل يشرح مشروعك.",
     project_not_completed: "التقييم بعد تأكيد الطرفين للاكتمال.",
     already_reviewed: "قيّمت هذا المشروع مسبقاً.", already_proposed: "أرسلت عرضاً هنا مسبقاً.",
     invalid_url: "أدخل رابط https صالحاً.", forbidden: "غير مسموح.",
@@ -1110,8 +1116,8 @@ async function viewRequestNew() {
       <div class="msg info" id="r-ai-msg" hidden></div>
     </div>
     <div class="panel">
-      <div class="field"><label>${T.title}</label><input id="r-title" /></div>
-      <div class="field"><label>${T.full_description}</label><textarea id="r-desc" rows="5"></textarea></div>
+      <div class="field"><label>${T.title} <span class="hint">(≥6)</span></label><input id="r-title" placeholder="${T.title_ph}" /></div>
+      <div class="field"><label>${T.full_description} <span class="hint">(≥20)</span></label><textarea id="r-desc" rows="5" placeholder="${T.desc_ph}"></textarea></div>
       <div class="form-2">
         <div class="field"><label>${T.category}</label><select id="r-cat"><option value="">—</option>${S.cats.map((c) => `<option value="${c.slug}">${esc(c.name)}</option>`).join("")}</select></div>
         <div class="field"><label>${T.currency}</label><select id="r-cur"><option selected>DZD</option></select></div>
@@ -1145,13 +1151,16 @@ async function viewRequestNew() {
     msg.textContent = `${T.structured_via} Vito AI Hub.` + ((d.questions || []).length ? ` ${T.clarify} ${d.questions.join(" ")}` : ` ${T.review_publish}`);
   });
   $("#r-go").addEventListener("click", async () => {
+    const msg = $("#r-msg");
+    const tV = $("#r-title").value.trim(), dV = $("#r-desc").value.trim();
+    if (tV.length < 6) { msg.hidden = false; msg.className = "msg bad"; msg.textContent = T.r_title_short; return; }
+    if (dV.length < 20) { msg.hidden = false; msg.className = "msg bad"; msg.textContent = T.r_desc_short; return; }
     const r = await api("/api/requests", "POST", {
       title: $("#r-title").value, description: $("#r-desc").value, category: $("#r-cat").value,
       currency: $("#r-cur").value, budget_min: Number($("#r-min").value) || 0, budget_max: Number($("#r-max").value) || 0,
       skills: $("#r-skills").value.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean),
       structured: $("#r-raw").value.trim() ? "1" : "",
     });
-    const msg = $("#r-msg");
     if (!r.ok) { msg.hidden = false; msg.className = "msg bad"; msg.textContent = errText(r.data.error); return; }
     toast(T.request_published); location.hash = `#/request/${r.data.id}`;
   });
