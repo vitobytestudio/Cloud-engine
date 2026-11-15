@@ -6,6 +6,10 @@ on:
     paths:
       - "naksab/**"
       - ".github/workflows/naksab-deploy.yml"
+  pull_request:
+    paths:
+      - "naksab/**"
+      - ".github/workflows/naksab-deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -220,6 +224,22 @@ jobs:
           fi
         env:
           ADMIN_SETUP_TOKEN: ${{ secrets.ADMIN_SETUP_TOKEN }}
+
+      - name: البوابة الحية — هارنس ناكساب الكامل + العدائي + المحفظة + التشغيل (النشر يوقفها)
+        working-directory: naksab
+        run: |
+          npm run build
+          npx wrangler d1 execute naksab-db --local -y --file schema.sql
+          npx wrangler d1 execute naksab-db --local -y --file seed.sql
+          npx wrangler d1 execute naksab-db --local -y --command "ALTER TABLE users ADD COLUMN plan_id TEXT NOT NULL DEFAULT 'free'" || true
+          npx wrangler d1 execute naksab-db --local -y --command "ALTER TABLE users ADD COLUMN site_template TEXT NOT NULL DEFAULT 'aurora'" || true
+          npx wrangler dev --port 8791 --local --ip 0.0.0.0 --var "ADMIN_SETUP_TOKEN:nk-drill-token" > dev.log 2>&1 &
+          for i in $(seq 1 60); do sleep 1; curl -s -m 2 http://127.0.0.1:8791/api/health >/dev/null 2>&1 && break; done
+          curl -s -m 3 http://127.0.0.1:8791/api/health | grep -q '"ok":true' || { echo "::error::خادم البوابة لم يقلع"; tail -n 20 dev.log; exit 1; }
+          node tests/harness.mjs
+          node tests/adversary.mjs
+          node tests/wallet.dev.mjs
+          node tests/ui-boot.mjs
 
       - name: بناء الواجهة (esbuild minify — المصدر المقروء في المستودع فقط)
         working-directory: naksab
