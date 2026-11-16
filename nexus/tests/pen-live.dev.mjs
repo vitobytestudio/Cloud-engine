@@ -133,9 +133,18 @@ mod("انتهاك ملكية المتجر التجريبي (3)", async (R) => {
     out.push(`تعديل منتج الغير→${put.s}`);
     const del = await req("/api/products/p_demo_watch", { method: "DELETE", headers: { cookie: jar, "x-csrf": csrf } });
     out.push(`حذف منتج الغير→${del.s}`);
+    /* /api/orders تُصفّى بـuser_id الجلسة — 200 لقائمة المهاجم الفارغة سلوك صحيح؛ الاختراق = بيانات متجر الغير في قائمته */
     const ord = await req("/api/orders", { headers: { cookie: jar } });
-    out.push(`قراءة طلبيات الغير→${ord.s}`);
-    return { out, bypass: (put.s === 200 || del.s === 200 || ord.s === 200) };
+    let foreign = false;
+    if (ord.s === 200) {
+      try {
+        const dd = JSON.parse(ord.b || "{}");
+        const list = dd.orders ?? [];
+        foreign = list.some((o) => String(o.product_id || o.id || "").includes("p_demo") || o.store_slug === "vito-store");
+      } catch {}
+    }
+    out.push(`قراءة الطلبيات بجلسة المهاجم→${ord.s} (بيانات الغير: ${foreign ? "نعم — اختراق!" : "لا — قائمته الفارغة، التصفية سليمة"})`);
+    return { out, bypass: (put.s === 200 || del.s === 200 || foreign) };
   }
   return { out, bypass: false };
 });
