@@ -30,3 +30,5 @@ CREATE TABLE IF NOT EXISTS ad_orders (
   updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_ad_user ON ad_orders(user_id, created_at DESC);
+
+ALTER TABLE users ADD COLUMN banned INTEGER NOT NULL DEFAULT 0;

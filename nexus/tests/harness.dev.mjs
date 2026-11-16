@@ -401,6 +401,15 @@ let pid = "", pid2 = "";
     ok("توثيق المتجر 200", (await A("/api/adm/merchants/" + me0.id + "/verify", { m: "POST", b: { v: 1 } })).status === 200);
     ok("التوثيق وصل للعامة", (await j("/api/store/" + mySlug)).data.store?.verified === 1);
     ok("إشعار المنحة وصل للتاجر", (await j("/api/notifications", { cookie })).data.notifications?.some((n) => n.type === "plan"));
+    /* ═══ الحظر: عقد كامل — جلسة تموت، دخول مرفوض، متجر مختفي من العالم، ثم عودة كاملة بعد فك الحظر ═══ */
+    ok("حظر التاجر 200", (await A("/api/adm/merchants/" + me0.id + "/ban", { m: "POST", b: { v: 1 } })).status === 200);
+    ok("جلستة المحظور تموت فوراً 403 banned", (await j("/api/me", { cookie })).data?.error === "banned");
+    ok("دخول المحظور مرفوض 403 banned", (await j("/api/auth/login", { method: "POST", body: { email: EMAIL, k0: K0 } })).data?.error === "banned");
+    ok("متجر المحظور يختفي من العالم 404", (await fetch(BASE + "/api/store/" + mySlug)).status === 404);
+    ok("المحظور محجوب من الفيد", !((await (await fetch(BASE + "/api/feed")).json()).posts || []).some((p) => p.store_slug === mySlug));
+    ok("فك الحظر 200", (await A("/api/adm/merchants/" + me0.id + "/ban", { m: "POST", b: { v: 0 } })).status === 200);
+    ok("بعد فك الحظر: الجلسة تعود والباقة باقية", (await j("/api/me", { cookie })).data?.plan === "pro");
+    ok("بعد فك الحظر: المتجر يعود موثقاً", (await j("/api/store/" + mySlug)).data.store?.verified === 1);
     const sv = await A("/api/adm/catalog", { m: "POST", b: { title: "فيديو إعلاني قصير", descr: "15-30ث", price_min: 1900, price_max: 4900, delivery_days: 3 } });
     ok("إضافة خدمة 201", sv.status === 201);
     const svcId = (await sv.json()).id;

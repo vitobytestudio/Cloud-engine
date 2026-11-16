@@ -39,11 +39,11 @@ const T = {
     amount: "المبلغ", my_store_link: "رابط متجري", language: "اللغة", logout: "تسجيل الخروج",
     acc_plans: "الباقات والأسعار", prices: "الأسعار",
     plans_t: "باقات NEXUS", plans_sub: "ابدأ مجاناً وطوّر متجرك حين تحتاج — كل باقة تفتح حصة أكبر من وكيل الذكاء ومنتجات أكثر.",
-    pl_start: "ابدأ مجاناً", pl_current: "باقتك الحالية", pl_request: "اطلب الترقية عبر واتساب", pl_soon: "السعر يُحدد مع الإطلاق — راسلنا مباشرة الآن وترقية تُمنح يدوياً خلال ساعات.",
-    pl_quota: "جلسة وكيل يومياً", pl_products: "منتجات", pl_free_n: "مجاني للأبد", pl_soon_s: "السعر قريباً", pl_wa: "السلام عليكم استوديو VITO، أريد ترقية متجري في NEXUS",
+    pl_start: "ابدأ مجاناً", pl_current: "باقتك الحالية", pl_request: "اطلب الترقية عبر واتساب", pl_soon: "الباقات تُفعّل بالطلب المباشر — راسلنا على واتساب الاستوديو وتُمنح باقتك خلال ساعات.",
+    pl_quota: "جلسة وكيل يومياً", pl_products: "منتجات", pl_free_n: "مجاني للأبد", pl_soon_s: "بالطلب عبر واتساب", pl_wa: "السلام عليكم استوديو VITO، أريد ترقية متجري في NEXUS",
     adm_t: "لوحة الإدارة", adm_login_t: "دخول الإدارة", adm_email: "البريد الإلكتروني", adm_pass: "كلمة السر", adm_enter: "دخول",
     adm_m: "تجار", adm_p: "منتجات", adm_o: "طلبيات", adm_o24: "طلبيات 24س", adm_a: "جلسات وكيل 24س", adm_rev: "أرباح المُسلَّم",
-    adm_merchants: "التجار", adm_search: "ابحث بالاسم أو الرابط…", adm_verify: "توثيق", adm_unverify: "إلغاء التوثيق", adm_verified_s: "موثّق",
+    adm_merchants: "التجار", adm_search: "ابحث بالاسم أو الرابط…", adm_verify: "توثيق", adm_unverify: "إلغاء التوثيق", adm_verified_s: "موثّق", adm_ban: "حظر", adm_unban: "فك الحظر", adm_banned: "محظور",
     adm_catalog: "كتالوج خدمات الاستوديو", adm_add_svc: "إضافة خدمة", adm_title: "اسم الخدمة", adm_descr: "الوصف", adm_pmin: "أدنى سعر (دج)", adm_pmax: "أعلى سعر (دج)", adm_days: "أيام التسليم",
     adm_edit: "تعديل", adm_del: "حذف", adm_confirm_del: "تأكيد الحذف؟", adm_active: "مفعّلة",
     adm_rotate: "تدوير رابط اللوحة", adm_rotate_hint: "التدوير يقتل الرابط القديم فوراً ويصدر جديداً يُعرض مرة واحدة.",
@@ -52,7 +52,7 @@ const T = {
     onb1_t: "سوق يجلب لك الزبائن", onb1_d: "منتجاتك تظهر أمام آلاف المشترين في فيد NEXUS — حركة زوار مشتركة لكل تاجر.",
     onb2_t: "متجرك برابط مستقل", onb2_d: "رابط سريع أنيق توجه إليه زبائن إعلاناتك، مع استمارة طلب سهلة والدفع عند الاستلام.",
     onb3_t: "طلبياتك وأرباحك في مكان", onb3_d: "تابع طلبياتك خطوة بخطوة وراقب أرباحك ومصاريفك بلوحة حية.",
-    start_now: "ابدأ الآن", skip: "تخطي", welcome: "أهلاً بك", empty_feed_t: "السوق ينبض قريباً",
+    start_now: "ابدأ الآن", skip: "تخطي", welcome: "أهلاً بك", empty_feed_t: "السوق يبدأ منك",
     empty_feed_d: "كن أول تاجر يعرض منتجاته هنا — سوقك بانتظارك.", load_more: "المزيد", loading: "جارٍ التحميل…",
     no_results: "لا نتائج", no_results_sub: "جرّب كلمة أخرى أو صنفاً مختلفاً.", categories: "الأصناف",
     cat_mode: "أزياء", cat_beauty: "تجميل", cat_electronics: "إلكترونيات", cat_home: "منزل", cat_kids: "أطفال",
@@ -82,7 +82,7 @@ const T = {
     org_btn: "رتّب منتجي بالوكيل", orging: "الوكيل يرتب…", org_ok: "اقتراحات الوكيل طُبقت", org_tips: "نصائح الوكيل",
     ready: "جاهزية النشر", pro_tab: "المحترفون", pro_hero: "محترفو ناكساب في خدمة متجرك",
     pro_sub: "كتالوج موثّق من ناكساب: هويات ومواقع ومونتاج — الطلب والدفع عبر محفظة ناكساب المؤتمتة.",
-    pro_open: "اطلب من ناكساب", pro_empty: "الكتالوج ينبض قريباً — موثقو ناكساب أول من يظهر",
+    pro_open: "اطلب من ناكساب", pro_empty: "لا خدمات منشورة بعد — كل جديد من موثقي ناكساب يظهر هنا",
     nk_field: "اسمك في ناكساب (لخصم العضوية)", nk_check: "تحقق", nk_ok: "خصم العضوية مطبق", nk_no: "لا عضوية نشطة بهذا الاسم", apply_org: "طبّق الاقتراحات",
   },
   en: {
@@ -121,11 +121,11 @@ const T = {
     amount: "Amount", my_store_link: "My store link", language: "Language", logout: "Log out",
     acc_plans: "Plans & pricing", prices: "Pricing",
     plans_t: "NEXUS plans", plans_sub: "Start free and grow when you need — each plan unlocks more AI agent sessions and products.",
-    pl_start: "Start free", pl_current: "Your current plan", pl_request: "Request upgrade on WhatsApp", pl_soon: "Pricing is set at launch — message us now and your upgrade is granted manually within hours.",
-    pl_quota: "agent sessions a day", pl_products: "products", pl_free_n: "Free forever", pl_soon_s: "Price soon", pl_wa: "Hello VITO studio, I want to upgrade my NEXUS store",
+    pl_start: "Start free", pl_current: "Your current plan", pl_request: "Request upgrade on WhatsApp", pl_soon: "Tiers are granted on request — message the studio on WhatsApp and yours lands within hours.",
+    pl_quota: "agent sessions a day", pl_products: "products", pl_free_n: "Free forever", pl_soon_s: "On request", pl_wa: "Hello VITO studio, I want to upgrade my NEXUS store",
     adm_t: "Admin panel", adm_login_t: "Admin sign-in", adm_email: "Email", adm_pass: "Password", adm_enter: "Enter",
     adm_m: "merchants", adm_p: "products", adm_o: "orders", adm_o24: "orders 24h", adm_a: "agent sessions 24h", adm_rev: "delivered revenue",
-    adm_merchants: "Merchants", adm_search: "Search by name or slug…", adm_verify: "Verify", adm_unverify: "Unverify", adm_verified_s: "Verified",
+    adm_merchants: "Merchants", adm_search: "Search by name or slug…", adm_verify: "Verify", adm_unverify: "Unverify", adm_verified_s: "Verified", adm_ban: "Ban", adm_unban: "Unban", adm_banned: "Banned",
     adm_catalog: "Studio services catalog", adm_add_svc: "Add service", adm_title: "Service title", adm_descr: "Description", adm_pmin: "Min price (DZD)", adm_pmax: "Max price (DZD)", adm_days: "Delivery days",
     adm_edit: "Edit", adm_del: "Delete", adm_confirm_del: "Confirm delete?", adm_active: "Active",
     adm_rotate: "Rotate panel URL", adm_rotate_hint: "Rotating kills the old URL instantly and mints a new one shown once.",
@@ -134,7 +134,7 @@ const T = {
     onb1_t: "A market that brings buyers", onb1_d: "Your products appear to thousands of shoppers in the NEXUS feed — shared traffic for every merchant.",
     onb2_t: "Your own store link", onb2_d: "A fast elegant link for your ad traffic, with an easy order form and cash on delivery.",
     onb3_t: "Orders & profit in one place", onb3_d: "Track every order step by step and watch profit and expenses live.",
-    start_now: "Start now", skip: "Skip", welcome: "Welcome", empty_feed_t: "The market awakens soon",
+    start_now: "Start now", skip: "Skip", welcome: "Welcome", empty_feed_t: "The market starts with you",
     empty_feed_d: "Be the first merchant to showcase here — your market awaits.", load_more: "More", loading: "Loading…",
     no_results: "No results", no_results_sub: "Try another word or category.", categories: "Categories",
     cat_mode: "Fashion", cat_beauty: "Beauty", cat_electronics: "Electronics", cat_home: "Home", cat_kids: "Kids",
@@ -164,7 +164,7 @@ const T = {
     org_btn: "Organize my product with AI", orging: "Agent organizing…", org_ok: "Agent suggestions applied", org_tips: "Agent tips",
     ready: "Publish readiness", pro_tab: "Pros", pro_hero: "NAKSAB pros for your store",
     pro_sub: "Verified catalog from NAKSAB: branding, websites, video editing — order & pay via the automated NAKSAB wallet.",
-    pro_open: "Order on NAKSAB", pro_empty: "Catalog awakens soon — verified NAKSAB pros appear first",
+    pro_open: "Order on NAKSAB", pro_empty: "No services yet — everything new from verified NAKSAB pros lands here",
     nk_field: "Your NAKSAB username (member discount)", nk_check: "Check", nk_ok: "Member discount applied", nk_no: "No active membership for this name", apply_org: "Apply suggestions",
   },
 };
@@ -1637,12 +1637,13 @@ rr("/adm", async (v) => {
       list.innerHTML = (d.merchants || []).map((m) => `
         <div class="adm-row">
           <div style="flex:1;min-width:0">
-            <b>${esc(m.store_name || "—")}</b> ${m.verified ? `<span class="vbadge"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
+            <b>${esc(m.store_name || "—")}</b> ${m.banned ? `<span class="hint" style="color:#e5484d;font-weight:700">${esc(t("adm_banned"))}</span>` : ""}${m.verified ? `<span class="vbadge"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
             <span class="hint" dir="ltr">@${esc(m.slug)} · ${m.products} ${esc(t("pl_products"))}</span>
           </div>
           <div style="display:flex;gap:4px;align-items:center">
             ${["free", "pro", "vip"].map((x) => `<button class="chip ${m.plan === x ? "on" : ""}" data-plan="${x}" data-uid="${m.id}">${esc(t("plan_" + x))}</button>`).join("")}
             <button class="btn ghost" data-vf="${m.id}" data-v="${m.verified}" style="min-height:34px;padding:0 10px;font-size:11px">${m.verified ? esc(t("adm_unverify")) : esc(t("adm_verify"))}</button>
+            <button class="btn ghost" data-ban="${m.id}" data-b="${m.banned}" style="min-height:34px;padding:0 10px;font-size:11px;color:${m.banned ? "#2ad4a6" : "#e5484d"}">${m.banned ? esc(t("adm_unban")) : esc(t("adm_ban"))}</button>
           </div>
         </div>`).join("") || `<p class="hint">${esc(t("adm_none"))}</p>`;
       if (!list.isConnected) return;
@@ -1651,6 +1652,9 @@ rr("/adm", async (v) => {
       }));
       $$("#ad-list [data-vf]").forEach((b) => (b.onclick = async () => {
         try { await call("/api/adm/merchants/" + b.dataset.vf + "/verify", { m: "POST", b: { v: b.dataset.v === "0" } }); toast(t("saved")); vibrate(10); merchants($("#ad-q").value.trim()); } catch { toast("error", "err"); }
+      }));
+      $$("#ad-list [data-ban]").forEach((b) => (b.onclick = async () => {
+        try { await call("/api/adm/merchants/" + b.dataset.ban + "/ban", { m: "POST", b: { v: b.dataset.b === "0" } }); toast(t("saved")); vibrate(10); merchants($("#ad-q").value.trim()); } catch { toast("error", "err"); }
       }));
     };
     merchants();

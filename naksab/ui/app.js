@@ -67,7 +67,7 @@ en: {
   n_requests: "request(s)", new_request: "+ New request", no_requests: "No requests yet.",
   proposals_c: "proposal(s)", budget: "budget", open: "open",
   open_ranked: "Ranked for your profile — send a proposal only where you truly fit.",
-  propose: "Propose", no_open: "No open requests right now — check back soon.",
+  propose: "Propose", no_open: "No open requests right now — new requests land here the moment they arrive.",
   proposals_hint: "Open requests you respond to will appear with their status here.",
   with: "with", no_projects: "No projects yet.",
   new_service_t: "New service", category: "Category", currency: "Currency",
@@ -123,14 +123,14 @@ en: {
   approve: "Approve", reject: "Reject", no_campaigns2: "No campaigns.",
   tab_site: "My site", site_link_l: "Your public website", copy_link: "Copy link", copied: "Copied ✓", site_view: "Open site",
   site_hint: "Share this link in your bio, WhatsApp and Facebook — visitors become leads here automatically.",
-  tpl_locked: "Needs a higher plan — coming soon.", leads_h: "Client requests from your site", no_leads: "No client requests yet — share your site link!",
+  tpl_locked: "Needs a higher tier — request activation on WhatsApp.", leads_h: "Client requests from your site", no_leads: "No client requests yet — share your site link!",
   verify: "verify", verified: "✓ verified", ban: "ban", unban: "unban", no_audit: "No admin actions yet.",
   admins_only: "Admins only.",
   broke: "Something broke — try again.",
   ago_now: "just now", ago_m: "m ago", ago_h: "h ago", ago_d: "d ago",
   // pricing + setup + admin v2
-  pricing: "Pricing", pricing_sub: "Start free. Paid tiers arrive soon — prices in Algerian Dinar.",
-  free_forever: "Free forever", per_month: "/month", coming_soon: "Coming soon",
+  pricing: "Pricing", pricing_sub: "Start free. Paid tiers are granted on request — message the studio on WhatsApp.",
+  free_forever: "Free forever", per_month: "/month", by_request: "On request", request_tier: "Request via WhatsApp", pl_wa_msg: "Hello VITO studio, I want to activate a NAKSAB tier",
   choose_free: "Start free", current_plan: "Your plan",
   cta_free_freelancer: "Complete your profile & offer services", cta_free_client: "Post a project",
   title_ph: "e.g. Online store for handmade crafts", desc_ph: "Describe your project: what you need, details, deadline…",
@@ -175,7 +175,7 @@ en: {
     project_not_completed: "You can review after both sides confirm completion.",
     already_reviewed: "You already reviewed this project.", already_proposed: "You already sent a proposal here.",
     invalid_url: "Enter a valid https:// link.", forbidden: "Not allowed.",
-    payments_disabled: "Payments are not open yet — coming soon.",
+    payments_disabled: "Online payment is not enabled for this store — reach the seller on WhatsApp.",
     client_only: "Only client accounts can post project requests.",
     invalid_setup: "Check the fields — code must be 16+ mixed characters.",
     not_buyable: "This plan is not open for purchase yet.",
@@ -251,7 +251,7 @@ ar: {
   n_requests: "طلب", new_request: "+ طلب جديد", no_requests: "لا طلبات بعد.",
   proposals_c: "عرض", budget: "الميزانية", open: "مفتوح",
   open_ranked: "مرتبة لملفك — أرسل عرضاً فقط حيث تناسبك فعلاً.",
-  propose: "قدّم عرضاً", no_open: "لا طلبات مفتوحة الآن — عود قريباً.",
+  propose: "قدّم عرضاً", no_open: "لا طلبات مفتوحة الآن — الطلبات الجديدة تظهر هنا فور وصولها.",
   proposals_hint: "الطلبات المفتوحة التي تستجيب لها ستظهر بحالتها هنا.",
   with: "مع", no_projects: "لا مشاريع بعد.",
   new_service_t: "خدمة جديدة", category: "التصنيف", currency: "العملة",
@@ -307,14 +307,14 @@ ar: {
   approve: "اعتماد", reject: "رفض", no_campaigns2: "لا حملات.",
   tab_site: "موقعي", site_link_l: "موقعك العام", copy_link: "انسخ الرابط", copied: "نُسخ ✓", site_view: "افتح الموقع",
   site_hint: "شارك هذا الرابط في بروفيلك وواتساب وفيسبوك — من يزوره يصبح طلباً محتملاً هنا تلقائياً.",
-  tpl_locked: "يتطلب باقة أعلى — قريباً.", leads_h: "طلبات الزبائن من موقعك", no_leads: "لا طلبات بعد — شارك رابط موقعك!",
+  tpl_locked: "يتطلب باقة أعلى — اطلب التفعيل عبر واتساب الاستوديو.", leads_h: "طلبات الزبائن من موقعك", no_leads: "لا طلبات بعد — شارك رابط موقعك!",
   verify: "توثيق", verified: "✓ موثّق", ban: "حظر", unban: "رفع الحظر", no_audit: "لا إجراءات إدارية بعد.",
   admins_only: "للمديرين فقط.",
   broke: "حدث خلل — حاول مجدداً.",
   ago_now: "الآن", ago_m: " د قبل", ago_h: " س قبل", ago_d: " ي قبل",
   // pricing + setup + admin v2
-  pricing: "الأسعار", pricing_sub: "ابدأ مجاناً. الباقات المدفوعة قريباً — الأسعار بالدينار الجزائري.",
-  free_forever: "مجاني للأبد", per_month: "/شهر", coming_soon: "قريباً",
+  pricing: "الأسعار", pricing_sub: "ابدأ مجاناً. الباقات المدفوعة بالطلب — راسل الاستوديو على واتساب وتُفعّل خلال ساعات.",
+  free_forever: "مجاني للأبد", per_month: "/شهر", by_request: "بالطلب", request_tier: "اطلب التفعيل عبر واتساب", pl_wa_msg: "السلام عليكم استوديو VITO، أريد تفعيل باقة في NAKSAB",
   choose_free: "ابدأ مجاناً", current_plan: "باقتك",
   cta_free_freelancer: "أكمل ملفك واعرض خدماتك", cta_free_client: "اعرض مشروعك",
   title_ph: "مثال: متجر إلكتروني للحرف اليدوية", desc_ph: "اشرح مشروعك: ماذا تحتاج، التفاصيل، الموعد…",
@@ -359,7 +359,7 @@ ar: {
     project_not_completed: "التقييم بعد تأكيد الطرفين للاكتمال.",
     already_reviewed: "قيّمت هذا المشروع مسبقاً.", already_proposed: "أرسلت عرضاً هنا مسبقاً.",
     invalid_url: "أدخل رابط https صالحاً.", forbidden: "غير مسموح.",
-    payments_disabled: "الدفع غير مفتوح بعد — قريباً.",
+    payments_disabled: "الدفع الإلكتروني غير مفعّل لهذا المتجر — تواصل مع البائع عبر واتساب.",
     client_only: "نشر طلبات المشاريع لحسابات العملاء فقط.",
     invalid_setup: "تحقق من الحقول — الرمز يجب أن يكون 16+ مختلطاً.",
     not_buyable: "هذه الباقة غير مفتوحة للشراء بعد.",
@@ -1435,7 +1435,7 @@ async function viewAdmin() {
       const r = await api("/api/admin/settings");
       const g = (k) => esc((r.data.settings || []).find((x) => x.k === k)?.v ?? "");
       body.innerHTML = `<div class="panel" style="max-width:680px">
-        <div class="field"><label>${T.payments_enabled_l}</label><select id="st-pay"><option value="0" ${g("payments_enabled") !== "1" ? "selected" : ""}>OFF — ${T.coming_soon}</option><option value="1" ${g("payments_enabled") === "1" ? "selected" : ""}>ON</option></select></div>
+        <div class="field"><label>${T.payments_enabled_l}</label><select id="st-pay"><option value="0" ${g("payments_enabled") !== "1" ? "selected" : ""}>OFF</option><option value="1" ${g("payments_enabled") === "1" ? "selected" : ""}>ON</option></select></div>
         <div class="form-2">
           <div class="field"><label>${T.ai_daily_l}</label><input id="st-ad" type="number" min="1" value="${g("ai_free_daily") || "10"}" /></div>
           <div class="field"><label>${T.ai_monthly_l}</label><input id="st-am" type="number" min="1" value="${g("ai_free_monthly") || "100"}" /></div>
@@ -1618,11 +1618,11 @@ async function viewPricing() {
   const r = await api("/api/plans");
   const plans = r.data.plans || [];
   const card = (pl) => `<div class="card card-pad" style="display:flex;flex-direction:column;gap:14px;${pl.id === "vip" ? "border-color:rgba(124,108,255,.45)" : ""}">
-    <div class="spread"><b style="font-family:var(--display);font-size:18px">${esc(pl.name)}</b>${pl.active ? `<span class="chip ok">●</span>` : `<span class="chip warn">${T.coming_soon}</span>`}</div>
-    <div><span class="price" style="font-size:28px">${pl.price_dzd ? money(pl.price_dzd) : T.free_forever}</span><span class="tiny muted">${pl.price_dzd ? " " + T.per_month : ""}</span></div>
+    <div class="spread"><b style="font-family:var(--display);font-size:18px">${esc(pl.name)}</b>${pl.active ? `<span class="chip ok">●</span>` : `<span class="chip warn">${T.by_request}</span>`}</div>
+    <div><span class="price" style="font-size:28px">${pl.active ? (pl.price_dzd ? money(pl.price_dzd) : T.free_forever) : T.by_request}</span><span class="tiny muted">${pl.active && pl.price_dzd ? " " + T.per_month : ""}</span></div>
     <div style="font-size:13px;color:var(--dim);line-height:2">${(() => { try { return JSON.parse(pl.features || "[]").map((f) => `<div>✓ ${esc(f)}</div>`).join(""); } catch { return ""; } })()}</div>
     ${pl.active && pl.buyable && pl.price_dzd ? `<button class="btn primary" style="justify-content:center" data-buy="${esc(pl.id)}">${T.mem_buy}</button>`
-      : pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "client" ? "#/request/new" : "#/dashboard"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "client" ? T.cta_free_client : T.cta_free_freelancer}</a>` : `<button class="btn" disabled style="justify-content:center">${T.coming_soon}</button>`}
+      : pl.active ? `<a class="btn primary" style="justify-content:center" href="${!S.user ? "#/" : S.user.role === "client" ? "#/request/new" : "#/dashboard"}" ${!S.user ? 'id="free-go"' : ""}>${!S.user ? T.choose_free : S.user.role === "client" ? T.cta_free_client : T.cta_free_freelancer}</a>` : `<a class="btn" style="justify-content:center" href="https://wa.me/213777845635?text=${encodeURIComponent(T.pl_wa_msg)}" target="_blank" rel="noopener">${T.request_tier}</a>`}
   </div>`;
   shell(`<div class="wrap page-head"><h1>${T.pricing}</h1><p>${T.pricing_sub}</p></div>
   <div class="wrap"><div class="t-grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">
