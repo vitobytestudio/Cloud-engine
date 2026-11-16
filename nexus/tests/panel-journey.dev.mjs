@@ -153,6 +153,16 @@ try {
         ok("تفعيل باقة VIP بالنقر يعمل من الجهاز الجديد", vip, `الحالة بعد النقر: ${onAfter}`);
       }
     }
+    /* الحظر: انقلاب حقيقي بالنقر — المحظور تُطفأ جلسته ويتختفي متجره، وفك الحظر يعيده */
+    const banBtn = await waitUntil(() => !!X.d.querySelector("[data-ban]"), 4000);
+    if (banBtn) {
+      await click(X, "[data-ban]");
+      const banned = await waitUntil(() => X.d.querySelector("[data-ban]")?.dataset.b === "1", 8000);
+      ok("حظر التاجر بالنقر يعمل من الجهاز الجديد", banned, `data-b بعد النقر: ${X.d.querySelector("[data-ban]")?.dataset.b}`);
+      await click(X, "[data-ban]");
+      const unbanned = await waitUntil(() => X.d.querySelector("[data-ban]")?.dataset.b === "0", 8000);
+      ok("فك الحظر بالنقر يعمل — التاجر يعود كاملاً", unbanned, `data-b بعد النقر: ${X.d.querySelector("[data-ban]")?.dataset.b}`);
+    }
     /* التدوير آخر الخطوات — يقتل التوكن المستعمل في هذه الجلسة */
     const rot = await waitUntil(() => !!X.d.getElementById("ad-rotate"), 4000);
     if (rot) {

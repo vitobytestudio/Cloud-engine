@@ -65,7 +65,7 @@ const CATEGORIES = ["mode", "beauty", "electronics", "home", "kids", "food", "sp
 type UserRow = {
   id: string; email: string; name: string; slug: string; k0: string;
   store_name: string; bio: string; logo: string; banner: string; whatsapp: string; color: string;
-  plan: Plan; credits: number; verified: number; created_at: number;
+  plan: Plan; credits: number; verified: number; banned?: number; created_at: number;
 };
 const publicUser = (u: UserRow) => ({
   slug: u.slug, store_name: u.store_name || u.name, bio: u.bio, logo: u.logo, banner: u.banner,
@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.6", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.7", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -121,6 +121,7 @@ route("POST", "/api/auth/login", async (req, env) => {
   if (!isEmail(email) || !isK0(k0)) return bad("invalid", 401);
   const u = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first<UserRow>();
   if (!u || !ctEqual(u.k0, k0)) return bad("invalid", 401);
+  if (u.banned) return bad("banned", 403); /* محظور: لا دخول */
   const s = await createSession(env, u.id);
   return json({ ok: true, slug: u.slug, csrf: s.csrf }, 200, { "set-cookie": sessionCookie(s.sid) });
 }, { csrf: false });
@@ -134,6 +135,7 @@ route("GET", "/api/me", async (_r, env, s) => {
   if (!s) return bad("auth_required", 401);
   const u = await getUser(env, s.userId);
   if (!u) return bad("auth_required", 401);
+  if (u.banned) return bad("banned", 403); /* المحظور: الواجهة تسجّله خروجاً — بوابة الحظر المركزية لا تغطي هذا المسار */
   const counts = await env.DB.prepare(
     `SELECT
       (SELECT COUNT(*) FROM products WHERE user_id = ?1 AND active = 1) AS products,
@@ -385,7 +387,7 @@ route("POST", "/api/media", async (req, env, s) => {
 // ═══ المتجر العام ═══
 route("GET", "/api/store/:slug", async (_r, env, _s, p) => {
   const u = await env.DB.prepare("SELECT * FROM users WHERE slug = ?").bind(p.slug).first<UserRow>();
-  if (!u) return bad("not_found", 404);
+  if (!u || u.banned) return bad("not_found", 404); /* متجر محظور: غير موجود للعالم */
   const { results } = await env.DB.prepare(
     "SELECT id, title, descr, price, compare_at, image, category, stock, created_at FROM products WHERE user_id = ? AND active = 1 ORDER BY featured DESC, created_at DESC LIMIT 100"
   ).bind(u.id).all();
@@ -401,7 +403,7 @@ route("GET", "/api/feed", async (req, env) => {
   let sql = `SELECT pr.id, pr.title, pr.price, pr.compare_at, pr.image, pr.category, pr.created_at,
     u.slug AS store_slug, u.store_name AS store_name, u.logo AS store_logo, u.verified AS store_verified, u.plan AS store_plan
     FROM products pr JOIN users u ON u.id = pr.user_id
-    WHERE pr.active = 1 AND pr.created_at < ?1`;
+    WHERE pr.active = 1 AND u.banned = 0 AND pr.created_at < ?1`;
   const binds: (string | number)[] = [before];
   if (cat) { sql += " AND pr.category = ?2"; binds.push(cat); }
   if (q) { sql += ` AND (pr.title LIKE ?${binds.length + 1} OR u.store_name LIKE ?${binds.length + 1})`; binds.push(`%${q}%`); }
@@ -419,8 +421,8 @@ route("GET", "/api/categories", async (_r, env) => {
 
 // ═══ الوكيل الذكي (قناتنا الأولى داخل المتجر — القنوات الخارجية لاحقاً بأمر المالك) ═══
 route("GET", "/api/store/:slug/agent", async (_r, env, _s, p) => {
-  const u = await env.DB.prepare("SELECT id, store_name, plan, verified FROM users WHERE slug = ?").bind(p.slug).first<UserRow>();
-  if (!u) return bad("not_found", 404);
+  const u = await env.DB.prepare("SELECT id, store_name, plan, verified, banned FROM users WHERE slug = ?").bind(p.slug).first<UserRow>();
+  if (!u || u.banned) return bad("not_found", 404);
   const day = new Date().toISOString().slice(0, 10);
   const used = Number((await env.CACHE_KV.get(`aq:${u.id}:${day}`)) ?? "0");
   const quota = PLAN_QUOTA[(u.plan ?? "free") as Plan] ?? 15;
@@ -918,7 +920,7 @@ route("GET", "/api/adm/merchants", async (req, env) => {
   const q = clip(new URL(req.url).searchParams.get("q") ?? "", 40);
   const like = `%${q}%`;
   const { results } = await env.DB.prepare(
-    "SELECT u.id, u.slug, u.store_name, u.plan, u.verified, u.created_at, (SELECT COUNT(*) FROM products p WHERE p.user_id = u.id) AS products FROM users u WHERE (? = '' OR u.store_name LIKE ? OR u.slug LIKE ?) ORDER BY u.created_at DESC LIMIT 100"
+    "SELECT u.id, u.slug, u.store_name, u.plan, u.verified, u.banned, u.created_at, (SELECT COUNT(*) FROM products p WHERE p.user_id = u.id) AS products FROM users u WHERE (? = '' OR u.store_name LIKE ? OR u.slug LIKE ?) ORDER BY u.created_at DESC LIMIT 100"
   ).bind(q, like, like).all<any>();
   return json({ merchants: results ?? [] });
 });
@@ -946,6 +948,18 @@ route("POST", "/api/adm/merchants/:id/verify", async (req, env, _s, p) => {
   if (v) await notify(env, mid, "verified", "تم توثيق متجرك", "منحك فريق NEXUS شارة التوثيق — تظهر للزوار في متجرك");
   await admAudit(env, v ? "verify" : "unverify", mid, "");
   return json({ ok: true, verified: v });
+});
+
+route("POST", "/api/adm/merchants/:id/ban", async (req, env, _s, p) => {
+  const b = (await req.json().catch(() => ({}))) as any;
+  const v = b.v ? 1 : 0;
+  const mid = String(p.id);
+  const u = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(mid).first<any>();
+  if (!u) return bad("not_found", 404);
+  await env.DB.prepare("UPDATE users SET banned = ? WHERE id = ?").bind(v, mid).run();
+  if (v) await notify(env, mid, "banned", "تم حظر متجرك", "حُظر متجرك من فريق NEXUS — تواصل مع الاستوديو عبر واتساب لمراجعة الحالة");
+  await admAudit(env, v ? "ban" : "unban", mid, "");
+  return json({ ok: true, banned: v });
 });
 
 route("GET", "/api/adm/catalog", async (_r, env) => {
@@ -1094,12 +1108,15 @@ export default {
         }
       }
       const s = await getSession(env, req);
+      /* الحظر المركزي: جلسة عضو محظور تموت فوراً على كل مسار — فحص واحد قبل التوزيع */
+      const bannedFlag = !!(s && (await env.DB.prepare("SELECT banned FROM users WHERE id = ?1").bind(s.userId).first<{ banned: number }>())?.banned);
       for (const r of R) {
         const params = matchPath(r.pat, path);
         if (!params || r.m !== req.method) continue;
-        if (r.auth && !s) return bad("auth_required", 401);
+        if (r.auth && (!s || bannedFlag)) return bad(bannedFlag ? "banned" : "auth_required", bannedFlag ? 403 : 401);
         if (r.csrf) {
           const hdr = req.headers.get("x-csrf") ?? "";
+          if (bannedFlag) return bad("banned", 403);
           if (!s || hdr !== s.csrf) return bad("csrf", 403);
         }
         try {
