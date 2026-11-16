@@ -194,6 +194,20 @@ jobs:
           tail -n 30 deploy.log | grep -av '^\s*$' | tail -n 9 | while IFS= read -r line; do echo "::notice::${line:0:900}"; done
           exit 1
 
+      - name: هجوم اختراق فعلي على الإنتاج من شبكة GitHub (عدّ العنوان السري/تزوير الكوكي/كسر الحد/CSRF/حقن/ملكية) — أي اختراق يُسقط النشر
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        working-directory: nexus
+        run: |
+          set +e
+          node tests/pen-live.dev.mjs | tee pen.log
+          RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$RC" -eq 0 ]; then echo "::notice::الهجوم الفعلي: الدفاعات صدت كل شيء"; exit 0; fi
+          if [ "$RC" -eq 3 ]; then echo "::warning::تعذر الوصول للهدف من هذه الشبكة — أُعيد المحاولة لاحقاً"; exit 0; fi
+          echo "::error::اختراق ناجح على الإنتاج — تقرير الهجوم:"
+          grep -aE "bypass|leak|created|weird|hits5xx" pen.log | head -n 12
+          exit 1
+
       - name: فحص ما بعد النشر
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
