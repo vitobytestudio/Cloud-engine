@@ -203,7 +203,7 @@ jobs:
           RC=${PIPESTATUS[0]}
           set -e
           mkdir -p "$GITHUB_WORKSPACE/docs/security"
-          cp pen-report.md "$GITHUB_WORKSPACE/docs/security/pen-report.md"
+          cp pen-report.md "$GITHUB_WORKSPACE/docs/security/pen-report.md" || echo "::warning::لا تقرير مكتوب"
           cd "$GITHUB_WORKSPACE"
           git config user.name "vito-pen"
           git config user.email "pen@vitobytestudio.dev"

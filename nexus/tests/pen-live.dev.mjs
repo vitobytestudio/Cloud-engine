@@ -164,17 +164,24 @@ mod("ترويسات خبيثة وHost مزيف (8)", async (R) => {
 
 // ═══ الإطلاق والتقرير ═══
 const results = [];
-for (const { name, fn } of mods) {
-  const t0 = Date.now();
-  let r;
-  try { r = await fn(); } catch (e) { r = { error: String(e).slice(0, 100) }; }
-  const ms = Date.now() - t0;
-  results.push({ name, ...r, ms });
-  console.log(`═══ ${name} — ${ms}ms ═══`);
-  console.log(JSON.stringify(r, null, 1).slice(0, 500));
-}
+let crash = null;
+try {
+  for (const { name, fn } of mods) {
+    const t0 = Date.now();
+    let r;
+    try { r = await fn(); } catch (e) { r = { error: String(e).slice(0, 100) }; }
+    const ms = Date.now() - t0;
+    results.push({ name, ...r, ms });
+    const summary = Object.entries(r).filter(([k]) => ["bypass", "leak", "created", "weird", "hits5xx", "error"].includes(k)).map(([k, v]) => `${k}=${v}`).join(" ");
+    console.log(`::notice::PEN|${name}|${summary || JSON.stringify(r).slice(0, 90)}`); /* تعليق مقروء من check-runs annotations */
+    console.log(`═══ ${name} — ${ms}ms ═══`);
+    console.log(JSON.stringify(r, null, 1).slice(0, 500));
+  }
+} catch (e) { crash = String(e).slice(0, 200); console.log(`::error::PEN CRASH: ${crash}`); }
 // تقرير مفصل يُكتب دائماً — تُقرؤه المالك والوكيل حتى لو حجبت CI السجلات
+if (crash) results.push({ name: "انهيار السكربت ذاته", error: crash, bypass: false });
 const rep = [`# تقرير الهجوم الفعلي — ${new Date().toISOString()}`, `الهدف: ${T}`, `الوصولية: ${reachable} ضربة وصلت / ${unreachable} فشلت شبكياً`, ""];
+if (crash) rep.push(`**انهيار**: ${crash}`, "");
 for (const r of results) {
   rep.push(`## ${r.name}`);
   rep.push("```json");
@@ -182,7 +189,7 @@ for (const r of results) {
   rep.push("```");
   rep.push(`**الحكم: ${r.bypass ? "✗ اختراق ناجح" : "✓ الدفاع صدّه"}**`, "");
 }
-rep.push(`---`, `الحصيلة: ${totalBypass} اختراقاً من ${mods.length} وحدة`);
+rep.push(`---`, `الحصيلة: ${results.filter((x) => x.bypass).length} اختراقاً من ${mods.length} وحدة`);
 import { writeFileSync } from "node:fs";
 writeFileSync(new URL("../pen-report.md", import.meta.url), rep.join("\n"));
 console.log("(التقرير كُتب: nexus/pen-report.md)");
