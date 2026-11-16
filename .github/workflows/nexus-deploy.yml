@@ -19,7 +19,7 @@ on:
         default: "0"
 
 permissions:
-  contents: read
+  contents: write # الكتابة لتقرير الهجوم فقط (docs/security) — لا يزوّر أي مسار نشر
 
 concurrency:
   group: nexus-deploy
@@ -202,10 +202,16 @@ jobs:
           node tests/pen-live.dev.mjs | tee pen.log
           RC=${PIPESTATUS[0]}
           set -e
+          mkdir -p docs/security
+          cp nexus/pen-report.md docs/security/pen-report.md
+          git config user.name "vito-pen"
+          git config user.email "pen@vitobytestudio.dev"
+          git add docs/security/pen-report.md
+          git commit -m "تقرير الهجوم الفعلي $(date -u +%FT%TZ)" || true
+          git push
           if [ "$RC" -eq 0 ]; then echo "::notice::الهجوم الفعلي: الدفاعات صدت كل شيء"; exit 0; fi
-          if [ "$RC" -eq 3 ]; then echo "::warning::تعذر الوصول للهدف من هذه الشبكة — أُعيد المحاولة لاحقاً"; exit 0; fi
-          echo "::error::اختراق ناجح على الإنتاج — تقرير الهجوم:"
-          grep -aE "bypass|leak|created|weird|hits5xx" pen.log | head -n 12
+          if [ "$RC" -eq 3 ]; then echo "::warning::تعذر الوصول للهدف — انظر التقرير"; exit 0; fi
+          echo "::error::اختراق ناجح على الإنتاج — التقرير في docs/security/pen-report.md"
           exit 1
 
       - name: فحص ما بعد النشر

@@ -173,6 +173,20 @@ for (const { name, fn } of mods) {
   console.log(`═══ ${name} — ${ms}ms ═══`);
   console.log(JSON.stringify(r, null, 1).slice(0, 500));
 }
+// تقرير مفصل يُكتب دائماً — تُقرؤه المالك والوكيل حتى لو حجبت CI السجلات
+const rep = [`# تقرير الهجوم الفعلي — ${new Date().toISOString()}`, `الهدف: ${T}`, `الوصولية: ${reachable} ضربة وصلت / ${unreachable} فشلت شبكياً`, ""];
+for (const r of results) {
+  rep.push(`## ${r.name}`);
+  rep.push("```json");
+  rep.push(JSON.stringify({ ...r, name: undefined }, null, 1).slice(0, 900));
+  rep.push("```");
+  rep.push(`**الحكم: ${r.bypass ? "✗ اختراق ناجح" : "✓ الدفاع صدّه"}**`, "");
+}
+rep.push(`---`, `الحصيلة: ${totalBypass} اختراقاً من ${mods.length} وحدة`);
+import { writeFileSync } from "node:fs";
+writeFileSync(new URL("../pen-report.md", import.meta.url), rep.join("\n"));
+console.log("(التقرير كُتب: nexus/pen-report.md)");
+
 const totalBypass = results.filter((x) => x.bypass).length;
 console.log(`\nالوصولية: ${reachable} ضربة وصلت — ${unreachable} فشلت شبكياً`);
 if (reachable < 30 && unreachable > 0) {
