@@ -1754,7 +1754,7 @@ document.documentElement.lang = S.lang;
 document.documentElement.dir = S.lang === "ar" ? "rtl" : "ltr";
 window.addEventListener("hashchange", render);
 (async () => {
-  if (!location.hash) location.hash = localStorage.getItem("nx_seen") ? "#/" : "#/onb-check";
+  if (!location.hash) location.hash = location.pathname.startsWith("/panel/") ? "#/adm" : (localStorage.getItem("nx_seen") ? "#/" : "#/onb-check"); /* الرابط السري للمالك يفتح اللوحة — لا الرئيسية */
   render();
   setTimeout(() => $("#boot")?.classList.add("off"), 650);
   await me();

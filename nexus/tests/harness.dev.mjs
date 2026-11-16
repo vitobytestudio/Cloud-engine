@@ -7,6 +7,7 @@ const ok = (name, cond) => { if (cond) { pass++; console.log("✓ " + name); } e
 import { readFileSync } from "node:fs";
 const bundle = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
 ok("توجيه الرابط السري: /panel/<tok> بلا هاش يهبط على اللوحة لا الواجهة العادية", bundle.includes('location.pathname.startsWith("/panel/")'));
+ok("إقلاع الرابط السري: الهاش يجبر #/adm للوحة قبل أي توجيه آخر", /pathname\.startsWith\("\/panel\/"\)\?"#\/adm"/.test(bundle), "الإقلاع كان يجبر #/ فيرى المالك الرئيسية دائماً");
 
 /* تصفير عدادات rl المحلية */
 try {
