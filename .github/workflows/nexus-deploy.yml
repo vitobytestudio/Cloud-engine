@@ -202,8 +202,9 @@ jobs:
           node tests/pen-live.dev.mjs | tee pen.log
           RC=${PIPESTATUS[0]}
           set -e
-          mkdir -p docs/security
-          cp nexus/pen-report.md docs/security/pen-report.md
+          mkdir -p "$GITHUB_WORKSPACE/docs/security"
+          cp pen-report.md "$GITHUB_WORKSPACE/docs/security/pen-report.md"
+          cd "$GITHUB_WORKSPACE"
           git config user.name "vito-pen"
           git config user.email "pen@vitobytestudio.dev"
           git add docs/security/pen-report.md
