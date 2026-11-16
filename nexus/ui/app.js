@@ -1539,7 +1539,7 @@ rr("/adm", async (v) => {
   v.innerHTML = `${topbar(t("adm_t"))}<div class="page" id="adm-body">${skeletons(2)}</div>`;
   let csrf = sessionStorage.getItem("nx_adm_csrf") || "";
   const call = async (path, o = {}) => {
-    const r = await fetch(path, { method: o.m || "GET", headers: { "content-type": "application/json", "x-panel": ptok, ...(o.b ? { "x-csrf": csrf } : {}) }, body: o.b ? JSON.stringify(o.b) : undefined });
+    const r = await fetch(path, { method: o.m || "GET", headers: { "content-type": "application/json", "x-panel": ptok, ...(o.m && o.m !== "GET" ? { "x-csrf": csrf || ptok } : {}) }, body: o.b ? JSON.stringify(o.b) : undefined }); /* التوكن يحل محل CSRF حين لا جهاز مُسجَّل — الرابط هو المفتاح */
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw { status: r.status, ...d };
     return d;

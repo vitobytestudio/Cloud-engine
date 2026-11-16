@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.5", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.6", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -1086,9 +1086,11 @@ export default {
         const me = await admFrom(req, env);
         if (!ph || !xp || (await sha256hex(xp)) !== ph || !me) return secure(bad("not_found", 404));
         if (req.method !== "GET") {
+          const hdr = req.headers.get("x-csrf") ?? "";
           const dtk = parseCookies(req)[ADM_COOKIE] ?? "";
           const d = /^[0-9a-f]{64}$/.test(dtk) ? await env.DB.prepare("SELECT csrf FROM admin_devices WHERE token_hash = ? AND revoked = 0").bind(await sha256hex(dtk)).first<any>() : null;
-          if ((req.headers.get("x-csrf") ?? "") !== (d?.csrf ?? "")) return secure(bad("csrf", 403));
+          /* الترويسة الصالحة: إما CSRF جهاز مُسجَّل، أو توكن الرابط السري نفسه (الرابط هو المفتاح — جلسات بلا كوكي مُصدر) */
+          if (!(d && hdr === d.csrf) && !(hdr && (await sha256hex(hdr)) === ph)) return secure(bad("csrf", 403));
         }
       }
       const s = await getSession(env, req);

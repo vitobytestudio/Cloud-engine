@@ -83,6 +83,8 @@ async function open(s, path, hash) {
 }
 const setV = (s, sel, v) => { const el = s.d.querySelector(sel); if (!el) throw new Error(`${s.label}: مفقود ${sel}`); el.value = v; };
 const click = async (s, sel) => { const el = s.d.querySelector(sel); if (!el) throw new Error(`${s.label}: مفقود ${sel}`); el.click(); await sleep(700); return el; };
+const clickUntil = async (s, sel, fn, ms = 8000) => { const el = s.d.querySelector(sel); if (!el) throw new Error(`${s.label}: مفقود ${sel}`); el.click(); const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await sleep(250); } return false; }; /* try داخل الحلقة يبتلع رفض الشرط أثناء الرسم */
+process.on("unhandledRejection", (r) => console.log("(رفض مبتلع: " + String(r).slice(0, 60) + ")"));
 
 try {
   // ═══ 1) المالك يعمل الإعداد بنقرة من صفحة النافذة ═══
@@ -126,15 +128,37 @@ try {
       setV(X, "#sv-d", "جلسة استشارة معمقة لخدمات المنصة.");
       setV(X, "#sv-mn", "500");
       setV(X, "#sv-mx", "2000");
-      await click(X, "#sv-save");
-      const saved = await waitUntil(() => X.d.body.textContent.includes("استشارة تقنية متقدمة"), 8000);
-      ok("إضافة خدمة حقيقية من جهاز جديد تنجح", saved);
+      const errEl = await waitUntil(() => X.d.getElementById("sv-err"), 400);
+      const saved = await clickUntil(X, "#sv-save", () => X.d.body.textContent.includes("استشارة تقنية متقدمة"), 8000);
+      ok("إضافة خدمة حقيقية من جهاز جديد تنجح", saved, X.d.getElementById("sv-err")?.textContent || X.d.body.textContent.slice(0, 100).replace(/\s+/g, " "));
     }
+    /* بلاغ المالك: التوثيق والباقات كانت ميتة من جهاز جديد — نضغطها فعلاً قبل تدوير الرابط */
+    const vf = await waitUntil(() => !!X.d.querySelector('[data-vf]'), 8000);
+    if (vf) {
+      /* البذرة تجعل التاجر التجريبي موثقاً أصلاً — النقرة تقلب الحالة (توثيق↔إلغاء) والصحيح أن تنعكس */
+      const before = X.d.querySelector('[data-vf]')?.dataset.v;
+      await click(X, '[data-vf]');
+      const flipped = await waitUntil(() => X.d.querySelector('[data-vf]')?.dataset.v === (before === "0" ? "1" : "0"), 8000);
+      const after = X.d.querySelector('[data-vf]')?.dataset.v;
+      ok("توثيق/إلغاء التوثيق بالنقر يعمل من الجهاز الجديد", flipped, `قبل=${before} بعد=${after}`);
+      if (before === "1") { await click(X, '[data-vf]'); await sleep(600); } /* أعد الحالة الجميلة للعرض */
+      const pro = await waitUntil(() => !!X.d.querySelector('[data-plan="pro"]'), 4000);
+      if (pro) {
+        await click(X, '[data-plan="pro"]');
+        const granted = await waitUntil(() => !!X.d.querySelector('[data-plan="pro"].on'), 8000);
+        ok("تفعيل باقة PRO بالنقر يعمل من الجهاز الجديد", granted);
+        await click(X, '[data-plan="vip"]');
+        const vip = await waitUntil(() => !!X.d.querySelector('[data-plan="vip"].on'), 8000);
+        const onAfter = X.d.querySelector('[data-plan].on')?.dataset.plan;
+        ok("تفعيل باقة VIP بالنقر يعمل من الجهاز الجديد", vip, `الحالة بعد النقر: ${onAfter}`);
+      }
+    }
+    /* التدوير آخر الخطوات — يقتل التوكن المستعمل في هذه الجلسة */
     const rot = await waitUntil(() => !!X.d.getElementById("ad-rotate"), 4000);
     if (rot) {
       await click(X, "#ad-rotate");
-      const newUrl = await waitUntil(() => X.d.body.textContent.includes("/panel/"), 8000);
-      ok("تدوير الرابط السري يعمل من الجهاز الجديد", newUrl);
+      const newUrl = await clickUntil(X, "#rp-copy", () => X.d.body.textContent.includes("/panel/"), 8000);
+      ok("تدوير الرابط السري يعمل من الجهاز الجديد", newUrl, X.d.body.textContent.slice(0, 80).replace(/\s+/g, " "));
     }
   }
 
