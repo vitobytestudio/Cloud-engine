@@ -19,8 +19,7 @@ on:
         default: "0"
 
 permissions:
-  contents: read
-  contents: write # تقرير الهجوم الفعلي فقط — docs/security لا يزوّر أي مسار نشر
+  contents: write # الكتابة لتقرير الهجوم فقط (docs/security) — لا يزوّر أي مسار نشر
 
 concurrency:
   group: nexus-deploy
