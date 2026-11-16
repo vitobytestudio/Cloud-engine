@@ -68,6 +68,10 @@ jobs:
           node tests/visual.dev.mjs
           kill $WPID 2>/dev/null || true
 
+      - name: رحلة لوحة المالك (إعداد بنقر ← الرابط السري ← اللوحة/الدخول)
+        working-directory: nexus
+        run: npm run gate:panel
+
       - name: بوابة نافذة الإعداد (فتح مؤقت/توكن موازٍ/انقضاء ذاتي)
         working-directory: nexus
         run: npm run gate:window
