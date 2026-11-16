@@ -149,6 +149,19 @@ jobs:
           npx wrangler d1 execute DB --remote -y --file seed.sql
           echo "::notice::مخطط NEXUS وترقيته وبذرة العرض مُطبّقة"
 
+      - name: ترقية الحظر بصوت عالٍ (عمود banned — لا صمت هنا)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        working-directory: nexus
+        run: |
+          if npx wrangler d1 execute DB --remote -y --command "SELECT banned FROM users LIMIT 1" >/dev/null 2>&1; then
+            echo "::notice::عمود banned مطبق مسبقاً — الحظر جاهز"
+          else
+            echo "::warning::عمود banned غائب — تطبيق ALTER الآن (أي فشل هنا حقيقي ويُوقف النشر)"
+            npx wrangler d1 execute DB --remote -y --command "ALTER TABLE users ADD COLUMN banned INTEGER NOT NULL DEFAULT 0"
+            npx wrangler d1 execute DB --remote -y --command "SELECT banned FROM users LIMIT 1" >/dev/null 2>&1
+            echo "::notice::عمود banned مطبق ومُتحقق — الحظر جاهز"
+          fi
+
       - name: مفتاح أسطول الذكاء الاصطناعي (سر — إن وُجد)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus
