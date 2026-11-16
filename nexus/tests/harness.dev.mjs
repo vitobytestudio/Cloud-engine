@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 const bundle = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
 ok("توجيه الرابط السري: /panel/<tok> بلا هاش يهبط على اللوحة لا الواجهة العادية", bundle.includes('location.pathname.startsWith("/panel/")'));
 ok("إقلاع الرابط السري: الهاش يجبر #/adm للوحة قبل أي توجيه آخر", /pathname\.startsWith\("\/panel\/"\)\?"#\/adm"/.test(bundle), "الإقلاع كان يجبر #/ فيرى المالك الرئيسية دائماً");
+ok("حاجز أجيال اللوحة: الكتابة للعناصر الحية فقط (سباق كل زر error)", bundle.includes(".isConnected"), "سباق الرسم كان يقتل أزرار المالك");
 
 /* تصفير عدادات rl المحلية */
 try {
@@ -387,7 +388,8 @@ let pid = "", pid2 = "";
     ok("الرابط السري يخدم التطبيق", (await fetch(BASE + "/panel/" + atok)).status === 200);
     ok("رابط لوحة خاطئ 404 صامت", (await fetch(BASE + "/panel/deadbeef0000")).status === 404);
     ok("إدارة بلا ترويسة الرابط 404 صامت", (await fetch(BASE + "/api/adm/stats", { headers: { cookie: admCk } })).status === 404);
-    ok("إدارة بلا جهاز مدير 404 صامت", (await fetch(BASE + "/api/adm/stats", { headers: { "x-panel": atok } })).status === 404);
+    ok("إدارة بالتوكن السري وحده 200 — الرابط هو المفتاح (قرار المالك، مثبت بعدّ 250×404)", (await fetch(BASE + "/api/adm/stats", { headers: { "x-panel": atok } })).status === 200);
+    ok("إدارة بتوكن مزيف 404 صامت", (await fetch(BASE + "/api/adm/stats", { headers: { "x-panel": "ffffffffffffffffffffffff" } })).status === 404);
     ok("من يأمرني 200", (await A("/api/adm/whoami")).status === 200);
     const st = await (await A("/api/adm/stats")).json();
     ok("إحصاءات الإدارة", st.merchants >= 1 && st.products >= 1, JSON.stringify(st).slice(0, 120));

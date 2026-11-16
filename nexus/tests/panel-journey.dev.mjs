@@ -102,22 +102,41 @@ try {
   ok("الرابط السري يفتح لوحة الإدارة مباشرة (لا الرئيسية)", O.w.location.hash === "#/adm", O.w.location.hash);
   const panelShown = await waitUntil(() => !!O.d.querySelector(".kpis") && O.d.body.textContent.length > 200, 9000);
   ok("لوحة المالك تظهر كاملة: مؤشرات وإعدادات", panelShown && !!O.d.querySelector(".kpis"), O.d.body.textContent.slice(0, 120).replace(/\s+/g, " "));
-  ok("اللوحة فيها التاجر التجريبي للإدارة", O.d.body.textContent.length > 0);
+  const demoListed = await waitUntil(() => O.d.getElementById("ad-list")?.textContent.includes("vito-store"), 8000);
+  ok("قائمة التجار تعرض المتجر التجريبي فعلاً", demoListed);
   ok("زر تدوير الرابط السري موجود في اللوحة", !!O.d.getElementById("ad-rotate"));
   ok("قسم الكتالوج/الخدمات موجود (إعدادات المالك)", !!O.d.getElementById("ad-cat") && !!O.d.getElementById("ad-addsvc"));
   ok("سجل التدقيق موجود", !!O.d.getElementById("ad-aud"));
 
-  // ═══ 2) نفس الرابط من متصفح غريب (بلا كوكي المالك) — نموذج دخول الإدارة ═══
-  const X = mkSession("غريب");
+  // ═══ 2) نفس الرابط من متصفح غريب (بلا كوكي المالك) — الرابط هو المفتاح: يدير كاملاً ═══
+  const X = mkSession("جهاز جديد");
   await open(X, panelPath);
-  ok("الرابط السري من متصفح آخر: لا لوحة ولا تسريب", X.w.location.hash === "#/adm" && !X.d.querySelector(".kpis"));
-  const loginShown = await waitUntil(() => !!X.d.getElementById("ad-go"), 9000);
-  ok("نموذج دخول الإدارة يظهر بدل الفراغ (علاج «لا إعدادات أبداً»)", loginShown && !!X.d.getElementById("ad-e"), X.d.body.textContent.slice(0, 100).replace(/\s+/g, " "));
-  setV(X, "#ad-e", "owner-nexus@vito.test");
-  setV(X, "#ad-p", "VitoOwner2026x");
-  await click(X, "#ad-go");
-  const xPanel = await waitUntil(() => !!X.d.querySelector(".kpis"), 9000);
-  ok("الدخول بالرمز من النموذج يفتح اللوحة كاملة", xPanel && !!O.d.querySelector(".kpis"));
+  ok("الرابط السري من متصفح آخر: اللوحة تُفتح (الرابط هو المفتاح — قرار المالك)", X.w.location.hash === "#/adm");
+  const xPanel0 = await waitUntil(() => !!X.d.querySelector(".kpis"), 9000);
+  ok("الجهاز الجديد يرى المؤشرات والإعدادات بلا كوكي سابق", xPanel0 && !!X.d.querySelector(".kpis"));
+  const xPanel = xPanel0;
+  /* علة «كل زر error» — الجهاز الجديد يدير فعلياً بالتوكن السري بلا كوكي مالك سابق */
+  const addBtn = await waitUntil(() => !!X.d.getElementById("ad-addsvc"), 8000);
+  if (addBtn) {
+    await click(X, "#ad-addsvc");
+    const sheetUp = await waitUntil(() => !!X.d.getElementById("sv-t"), 6000);
+    ok("زر إضافة خدمة يفتح الورقة (بلا كوكي مالك)", sheetUp);
+    if (sheetUp) {
+      setV(X, "#sv-t", "استشارة تقنية متقدمة");
+      setV(X, "#sv-d", "جلسة استشارة معمقة لخدمات المنصة.");
+      setV(X, "#sv-mn", "500");
+      setV(X, "#sv-mx", "2000");
+      await click(X, "#sv-save");
+      const saved = await waitUntil(() => X.d.body.textContent.includes("استشارة تقنية متقدمة"), 8000);
+      ok("إضافة خدمة حقيقية من جهاز جديد تنجح", saved);
+    }
+    const rot = await waitUntil(() => !!X.d.getElementById("ad-rotate"), 4000);
+    if (rot) {
+      await click(X, "#ad-rotate");
+      const newUrl = await waitUntil(() => X.d.body.textContent.includes("/panel/"), 8000);
+      ok("تدوير الرابط السري يعمل من الجهاز الجديد", newUrl);
+    }
+  }
 
   // ═══ 3) زبون عادي لا يرى أي أثر ═══
   const U = mkSession("زائر");

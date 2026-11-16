@@ -1567,10 +1567,14 @@ rr("/adm", async (v) => {
     };
     $("#ad-p").onkeydown = (e) => { if (e.key === "Enter") $("#ad-go").click(); };
   };
+  let panelGen = 0;
   const panelView = async () => {
+    const gen = ++panelGen; /* حاجز الأجيال: الجلبات القديمة أثناء الطيران لا تكتب في رسم أحدث — سباق «كل زر error» يُمسح هنا */
+    const live = (sel) => { const el = $(sel); return el && gen === panelGen && el.isConnected ? el : null; }; /* isConnected: حتى لو بقي العنصر بالذاكرة بعد تفكيك رسمه */
     sessionStorage.setItem("nx_panel_tok", ptok);
     $("#adm-body").innerHTML = `${skeletons(2)}`;
     const [stats, cat] = await Promise.all([call("/api/adm/stats"), call("/api/adm/catalog").catch(() => ({ services: [] }))]);
+    if (gen !== panelGen) return; /* رسم أحدث حلّ محلنا — نتوقف بصمت */
     const openSvc = (svc) => {
       let svcOn = svc ? (svc.active ? 1 : 0) : 1;
       const sh = sheet(`
@@ -1628,7 +1632,9 @@ rr("/adm", async (v) => {
     $$("#adm-body .v[data-c]").forEach((el) => countUp(el, Number(el.dataset.c)));
     const merchants = async (q = "") => {
       const d = await call("/api/adm/merchants?q=" + encodeURIComponent(q));
-      $("#ad-list").innerHTML = (d.merchants || []).map((m) => `
+      const list = live("#ad-list");
+      if (!list) return;
+      list.innerHTML = (d.merchants || []).map((m) => `
         <div class="adm-row">
           <div style="flex:1;min-width:0">
             <b>${esc(m.store_name || "—")}</b> ${m.verified ? `<span class="vbadge"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>` : ""}
@@ -1639,6 +1645,7 @@ rr("/adm", async (v) => {
             <button class="btn ghost" data-vf="${m.id}" data-v="${m.verified}" style="min-height:34px;padding:0 10px;font-size:11px">${m.verified ? esc(t("adm_unverify")) : esc(t("adm_verify"))}</button>
           </div>
         </div>`).join("") || `<p class="hint">${esc(t("adm_none"))}</p>`;
+      if (!list.isConnected) return;
       $$("#ad-list [data-plan]").forEach((b) => (b.onclick = async () => {
         try { await call("/api/adm/merchants/" + b.dataset.uid + "/plan", { m: "POST", b: { plan: b.dataset.plan } }); toast(t("saved")); vibrate(10); merchants($("#ad-q").value.trim()); } catch { toast("error", "err"); }
       }));
@@ -1650,7 +1657,9 @@ rr("/adm", async (v) => {
     let qT = null;
     $("#ad-q").oninput = () => { clearTimeout(qT); qT = setTimeout(() => merchants($("#ad-q").value.trim()), 350); };
     const cat2 = await call("/api/adm/catalog").catch(() => ({ services: [] }));
-    $("#ad-cat").innerHTML = (cat2.services || []).map((x) => `
+    const catEl = live("#ad-cat");
+    if (!catEl) return;
+    catEl.innerHTML = (cat2.services || []).map((x) => `
       <div class="adm-row">
         <div style="flex:1;min-width:0">
           <b>${esc(x.title)}</b> ${x.active ? "" : `<span class="hint">OFF</span>`}
@@ -1676,7 +1685,8 @@ rr("/adm", async (v) => {
       } catch { toast("error", "err"); }
     };
     call("/api/adm/audit").then((d) => {
-      $("#ad-aud").innerHTML = (d.audit || []).map((a) => `<div><b>${esc(a.action)}</b> <span dir="ltr">${esc(a.target)} ${esc(a.detail)}</span> · ${fdate(a.at)}</div>`).join("") || esc(t("adm_none"));
+      const aud = live("#ad-aud");
+      if (aud) aud.innerHTML = (d.audit || []).map((a) => `<div><b>${esc(a.action)}</b> <span dir="ltr">${esc(a.target)} ${esc(a.detail)}</span> · ${fdate(a.at)}</div>`).join("") || esc(t("adm_none"));
     }).catch(() => {});
   };
   try { await call("/api/adm/whoami"); await panelView(); }

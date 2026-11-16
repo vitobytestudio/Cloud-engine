@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.4", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.5", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -835,11 +835,21 @@ async function admDevice(env: Env, adminId: string, label: string): Promise<{ to
   return { tok, csrf };
 }
 async function admFrom(req: Request, env: Env): Promise<{ adminId: string; email: string } | null> {
+  // 1) كوكي الجهاز (أقوى — جلسة كاملة بإحصائيات وأدوات)
   const tok = parseCookies(req)[ADM_COOKIE] ?? "";
-  if (!/^[0-9a-f]{64}$/.test(tok)) return null;
-  const row = await env.DB.prepare("SELECT d.admin_id, a.email FROM admin_devices d JOIN admins a ON a.id = d.admin_id WHERE d.token_hash = ? AND d.revoked = 0")
-    .bind(await sha256hex(tok)).first<any>();
-  return row ? { adminId: row.admin_id, email: row.email } : null;
+  if (/^[0-9a-f]{64}$/.test(tok)) {
+    const row = await env.DB.prepare("SELECT d.admin_id, a.email FROM admin_devices d JOIN admins a ON a.id = d.admin_id WHERE d.token_hash = ? AND d.revoked = 0")
+      .bind(await sha256hex(tok)).first<any>();
+    if (row) return { adminId: row.admin_id, email: row.email };
+  }
+  // 2) توكن الرابط السري (x-panel) — الجهاز الجديد يدير المنصة كاملة بلا انتظار إصدار كوكي (علاج «كل زر error»)
+  const ph = await admMeta(env, "panel_hash");
+  const xp = (req.headers.get("x-panel") ?? "").trim();
+  if (ph && xp && (await sha256hex(xp)) === ph) {
+    const row = await env.DB.prepare("SELECT id, email FROM admins LIMIT 1").first<any>();
+    if (row) return { adminId: row.id, email: row.email };
+  }
+  return null;
 }
 
 route("GET", "/api/adm/setup-status", async (_r, env) => json({ done: (await admMeta(env, "setup_done")) === "1" }));
