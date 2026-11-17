@@ -410,6 +410,9 @@ let pid = "", pid2 = "";
     ok("فك الحظر 200", (await A("/api/adm/merchants/" + me0.id + "/ban", { m: "POST", b: { v: 0 } })).status === 200);
     ok("بعد فك الحظر: الجلسة تعود والباقة باقية", (await j("/api/me", { cookie })).data?.plan === "pro");
     ok("بعد فك الحظر: المتجر يعود موثقاً", (await j("/api/store/" + mySlug)).data.store?.verified === 1);
+    /* قاعدة بيانات فيتو: المرآة تكتب والقراءة العكسية من محركنا تثبت الحياة */
+    const vdbAud = await (await A("/api/adm/audit-vdb")).json();
+    ok("قاعدة بيانات فيتو حية: مرآة التدقيق تُقرأ عكسياً من محركنا", vdbAud.engine === "vdb" && (vdbAud.entries || []).some((x) => x.action === "plan_grant" || x.action === "verify" || x.action === "ban"), `gen=${vdbAud.gen} قيود=${(vdbAud.entries || []).length}`);
     const sv = await A("/api/adm/catalog", { m: "POST", b: { title: "فيديو إعلاني قصير", descr: "15-30ث", price_min: 1900, price_max: 4900, delivery_days: 3 } });
     ok("إضافة خدمة 201", sv.status === 201);
     const svcId = (await sv.json()).id;

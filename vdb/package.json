@@ -1,0 +1,10 @@
+{
+  "name": "vdb",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VDB — قاعدة بيانات فيتو: محرك تخزين من البايتة الأولى (B+ COW، التزام ذري، جيران بحصص، زمن بدفتر، عربية في العُظم)",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/engine.dev.mjs"
+  }
+}

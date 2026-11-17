@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "vdb/**"
       - "naksab/**"
       - ".github/workflows/naksab-deploy.yml"
   pull_request:
@@ -36,6 +37,10 @@ jobs:
       - name: تثبيت الحزم
         working-directory: naksab
         run: npm install --no-audit --no-fund
+
+      - name: قاعدة بيانات فيتو (VDB) — بوابة المحرك 48 فحصاً من البايتة الأولى
+        run: node vdb/tests/engine.dev.mjs
+
 
       - name: تجهيز قاعدة D1 ومساحة KV (إنشاء إن لم يوجدا — برمجياً فقط)
         working-directory: naksab

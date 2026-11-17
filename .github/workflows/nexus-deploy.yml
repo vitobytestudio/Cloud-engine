@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "vdb/**"
       - "nexus/**"
       - ".github/workflows/nexus-deploy.yml"
   pull_request:
@@ -45,6 +46,10 @@ jobs:
       - name: تجميع الحزم
         working-directory: nexus
         run: npm ci || npm install --no-audit --no-fund
+
+      - name: قاعدة بيانات فيتو (VDB) — بوابة المحرك 48 فحصاً من البايتة الأولى
+        run: node vdb/tests/engine.dev.mjs
+
 
       - name: بناء الواجهة (esbuild minify — المصدر في المستودع فقط)
         working-directory: nexus

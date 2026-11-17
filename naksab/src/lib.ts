@@ -111,6 +111,7 @@ export async function notify(env: Env, userId: string, type: string, body: strin
 }
 
 export async function audit(env: Env, adminId: string, action: string, detail = ""): Promise<void> {
+  try { const { vdbAudit } = await import("./vdb"); await vdbAudit(env, adminId, action, detail); } catch { /* وضع الظل */ } /* مرآة قاعدة بيانات فيتو */
   await env.DB.prepare("INSERT INTO audit (id, admin_id, action, detail, created_at) VALUES (?,?,?,?,?)")
     .bind(id("a"), adminId, action, clip(detail, 300), now()).run();
 }

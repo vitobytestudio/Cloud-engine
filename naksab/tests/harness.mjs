@@ -392,6 +392,13 @@ const nd_meBan = await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "PO
 check("حظر مستخدم من الإدارة يعمل", nd_meBan.ok === true, JSON.stringify({ s: nd_meBan.status, d: nd_meBan.data }).slice(0, 160));
 await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "POST", { banned: false });
 
+// ═══ قاعدة بيانات فيتو: مرآة التدقيق حية والقراءة العكسية تثبت ═══
+{
+  const av = await call("str", "/api/admin/audit-vdb");
+  const es = av.data.audit || [];
+  check("قاعدة بيانات فيتو حية: التدقيق يُقرأ عكسياً من محركنا", av.data.engine === "vdb" && es.some((x) => x.action === "user_flags"), `gen=${av.data.gen} قيود=${es.length}`);
+}
+
 // ═══ النتيجة ═══
 const fails = results.filter((r) => !r).length;
 console.log(`\n═══ NAKSAB harness: ${results.length - fails}/${results.length} نجح ═══`);
