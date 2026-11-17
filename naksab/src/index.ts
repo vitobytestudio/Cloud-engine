@@ -17,7 +17,7 @@ const route = (m: string, pat: string, h: Route["h"], o: Partial<Route> = {}) =>
 const bad = (err: string, status = 400) => json({ error: err }, status);
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.0.0", env: e.ENVIRONMENT }));
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.1.0", env: e.ENVIRONMENT }) /* 1.1.0: VDB — قاعدة بيانات فيتو على متن السفينة */);
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -712,6 +712,18 @@ route("GET", "/api/admin/audit", async (_r, env, s) => {
   if (!s || s.role !== "admin") return bad("forbidden", 403);
   const { results } = await env.DB.prepare("SELECT * FROM audit ORDER BY created_at DESC LIMIT 100").all<any>();
   return json({ audit: results ?? [] });
+}, { auth: true });
+
+route("GET", "/api/admin/audit-vdb", async (_r, env, s) => {
+  if (!s || s.role !== "admin") return bad("forbidden", 403);
+  const { getVDB } = await import("./vdb");
+  const db = await getVDB(env);
+  const rows = await db.tenant("naksab").bucket("audit").list({ limit: 500 });
+  return json({
+    engine: "vdb",
+    gen: db.stats().gen,
+    audit: rows.slice(-60).reverse().map((r) => ({ key: r.k, ...(JSON.parse(new TextDecoder().decode(r.v)) as object) })),
+  });
 }, { auth: true });
 
 // ═══ الراوتر ═══

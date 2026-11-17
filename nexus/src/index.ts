@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.0.7", app: "nexus", env: e.ENVIRONMENT })); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.0", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.0: VDB — قاعدة بيانات فيتو على متن السفينة (مرآة التدقيق) */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -816,8 +816,11 @@ async function admMeta(env: Env, k: string): Promise<string | null> {
   const r = await env.DB.prepare("SELECT v FROM admin_meta WHERE k = ?").bind(k).first<any>();
   return r?.v ?? null;
 }
+import { getVDB, vdbAudit } from "./vdb";
+
 async function admAudit(env: Env, action: string, target = "", detail = ""): Promise<void> {
   await env.DB.prepare("INSERT INTO adm_audit (id, action, target, detail, at) VALUES (?,?,?,?,?)").bind(id("aa"), action, clip(target, 60), clip(detail, 200), now()).run();
+  await vdbAudit(env, action, clip(target, 60), clip(detail, 200)); /* مرآة قاعدة بيانات فيتو — وضع الظل */
 }
 async function mintPanel(env: Env, adminId: string): Promise<string> {
   let secret = await admMeta(env, "path_secret");
@@ -1028,6 +1031,16 @@ route("POST", "/api/adm/logout", async (req, env) => {
     await admAudit(env, "admin_logout", "", "");
   }
   return json({ ok: true }, 200, { "set-cookie": `${ADM_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0` });
+});
+
+route("GET", "/api/adm/audit-vdb", async (_r, env) => {
+  const db = await getVDB(env);
+  const rows = await db.tenant("nexus").bucket("audit").list({ limit: 500 });
+  return json({
+    engine: "vdb",
+    gen: db.stats().gen,
+    entries: rows.slice(-60).reverse().map((r) => ({ key: r.k, ...(JSON.parse(new TextDecoder().decode(r.v)) as object) })),
+  });
 });
 
 route("GET", "/api/adm/audit", async (_r, env) => {
