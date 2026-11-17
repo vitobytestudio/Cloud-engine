@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.0", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.0: VDB — قاعدة بيانات فيتو على متن السفينة (مرآة التدقيق) */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.1", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -1035,6 +1035,7 @@ route("POST", "/api/adm/logout", async (req, env) => {
 
 route("GET", "/api/adm/audit-vdb", async (_r, env) => {
   const db = await getVDB(env);
+  await db.fresh();
   const rows = await db.tenant("nexus").bucket("audit").list({ limit: 500 });
   return json({
     engine: "vdb",
@@ -1044,8 +1045,24 @@ route("GET", "/api/adm/audit-vdb", async (_r, env) => {
 });
 
 route("GET", "/api/adm/audit", async (_r, env) => {
+  /* التدقيق الرسمي يُقرأ من قاعدة بيانات فيتو أولاً — وD1 سنداً عند الفارغ */
+  try {
+    const db = await getVDB(env);
+    await db.fresh(); /* مزامنة اللقطة — العزلات الأخرى قد التزمت */
+    const rows = await db.tenant("nexus").bucket("audit").list({ limit: 100 });
+    if (rows.length) {
+      const audit = rows
+        .slice(-100)
+        .reverse()
+        .map((r) => {
+          const e = JSON.parse(new TextDecoder().decode(r.v)) as { action: string; target?: string; detail?: string; ts?: number };
+          return { action: e.action, target: e.target ?? "", detail: e.detail ?? "", at: e.ts ?? 0 };
+        });
+      return json({ audit, engine: "vdb" });
+    }
+  } catch { /* السند: D1 */ }
   const { results } = await env.DB.prepare("SELECT action, target, detail, at FROM adm_audit ORDER BY at DESC LIMIT 100").all<any>();
-  return json({ audit: results ?? [] });
+  return json({ audit: results ?? [], engine: "d1" });
 });
 
 // صفحة الإعداد لمرة واحدة — تختفي نهائياً بعد إنشاء المالك

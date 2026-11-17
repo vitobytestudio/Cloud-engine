@@ -413,6 +413,8 @@ let pid = "", pid2 = "";
     /* قاعدة بيانات فيتو: المرآة تكتب والقراءة العكسية من محركنا تثبت الحياة */
     const vdbAud = await (await A("/api/adm/audit-vdb")).json();
     ok("قاعدة بيانات فيتو حية: مرآة التدقيق تُقرأ عكسياً من محركنا", vdbAud.engine === "vdb" && (vdbAud.entries || []).some((x) => x.action === "plan_grant" || x.action === "verify" || x.action === "ban"), `gen=${vdbAud.gen} قيود=${(vdbAud.entries || []).length}`);
+    const audV = await (await A("/api/adm/audit")).json();
+    ok("التدقيق الرسمي يُقرأ من قاعدة فيتو أولاً (ترقية القراءة)", audV.engine === "vdb" && (audV.audit || []).some((x) => ["plan_grant", "verify", "ban"].includes(x.action)), `engine=${audV.engine} قيود=${(audV.audit || []).length}`);
     const sv = await A("/api/adm/catalog", { m: "POST", b: { title: "فيديو إعلاني قصير", descr: "15-30ث", price_min: 1900, price_max: 4900, delivery_days: 3 } });
     ok("إضافة خدمة 201", sv.status === 201);
     const svcId = (await sv.json()).id;

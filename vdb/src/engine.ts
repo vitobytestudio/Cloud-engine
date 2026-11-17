@@ -123,7 +123,7 @@ export class VDB {
   }
 
   private async loadPage(page: number): Promise<Uint8Array> {
-    const b = await this.store.get(page);
+    const b = await this.store.get(page, this.gen);
     if (!b) throw new Error("vdb:page_missing");
     this.cache.set(page, b);
     return b;
@@ -195,9 +195,7 @@ export class VDB {
       this.beginIf();
       await this.treePut(jk, toBytes({ ts: Date.now(), ops: this.opsN, bytes: this.bytesN }));
     }
-    /* كتابة كل الصفحات الجديدة — ثم نقطة الالتزام الوحيدة: صفحة الميتا */
     const pages = [...this.overlay.entries()];
-    for (const [p, b] of pages) if (p !== 0) await this.store.put(p, b);
     const ts = Date.now();
     const meta = serMeta({
       root: this.dirtyRoot,
@@ -206,7 +204,18 @@ export class VDB {
       ts,
       flags: this.journal ? FLAG_JOURNAL : 0,
     });
-    await this.store.put(0, meta); /* ← الالتزام يولد هنا. ما قبلها يتيمة بلا ضرر */
+    if (this.store.atomicCommit) {
+      /* الذرية الكاملة عبر حجز الجيل: نافسة سبقتنا → المعاملة كلها تتراجع على الأقراص */
+      const won = await this.store.atomicCommit(
+        pages.filter(([p]) => p !== 0).map(([p, b]) => [p, b] as [number, Uint8Array]),
+        meta,
+        this.gen + 1,
+      );
+      if (!won) throw new Error("vdb:conflict");
+    } else {
+      for (const [p, b] of pages) if (p !== 0) await this.store.put(p, b);
+      await this.store.put(0, meta); /* ← الالتزام يولد هنا. ما قبلها يتيمة بلا ضرر */
+    }
     /* الاعتماد */
     for (const [p, b] of pages) this.cache.set(p, b);
     this.cache.set(0, meta);
@@ -225,6 +234,39 @@ export class VDB {
         c.pend = 0;
       }
     return { gen: this.gen, pages: this.pageCnt, ts, ops };
+  }
+
+  private async doReload(): Promise<void> {
+    this.overlay.clear();
+    this.cache.clear();
+    const meta = await this.store.get(0);
+    if (meta) {
+      const m = parseMeta(meta);
+      this.root = m.root;
+      this.pageCnt = m.pageCnt;
+      this.gen = m.gen;
+      this.ts = m.ts;
+      this.journal = (m.flags & FLAG_JOURNAL) !== 0;
+      this.cache.set(0, meta);
+    } else {
+      this.root = 0;
+      this.pageCnt = 1;
+      this.gen = 0;
+      this.ts = 0;
+    }
+    this.sessCnt = this.pageCnt;
+    this.dirtyRoot = null;
+    this.opsN = 0;
+    this.bytesN = 0;
+    for (const c of this.counters.values()) {
+      c.known = false;
+      c.pend = 0;
+    }
+  }
+
+  /* مزامنة اللقطة من الأقراص — قبل أي قراءة حساسة عبر عزلات متعددة */
+  async fresh(): Promise<void> {
+    return this.serial(() => this.doReload());
   }
 
   /* ═════════ الواجهة العامة ═════════ */
@@ -249,7 +291,20 @@ export class VDB {
       return { gen: this.gen, pages: this.pageCnt, ts: this.ts, ops: this.opsN };
     };
     if (this.batching) return await body();
-    return this.serial(body);
+    return this.serial(async () => {
+      for (let i = 0; ; i++) {
+        try {
+          return await body();
+        } catch (er) {
+          if (this.dirtyRoot !== null) this.rollback();
+          if (String((er as Error)?.message ?? er).includes("vdb:conflict") && i < 8) {
+            await this.doReload();
+            continue;
+          }
+          throw er;
+        }
+      }
+    });
   }
 
   async del(tenant: string, bucket: string, key: string | number): Promise<CommitInfo | null> {
@@ -270,22 +325,46 @@ export class VDB {
       return { gen: this.gen, pages: this.pageCnt, ts: this.ts, ops: this.opsN };
     };
     if (this.batching) return await body();
-    return this.serial(body);
+    return this.serial(async () => {
+      for (let i = 0; ; i++) {
+        try {
+          return await body();
+        } catch (er) {
+          if (this.dirtyRoot !== null) this.rollback();
+          if (String((er as Error)?.message ?? er).includes("vdb:conflict") && i < 8) {
+            await this.doReload();
+            continue;
+          }
+          throw er;
+        }
+      }
+    });
   }
 
   /* دفعة عمليات تحت التزام واحد ذري — فشل أحدها يُسقط الدفعة كلها */
   async batch<T>(fn: (db: VDB) => Promise<T>): Promise<T> {
-    return this.serial(async () => {
+    const attempt = async (): Promise<T> => {
       this.batching = true;
       try {
         const r = await fn(this);
         await this.flushCommit();
         return r;
-      } catch (e) {
-        this.rollback();
-        throw e;
       } finally {
         this.batching = false;
+      }
+    };
+    return this.serial(async () => {
+      for (let i = 0; ; i++) {
+        try {
+          return await attempt();
+        } catch (er) {
+          if (this.dirtyRoot !== null) this.rollback();
+          if (String((er as Error)?.message ?? er).includes("vdb:conflict") && i < 8) {
+            await this.doReload();
+            continue;
+          }
+          throw er;
+        }
       }
     });
   }

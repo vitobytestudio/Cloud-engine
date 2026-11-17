@@ -2,14 +2,16 @@
    VDB — قاعدة بيانات فيتو: غرفة المحرك في ناكساب.
    أول مهمة إنتاجية: مرآة سجل التدقيق الإداري (وضع الظل).
    ═══════════════════════════════════════════════════════════════════ */
-import { KVBlockStore, VDB } from "../../vdb/src";
+import { D1BlockStore, VDB, type MinimalD1 } from "../../vdb/src";
 import type { Env } from "./env";
 
 let _db: VDB | null = null;
 
 export const getVDB = async (env: Env): Promise<VDB> => {
   if (_db) return _db;
-  _db = await VDB.open(new KVBlockStore(env.CACHE_KV, "vdb:naksab:"), {
+  const store = new D1BlockStore(env.DB as unknown as MinimalD1, "vdb_pages");
+  await store.init(); /* أقراص قاعدة فيتو الذرية — بلا KV إطلاقاً */
+  _db = await VDB.open(store, {
     journal: true,
     maxKeysPerTenant: 20000,
   });
