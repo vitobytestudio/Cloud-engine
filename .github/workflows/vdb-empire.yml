@@ -1,0 +1,50 @@
+name: "VDB — أمين الإمبراطورية (أرشفة الأجيال إلى الأقراص الأبدية)"
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vdb-empire
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: بوابة المحرك قبل أي لمسة
+        run: node vdb/tests/engine.dev.mjs
+
+      - name: تثبيت عدة الأقراص الحارة
+        working-directory: nexus
+        run: npm install --no-audit --no-fund
+
+      - name: أرشفة أجيال نكسوس وفحص سلامة الأرشيف
+        env:
+          PLATFORM: nexus
+          DB_NAME: nexus_db
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+        run: node .github/scripts/vdb-archive.mjs
+
+      - name: أرشفة أجيال ناكساب وفحص سلامة الأرشيف
+        env:
+          PLATFORM: naksab
+          DB_NAME: naksab-db
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+        run: node .github/scripts/vdb-archive.mjs
+
+      - name: دفع الأرشيف الملكي
+        run: git push || echo "::notice::لا جديد في الأرشيف"

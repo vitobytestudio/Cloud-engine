@@ -62,6 +62,11 @@ const parseMeta = (b: Uint8Array) => {
   };
 };
 
+export type OnCommit = (
+  info: { gen: number; ts: number; ops: number },
+  pages: Array<[number, Uint8Array]>,
+) => void | Promise<void>;
+
 export class VDB {
   private root = 0; /* جذر آخر التزام معتمد — 0 = شجرة فارغة */
   private pageCnt = 1; /* عدّاد الصفحات المعتمد (الصفحة 0 مخصوصة للميتا) */
@@ -69,6 +74,7 @@ export class VDB {
   private ts = 0;
   private journal: boolean;
   private maxKeys: number;
+  private onCommit: OnCommit | null = null;
 
   private cache = new Map<number, Uint8Array>(); /* صفحات معتمدة ساخنة */
   private overlay = new Map<number, Uint8Array>(); /* صفحات الالتزام الجاري */
@@ -82,15 +88,16 @@ export class VDB {
 
   private constructor(
     private store: BlockStore,
-    opts: { journal?: boolean; maxKeysPerTenant?: number },
+    opts: { journal?: boolean; maxKeysPerTenant?: number; onCommit?: OnCommit },
   ) {
     this.journal = opts.journal !== false;
     this.maxKeys = opts.maxKeysPerTenant ?? 0; /* 0 = بلا سقف */
+    this.onCommit = opts.onCommit ?? null;
   }
 
   static async open(
     store: BlockStore,
-    opts: { journal?: boolean; maxKeysPerTenant?: number } = {},
+    opts: { journal?: boolean; maxKeysPerTenant?: number; onCommit?: OnCommit } = {},
   ): Promise<VDB> {
     const db = new VDB(store, opts);
     const meta = await store.get(0);
@@ -233,6 +240,14 @@ export class VDB {
         c.n += c.pend;
         c.pend = 0;
       }
+    if (this.onCommit) {
+      const all = [...pages, [0, meta] as [number, Uint8Array]];
+      const info = { gen: this.gen, ts, ops };
+      const hook = this.onCommit;
+      void Promise.resolve()
+        .then(() => hook(info, all))
+        .catch(() => {}); /* المرآة الأبدية لا تعوق المسار الساخن أبداً */
+    }
     return { gen: this.gen, pages: this.pageCnt, ts, ops };
   }
 

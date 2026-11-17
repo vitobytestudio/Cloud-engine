@@ -210,7 +210,7 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   let db = await V.VDB.open(st);
   for (let i = 0; i < 50; i++) await db.put("t", "c", "k" + i, "v" + i);
   const genBefore = db.stats().gen;
-  st.failAfter = st.puts + 1; /* الـput التالي (ورقة جديدة) ينجح ثم الميتا ترمي — أو العكس */
+  st.failAfter = st.puts; /* أقراص الذرية الكاملة: أول التزام بعد الحاجز يفشل كاملاً — لا تمزق فيزيائي بعد اليوم */
   let crashed = false;
   try {
     await db.put("t", "c", "kk", "vv");
@@ -229,7 +229,7 @@ const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   await db.put("t", "c", "kk", "vv");
   ok("العمل بعد الانهيار يكمل عادي — إعادة استخدام الأيتام آمنة", (await db.get("t", "c", "kk")) !== null && (await db.count("t", "c")) === 51);
   /* انهيار داخل دفعة: الدفعة كلها أو لا شيء */
-  st.failAfter = st.puts + 1; /* الانهيار يقع في نقطة التزام الدفعة نفسها */
+  st.failAfter = st.puts; /* انهيار الالتزام الكامل يضرب الدفعة قبل أي بايت */
   let batchCrash = false;
   try {
     await db.batch(async (d) => {
