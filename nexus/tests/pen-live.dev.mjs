@@ -171,6 +171,47 @@ mod("ترويسات خبيثة وHost مزيف (8)", async (R) => {
   return { weird, bypass: weird > 0 };
 });
 
+// ── 9) قاعدة بيانات فيتو: نقاط المحرك محصّنة بلا هوية (المسار الصامت 404) ──
+mod("قاعدة بيانات فيتو: نقاط المحرك محصّنة (6 مسارات بلا هوية)", async (R) => {
+  const paths = [
+    "/api/adm/audit-vdb",
+    "/api/adm/audit",
+    "/api/adm/stats",
+    "/api/adm/audit-vdb?gen=999999",
+    "/api/adm/audit-vdb?tenant=_sys",
+    "/api/adm/audit-vdb/../admin",
+  ];
+  let leak = 0;
+  const codes = {};
+  for (const p of paths) {
+    const r = await req(p);
+    codes[r.s] = (codes[r.s] || 0) + 1;
+    if (r.s === 200) leak += 10; /* أي 200 بلا هوية = تسريب من المحرك */
+    if (r.b.includes("plan_grant") || r.b.includes("engine") || r.b.includes("audit")) leak += 5;
+  }
+  return { codes, leak, bypass: leak > 0 };
+});
+
+// ── 10) تسميم المرآة: بارامترات تجاوز الجار والجينات والحقن — كلها صامتة ──
+mod("تسميم مرآة فيتو: بارامترات تجاوز وحقن (12 ضربة)", async (R) => {
+  const qs = [
+    "?tenant=naksab", "?bucket=audit&tenant=naksab", "?limit=999999",
+    "?gen=" + rnd(8), "?key=_sys", "?prefix=",
+    "?tenant=" + rnd(10) + "' OR '1'='1", "?callback=evil", "?jsonp=steal",
+    "?format=html", "?__proto__=admin", "?t=" + rnd(40),
+  ];
+  let leak = 0;
+  const codes = {};
+  for (const q of qs) {
+    const r = await req("/api/adm/audit-vdb" + q);
+    codes[r.s] = (codes[r.s] || 0) + 1;
+    if (r.s === 200) leak += 10;
+    if (r.b.includes("naksab") || r.b.includes("_sys") || r.b.includes("entries")) leak += 5;
+    if (r.s >= 500) leak += 20; /* أي انهيار خادم من بارامتر = ثغرة */
+  }
+  return { codes, leak, bypass: leak > 0 };
+});
+
 // ═══ الإطلاق والتقرير ═══
 const results = [];
 let crash = null;

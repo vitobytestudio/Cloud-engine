@@ -17,7 +17,7 @@ const route = (m: string, pat: string, h: Route["h"], o: Partial<Route> = {}) =>
 const bad = (err: string, status = 400) => json({ error: err }, status);
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.1.0", env: e.ENVIRONMENT }) /* 1.1.0: VDB — قاعدة بيانات فيتو على متن السفينة */);
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.1.1", env: e.ENVIRONMENT }) /* 1.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */);
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -710,14 +710,32 @@ route("POST", "/api/admin/ads/:id/moderate", async (req, env, s, p) => {
 
 route("GET", "/api/admin/audit", async (_r, env, s) => {
   if (!s || s.role !== "admin") return bad("forbidden", 403);
+  /* التدقيق الرسمي يُقرأ من قاعدة بيانات فيتو أولاً — وD1 سنداً عند الفارغ */
+  try {
+    const { getVDB } = await import("./vdb");
+    const db = await getVDB(env);
+    await db.fresh();
+    const rows = await db.tenant("naksab").bucket("audit").list({ limit: 100 });
+    if (rows.length) {
+      const audit = rows
+        .slice(-100)
+        .reverse()
+        .map((r) => {
+          const e = JSON.parse(new TextDecoder().decode(r.v)) as { adminId?: string; action: string; detail?: string; ts?: number };
+          return { admin_id: e.adminId ?? "", action: e.action, detail: e.detail ?? "", created_at: e.ts ?? 0 };
+        });
+      return json({ audit, engine: "vdb" });
+    }
+  } catch { /* السند: D1 */ }
   const { results } = await env.DB.prepare("SELECT * FROM audit ORDER BY created_at DESC LIMIT 100").all<any>();
-  return json({ audit: results ?? [] });
+  return json({ audit: results ?? [], engine: "d1" });
 }, { auth: true });
 
 route("GET", "/api/admin/audit-vdb", async (_r, env, s) => {
   if (!s || s.role !== "admin") return bad("forbidden", 403);
   const { getVDB } = await import("./vdb");
   const db = await getVDB(env);
+  await db.fresh();
   const rows = await db.tenant("naksab").bucket("audit").list({ limit: 500 });
   return json({
     engine: "vdb",

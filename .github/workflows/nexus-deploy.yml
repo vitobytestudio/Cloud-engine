@@ -49,6 +49,8 @@ jobs:
 
       - name: قاعدة بيانات فيتو (VDB) — بوابة المحرك 48 فحصاً من البايتة الأولى
         run: node vdb/tests/engine.dev.mjs
+      - name: قاعدة بيانات فيتو — بوابة الفوضى (معارك متزامنة وانهيارات مصادفة وقراءات لقطة)
+        run: node vdb/tests/chaos.dev.mjs
 
 
       - name: بناء الواجهة (esbuild minify — المصدر في المستودع فقط)

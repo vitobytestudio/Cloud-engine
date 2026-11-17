@@ -397,6 +397,8 @@ await call("str", `/api/admin/users/${nd_freRow.id}/flags`, "POST", { banned: fa
   const av = await call("str", "/api/admin/audit-vdb");
   const es = av.data.audit || [];
   check("قاعدة بيانات فيتو حية: التدقيق يُقرأ عكسياً من محركنا", av.data.engine === "vdb" && es.some((x) => x.action === "user_flags"), `gen=${av.data.gen} قيود=${es.length}`);
+  const au2 = await call("str", "/api/admin/audit");
+  check("التدقيق الرسمي يُقرأ من قاعدة فيتو أولاً (ترقية القراءة)", au2.data.engine === "vdb" && (au2.data.audit || []).some((x) => x.action === "user_flags"), `engine=${au2.data.engine} قيود=${(au2.data.audit || []).length}`);
 }
 
 // ═══ النتيجة ═══
