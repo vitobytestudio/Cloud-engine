@@ -1,4 +1,4 @@
-// src/bytes.ts
+// vdb/src/bytes.ts
 var cmpBytes = (a, b) => {
   const n = Math.min(a.length, b.length);
   for (let i = 0; i < n; i++) {
@@ -106,7 +106,7 @@ var ckLast = (full, prefixLen) => {
   return decRaw(new Uint8Array(out));
 };
 
-// src/btree.ts
+// vdb/src/btree.ts
 var PAGE = 4096;
 var MAX_KEY = 200;
 var MAX_VAL = 1500;
@@ -336,7 +336,7 @@ var scan = async (root, start, ctx, take) => {
   }
 };
 
-// src/engine.ts
+// vdb/src/engine.ts
 var MAGIC = [86, 68, 66, 49];
 var FLAG_JOURNAL = 1;
 var toBytes = (v) => {
@@ -770,7 +770,7 @@ var BucketHandle = class {
   }
 };
 
-// src/store.ts
+// vdb/src/store.ts
 var eqBytes = (a, b) => {
   if (a === b) return true;
   if (!a || !b || a.length !== b.length) return false;
@@ -882,7 +882,7 @@ var D1BlockStore = class {
   }
 };
 
-// src/ar.ts
+// vdb/src/ar.ts
 var DIACRITICS = /[\u064B-\u0655\u0670\u0640]/g;
 var normAr = (s) => s.replace(DIACRITICS, "").replace(/[أإآٱ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ؤ/g, "و").replace(/ئ/g, "ي").toLowerCase();
 var arKey = (s) => normAr(s.trim()).replace(/\s+/g, " ");

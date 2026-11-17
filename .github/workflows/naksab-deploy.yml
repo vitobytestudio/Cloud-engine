@@ -42,6 +42,8 @@ jobs:
         run: node vdb/tests/engine.dev.mjs
       - name: قاعدة بيانات فيتو — بوابة الفوضى (معارك متزامنة وانهيارات مصادفة وقراءات لقطة)
         run: node vdb/tests/chaos.dev.mjs
+      - name: الإمبراطورية — عنقود حي بأقراصنا (SIGKILL أثناء الكتابة + نسخ متماثل + استعادة)
+        run: node vdb/tests/cluster.dev.mjs
 
 
       - name: تجهيز قاعدة D1 ومساحة KV (إنشاء إن لم يوجدا — برمجياً فقط)
