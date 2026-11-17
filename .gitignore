@@ -2,3 +2,8 @@ dist/
 node_modules/
 .wrangler/
 *.log
+
+# VDB empire local disks + built bundles
+vdb/server/data/
+vdb/server/vdb.bundle.mjs
+vdb/tests/.vdb*.mjs

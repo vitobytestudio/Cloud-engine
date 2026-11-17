@@ -5,6 +5,13 @@
   "description": "VDB — قاعدة بيانات فيتو: محرك تخزين من البايتة الأولى (B+ COW، التزام ذري، جيران بحصص، زمن بدفتر، عربية في العُظم)",
   "type": "module",
   "scripts": {
-    "test": "node tests/engine.dev.mjs"
+    "test": "node tests/engine.dev.mjs",
+    "chaos": "node tests/chaos.dev.mjs",
+    "empire": "node tests/cluster.dev.mjs",
+    "build:node": "esbuild server/bundle-entry.ts --bundle --format=esm --platform=node --charset=utf8 --outfile=server/vdb.bundle.mjs",
+    "node": "npm run build:node && node server/node.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }
