@@ -60,6 +60,22 @@ export class MemoryBlockStore implements BlockStore {
     this.m.set(page, data.slice());
     return true;
   }
+
+  private gens = new Set<number>();
+
+  /* التزام الذري بالحجز — لأدوات الفحص وإعادة البناء من الأرشيف الأبدي */
+  async atomicCommit(pages: Array<[number, Uint8Array]>, meta: Uint8Array, gen: number): Promise<boolean> {
+    if (this.puts >= this.failAfter) throw new Error("vdb_sim_crash");
+    if (this.gens.has(gen)) return false;
+    this.gens.add(gen);
+    for (const [p, d] of pages) {
+      this.puts++;
+      this.m.set(p, d.slice());
+    }
+    this.puts++;
+    this.m.set(0, meta.slice());
+    return true;
+  }
 }
 
 /* عقد KV بنيوي محايد — بلا CAS ذري (KV لا يمنحه) */

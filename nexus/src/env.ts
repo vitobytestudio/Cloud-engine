@@ -11,5 +11,7 @@ export interface Env {
   ADMIN_SETUP_TOKEN?: string;
   ADMIN_SETUP_WINDOW_END?: string; /* نافذة إعداد مؤقتة بأمر المالك: نهاية النافذة (epoch ms) — تنقضي ذاتياً وتموت نهائياً بعد إنشاء المالك */ /* صفحة الإعداد لا تُعرض على المنصة الرسمية — تُفتح من /setup/<توكن> حصراً بأمر المالك */
   AI_KEYS?: string;
-  NAKSAB_ORIGIN?: string; /* مصدر كتالوج المحترفين — جسر ناكساب */
+  NAKSAB_ORIGIN?: string;
+  GH_VDB_TOKEN?: string; /* مرآة الأقراص الأبدية — توكن أرشيف المستودع */
+  GH_VDB_REPO?: string; /* owner/name */ /* مصدر كتالوج المحترفين — جسر ناكساب */
 }
