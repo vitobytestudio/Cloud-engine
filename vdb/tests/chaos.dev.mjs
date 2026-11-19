@@ -132,10 +132,11 @@ class FakeAtomicStore {
   await w.put("t", "b", "seed", "v0");
   await w.fresh();
   const genBefore = w.stats().gen;
+  /* القارئ يُفتح قبل بدء المعاملة — لقطة الجيل حتمية لا سباق فيها */
+  const r = await V.VDB.open(st);
+  ok("لقطة القارئ مثبتة على الجيل الحالي", r.stats().gen === genBefore, `gen=${r.stats().gen}`);
   /* كاتب يلتزم في الخلفية بمعاملة بطيئة */
   const bg = w.put("t", "b", "new", "v1");
-  /* القارئ على لقطة الجيل القديم يقرأ أثناء الطبخ */
-  const r = await V.VDB.open(st);
   const seen = await r.get("t", "b", "new");
   const seed = await r.get("t", "b", "seed");
   ok("اللقطة القديمة لا ترى التزام الجيل الجديد أثناء طهيه", seen === null && seed && new TextDecoder().decode(seed) === "v0");

@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.2", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.2: استعادة بعد تداخل نشر خارجي باسم العامل (سابقة 2.0.1) — المنصة كاملة والبيانات سليمة */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.3", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.3: الخفة — ذاكرة الحظر بالعزلة (صفر رحلة D1 إضافية للطلبات الدافئة) وكاش الصفحات الصارم */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -393,6 +393,9 @@ route("GET", "/api/store/:slug", async (_r, env, _s, p) => {
   ).bind(u.id).all();
   return json({ store: publicUser(u), products: results ?? [], agent_enabled: !!env.AI_KEYS });
 });
+
+/* ذاكرة الحظر بالعزلة: uid → { v, exp } — 30 ثانية، وتُحدَّث لحظياً عند الحظر/فك الحظر */
+const banMemo = new Map<string, { v: boolean; exp: number }>();
 
 // ═══ الفيد والاستكشاف ═══
 route("GET", "/api/feed", async (req, env) => {
@@ -960,6 +963,7 @@ route("POST", "/api/adm/merchants/:id/ban", async (req, env, _s, p) => {
   const u = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(mid).first<any>();
   if (!u) return bad("not_found", 404);
   await env.DB.prepare("UPDATE users SET banned = ? WHERE id = ?").bind(v, mid).run();
+  banMemo.set(mid, { v: !!v, exp: Date.now() + 30_000 }); /* فوري في العزلة هذه */
   if (v) await notify(env, mid, "banned", "تم حظر متجرك", "حُظر متجرك من فريق NEXUS — تواصل مع الاستوديو عبر واتساب لمراجعة الحالة");
   await admAudit(env, v ? "ban" : "unban", mid, "");
   return json({ ok: true, banned: v });
@@ -1138,8 +1142,17 @@ export default {
         }
       }
       const s = await getSession(env, req);
-      /* الحظر المركزي: جلسة عضو محظور تموت فوراً على كل مسار — فحص واحد قبل التوزيع */
-      const bannedFlag = !!(s && (await env.DB.prepare("SELECT banned FROM users WHERE id = ?1").bind(s.userId).first<{ banned: number }>())?.banned);
+      /* الحظر المركزي: جلسة عضو محظور تموت فوراً على كل مسار — بذاكرة العزلة
+         (طلبات دافئة بلا أي رحلة D1، والفحص الفعلي كل 30 ثانية أو عند أول طلب) */
+      let bannedFlag = false;
+      if (s) {
+        const memo = banMemo.get(s.userId);
+        if (memo && memo.exp > Date.now()) bannedFlag = memo.v;
+        else {
+          bannedFlag = !!(await env.DB.prepare("SELECT banned FROM users WHERE id = ?1").bind(s.userId).first<{ banned: number }>())?.banned;
+          banMemo.set(s.userId, { v: bannedFlag, exp: Date.now() + 30_000 });
+        }
+      }
       for (const r of R) {
         const params = matchPath(r.pat, path);
         if (!params || r.m !== req.method) continue;
