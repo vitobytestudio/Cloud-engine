@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.1", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.2", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.2: استعادة بعد تداخل نشر خارجي باسم العامل (سابقة 2.0.1) — المنصة كاملة والبيانات سليمة */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
