@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.3", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.3: الخفة — ذاكرة الحظر بالعزلة (صفر رحلة D1 إضافية للطلبات الدافئة) وكاش الصفحات الصارم */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.4", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.4: السلاسة — إقلاع بلا قفلة، جلسة مُرطّبة فوراً، ودفعة D1 واحدة في me وfinance بدل 4 و5 رحلات متسلسلة */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -133,23 +133,31 @@ route("POST", "/api/auth/logout", async (req, env, s) => {
 
 route("GET", "/api/me", async (_r, env, s) => {
   if (!s) return bad("auth_required", 401);
-  const u = await getUser(env, s.userId);
+  /* الخفة 2.1.4: رحلتان بدل أربع — دفعة D1 واحدة (المستخدم + العدّادات) ورصيد الوكيل بالتوازي */
+  const day = new Date().toISOString().slice(0, 10);
+  const [batch, agentToday] = await Promise.all([
+    env.DB.batch([
+      env.DB.prepare("SELECT * FROM users WHERE id = ?1").bind(s.userId),
+      env.DB.prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM products WHERE user_id = ?1 AND active = 1) AS products,
+          (SELECT COUNT(*) FROM orders WHERE user_id = ?1 AND status = 'new') AS orders_new,
+          (SELECT COUNT(*) FROM orders WHERE user_id = ?1) AS orders`
+      ).bind(s.userId),
+    ]),
+    env.CACHE_KV.get(`aq:${s.userId}:${day}`),
+  ]);
+  const u = (batch[0]?.results as unknown as UserRow[] | undefined)?.[0] ?? null;
   if (!u) return bad("auth_required", 401);
   if (u.banned) return bad("banned", 403); /* المحظور: الواجهة تسجّله خروجاً — بوابة الحظر المركزية لا تغطي هذا المسار */
-  const counts = await env.DB.prepare(
-    `SELECT
-      (SELECT COUNT(*) FROM products WHERE user_id = ?1 AND active = 1) AS products,
-      (SELECT COUNT(*) FROM orders WHERE user_id = ?1 AND status = 'new') AS orders_new,
-      (SELECT COUNT(*) FROM orders WHERE user_id = ?1) AS orders`
-  ).bind(u.id).first<{ products: number; orders_new: number; orders: number }>();
-  const day = new Date().toISOString().slice(0, 10);
-  const agentToday = Number((await env.CACHE_KV.get(`aq:${u.id}:${day}`)) ?? "0");
+  const counts = (batch[1]?.results as unknown as { products: number; orders_new: number; orders: number }[] | undefined)?.[0]
+    ?? { products: 0, orders_new: 0, orders: 0 };
   return json({
     user: { ...publicUser(u), name: u.name, email: u.email },
     csrf: s.csrf, counts,
     plan: u.plan ?? "free", credits: u.credits ?? 0,
     plan_products: PLAN_PRODUCTS[u.plan ?? "free"] ?? 3,
-    agent_today: agentToday, agent_quota: PLAN_QUOTA[u.plan ?? "free"] ?? 15,
+    agent_today: Number(agentToday ?? "0"), agent_quota: PLAN_QUOTA[u.plan ?? "free"] ?? 15,
   });
 });
 
@@ -304,28 +312,33 @@ route("PATCH", "/api/orders/:id", async (req, env, s, p) => {
 // ═══ المالية ═══
 route("GET", "/api/finance", async (_r, env, s) => {
   if (!s) return bad("auth_required", 401);
-  const sums = await env.DB.prepare(
-    `SELECT
-      COALESCE(SUM(CASE WHEN status='delivered' THEN total END),0) AS revenue,
-      COALESCE(SUM(CASE WHEN status IN ('new','confirmed','shipped') THEN total END),0) AS pending,
-      COALESCE(SUM(CASE WHEN status='cancelled' THEN total END),0) AS cancelled
-    FROM orders WHERE user_id = ?`
-  ).bind(s.userId).first<{ revenue: number; pending: number; cancelled: number }>();
-  const exp = await env.DB.prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE user_id = ?").bind(s.userId)
-    .first<{ total: number }>();
-  const byStatus = await env.DB.prepare("SELECT status, COUNT(*) AS n FROM orders WHERE user_id = ? GROUP BY status").bind(s.userId).all();
-  const revSeries = await env.DB.prepare(
-    `SELECT (created_at / 86400000) AS d, COALESCE(SUM(total),0) AS v FROM orders
-     WHERE user_id = ?1 AND status='delivered' AND created_at > ?2 GROUP BY d ORDER BY d`
-  ).bind(s.userId, now() - 14 * DAY).all();
-  const expSeries = await env.DB.prepare(
-    `SELECT (created_at / 86400000) AS d, COALESCE(SUM(amount),0) AS v FROM expenses
-     WHERE user_id = ?1 AND created_at > ?2 GROUP BY d ORDER BY d`
-  ).bind(s.userId, now() - 14 * DAY).all();
+  /* الخفة 2.1.4: رحلة واحدة بدل خمس — كل أرقام اللوحة دفعة D1 واحدة (كلها مستقلة) */
+  const rs = await env.DB.batch([
+    env.DB.prepare(
+      `SELECT
+        COALESCE(SUM(CASE WHEN status='delivered' THEN total END),0) AS revenue,
+        COALESCE(SUM(CASE WHEN status IN ('new','confirmed','shipped') THEN total END),0) AS pending,
+        COALESCE(SUM(CASE WHEN status='cancelled' THEN total END),0) AS cancelled
+      FROM orders WHERE user_id = ?1`
+    ).bind(s.userId),
+    env.DB.prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE user_id = ?1").bind(s.userId),
+    env.DB.prepare("SELECT status, COUNT(*) AS n FROM orders WHERE user_id = ?1 GROUP BY status").bind(s.userId),
+    env.DB.prepare(
+      `SELECT (created_at / 86400000) AS d, COALESCE(SUM(total),0) AS v FROM orders
+       WHERE user_id = ?1 AND status='delivered' AND created_at > ?2 GROUP BY d ORDER BY d`
+    ).bind(s.userId, now() - 14 * DAY),
+    env.DB.prepare(
+      `SELECT (created_at / 86400000) AS d, COALESCE(SUM(amount),0) AS v FROM expenses
+       WHERE user_id = ?1 AND created_at > ?2 GROUP BY d ORDER BY d`
+    ).bind(s.userId, now() - 14 * DAY),
+  ]);
+  const sm = (rs[0]?.results as unknown as { revenue: number; pending: number; cancelled: number }[] | undefined)?.[0]
+    ?? { revenue: 0, pending: 0, cancelled: 0 };
+  const ex = (rs[1]?.results as unknown as { total: number }[] | undefined)?.[0] ?? { total: 0 };
   return json({
-    revenue: sums?.revenue ?? 0, pending: sums?.pending ?? 0, cancelled: sums?.cancelled ?? 0,
-    expenses: exp?.total ?? 0, net: (sums?.revenue ?? 0) - (exp?.total ?? 0),
-    by_status: byStatus.results ?? [], rev_series: revSeries.results ?? [], exp_series: expSeries.results ?? [],
+    revenue: sm.revenue ?? 0, pending: sm.pending ?? 0, cancelled: sm.cancelled ?? 0,
+    expenses: ex.total ?? 0, net: (sm.revenue ?? 0) - (ex.total ?? 0),
+    by_status: rs[2]?.results ?? [], rev_series: rs[3]?.results ?? [], exp_series: rs[4]?.results ?? [],
   });
 }, { auth: true });
 
