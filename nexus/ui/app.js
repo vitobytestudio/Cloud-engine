@@ -1239,7 +1239,7 @@ function productEditor(p = null) {
     $("#ready-pct", sh.wrap).textContent = pts + "%";
     $("#ready-fill", sh.wrap).style.background = pts >= 80 ? "linear-gradient(90deg,#34d399,#2ad4f6)" : pts >= 50 ? "linear-gradient(90deg,#ffd166,#ff9f43)" : "linear-gradient(90deg,#ff5d73,#ff9f43)";
   };
-  ["#e-title", "#e-desc", "#e-image", "#e-compare", "#e-price"].forEach((id) => { const el = $(id, sh.wrap); if (el) el.addEventListener("input", () => { readyCalc(); const pv = Number($("#e-price", sh.wrap).value), cv = Number($("#e-compare", sh.wrap).value) || 0, h = $("#cmp-hint", sh.wrap); if (h) h.style.display = cv > 0 && pv > 0 && cv <= pv ? "block" : "none"; }); });
+  ["#e-title", "#e-desc", "#e-image", "#e-compare", "#e-price"].forEach((id) => { const el = $(id, sh.wrap); if (el) el.addEventListener("input", () => { readyCalc(); const pv = Number($("#e-price", sh.wrap).value), cv = Number($("#e-compare", sh.wrap).value) || 0, h = $("#cmp-hint", sh.wrap); if (h) h.style.display = cv > 0 && pv > 0 && (cv <= pv || cv > 99000000) ? "block" : "none"; }); });
   readyCalc();
   /* منظّم المنتج: الوكيل يرتب الباقة ويقترح */
   $("#e-org", sh.wrap).onclick = async () => {
@@ -1284,7 +1284,7 @@ function productEditor(p = null) {
   $("#e-feat", sh.wrap).onclick = (e) => e.currentTarget.classList.toggle("on");
   $("#e-save", sh.wrap).onclick = async (e) => {
     const pv = Number($("#e-price", sh.wrap).value), cv = Number($("#e-compare", sh.wrap).value) || 0;
-    if (cv > 0 && pv > 0 && cv <= pv) { $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(t("err_invalid_compare"))}</span>`; vibrate([8, 30, 8]); return; }
+    if (cv > 0 && pv > 0 && (cv <= pv || cv > 99000000)) { $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(t("err_invalid_compare"))}</span>`; vibrate([8, 30, 8]); return; }
     const bbody = {
       title: $("#e-title", sh.wrap).value.trim(), descr: $("#e-desc", sh.wrap).value.trim(),
       price: Number($("#e-price", sh.wrap).value), compare_at: Number($("#e-compare", sh.wrap).value) || 0,
