@@ -1264,6 +1264,13 @@ export default {
       if ((await admMeta(env, "setup_done")) === "1" || !env.ADMIN_SETUP_TOKEN || !tok || !ctEqual(tok, env.ADMIN_SETUP_TOKEN.trim())) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
       return setupPage(new URL(req.url).origin, tok);
     }
-    return secure(await env.ASSETS.fetch(req));
+    /* المخزن الحكيم: HTML والأكواد تُعاد موثوقيتها كل مرة (304 رخيصة) — تحديث الواجهة يصل الجميع فوراً بلا تبعية لغسل المتصفح يدوياً */
+    const assetPath = new URL(req.url).pathname;
+    const asset = await env.ASSETS.fetch(req);
+    const ah = new Headers(asset.headers);
+    ah.set("cache-control", assetPath === "/" || assetPath.endsWith(".html") || assetPath.endsWith(".js") || assetPath.endsWith(".css") || assetPath.endsWith(".webmanifest")
+      ? "no-cache"
+      : "public, max-age=31536000, immutable");
+    return secure(new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers: ah }));
   },
 };
