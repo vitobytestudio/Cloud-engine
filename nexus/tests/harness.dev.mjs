@@ -79,6 +79,10 @@ let cookie = "", csrf = "";
   ok("/api/me يعيد المستخدم والعدادات", me.status === 200 && me.data.user.slug && typeof me.data.counts.products === "number");
   const meNo = await j("/api/me");
   ok("/api/me بلا جلسة 401", meNo.status === 401);
+  const dash = await j("/api/dash/overview", { cookie });
+  ok("لوحة متجري برحلة واحدة: مستخدم+مالية+غير المقروء", dash.status === 200 && !!dash.data.user?.slug && typeof dash.data.finance?.revenue === "number" && typeof dash.data.unread === "number");
+  const dashNo = await j("/api/dash/overview");
+  ok("لوحة متجري بلا جلسة 401", dashNo.status === 401);
 }
 
 /* ─── 3. إعدادات المتجر ─── */

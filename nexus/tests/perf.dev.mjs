@@ -46,6 +46,7 @@ async function j(path, opts = {}, cookie = null, extra = {}) {
 
   console.log("── المسار الحار المصادَق (" + BASE + ") ──");
   await bench("GET /api/me", "/api/me", 40, true);
+  await bench("GET /api/dash/overview", "/api/dash/overview", 40, true);
   await bench("GET /api/finance", "/api/finance", 40, true);
   await bench("GET /api/orders", "/api/orders", 30, true);
   await bench("GET /api/products", "/api/products", 30, true);

@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.4", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.4: السلاسة — إقلاع بلا قفلة، جلسة مُرطّبة فوراً، ودفعة D1 واحدة في me وfinance بدل 4 و5 رحلات متسلسلة */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.5", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.5: صفحة متجري برحلة واحدة + ذاكرة فورية — /api/dash/overview يجمّع اللوحة كاملة، والإشعارات دفعة واحدة */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -339,6 +339,65 @@ route("GET", "/api/finance", async (_r, env, s) => {
     revenue: sm.revenue ?? 0, pending: sm.pending ?? 0, cancelled: sm.cancelled ?? 0,
     expenses: ex.total ?? 0, net: (sm.revenue ?? 0) - (ex.total ?? 0),
     by_status: rs[2]?.results ?? [], rev_series: rs[3]?.results ?? [], exp_series: rs[4]?.results ?? [],
+  });
+}, { auth: true });
+
+/* الخفة 2.1.5: صفحة متجري برحلة واحدة — اللوحة كاملة (مستخدم + عدّادات + مالية + غير المقروء) في استجابة واحدة */
+route("GET", "/api/dash/overview", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const day = new Date().toISOString().slice(0, 10);
+  const [uB, fB, agentToday] = await Promise.all([
+    env.DB.batch([
+      env.DB.prepare("SELECT * FROM users WHERE id = ?1").bind(s.userId),
+      env.DB.prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM products WHERE user_id = ?1 AND active = 1) AS products,
+          (SELECT COUNT(*) FROM orders WHERE user_id = ?1 AND status = 'new') AS orders_new,
+          (SELECT COUNT(*) FROM orders WHERE user_id = ?1) AS orders`
+      ).bind(s.userId),
+    ]),
+    env.DB.batch([
+      env.DB.prepare(
+        `SELECT
+          COALESCE(SUM(CASE WHEN status='delivered' THEN total END),0) AS revenue,
+          COALESCE(SUM(CASE WHEN status IN ('new','confirmed','shipped') THEN total END),0) AS pending,
+          COALESCE(SUM(CASE WHEN status='cancelled' THEN total END),0) AS cancelled
+        FROM orders WHERE user_id = ?1`
+      ).bind(s.userId),
+      env.DB.prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE user_id = ?1").bind(s.userId),
+      env.DB.prepare("SELECT status, COUNT(*) AS n FROM orders WHERE user_id = ?1 GROUP BY status").bind(s.userId),
+      env.DB.prepare(
+        `SELECT (created_at / 86400000) AS d, COALESCE(SUM(total),0) AS v FROM orders
+         WHERE user_id = ?1 AND status='delivered' AND created_at > ?2 GROUP BY d ORDER BY d`
+      ).bind(s.userId, now() - 14 * DAY),
+      env.DB.prepare(
+        `SELECT (created_at / 86400000) AS d, COALESCE(SUM(amount),0) AS v FROM expenses
+         WHERE user_id = ?1 AND created_at > ?2 GROUP BY d ORDER BY d`
+      ).bind(s.userId, now() - 14 * DAY),
+      env.DB.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ?1 AND read = 0").bind(s.userId),
+    ]),
+    env.CACHE_KV.get(`aq:${s.userId}:${day}`),
+  ]);
+  const u = (uB[0]?.results as unknown as UserRow[] | undefined)?.[0] ?? null;
+  if (!u) return bad("auth_required", 401);
+  if (u.banned) return bad("banned", 403);
+  const counts = (uB[1]?.results as unknown as { products: number; orders_new: number; orders: number }[] | undefined)?.[0]
+    ?? { products: 0, orders_new: 0, orders: 0 };
+  const sm = (fB[0]?.results as unknown as { revenue: number; pending: number; cancelled: number }[] | undefined)?.[0]
+    ?? { revenue: 0, pending: 0, cancelled: 0 };
+  const ex = (fB[1]?.results as unknown as { total: number }[] | undefined)?.[0] ?? { total: 0 };
+  return json({
+    user: { name: u.name, slug: u.slug, store_name: u.store_name, plan: u.plan ?? "free", credits: u.credits ?? 0, logo: u.logo ?? "" },
+    counts,
+    plan: u.plan ?? "free", credits: u.credits ?? 0,
+    plan_products: PLAN_PRODUCTS[u.plan ?? "free"] ?? 3,
+    agent_today: Number(agentToday ?? "0"), agent_quota: PLAN_QUOTA[u.plan ?? "free"] ?? 15,
+    unread: (fB[5]?.results as unknown as { c: number }[] | undefined)?.[0]?.c ?? 0,
+    finance: {
+      revenue: sm.revenue ?? 0, pending: sm.pending ?? 0, cancelled: sm.cancelled ?? 0,
+      expenses: ex.total ?? 0, net: (sm.revenue ?? 0) - (ex.total ?? 0),
+      by_status: fB[2]?.results ?? [], rev_series: fB[3]?.results ?? [], exp_series: fB[4]?.results ?? [],
+    },
   });
 }, { auth: true });
 
@@ -611,9 +670,12 @@ route("POST", "/api/agent/describe", async (req, env, s) => {
 
 // ═══ إشعارات التاجر ═══
 route("GET", "/api/notifications", async (_r, env, s) => {
-  const { results } = await env.DB.prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 30").bind(s!.userId).all();
-  const unread = await env.DB.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND read = 0").bind(s!.userId).first<{ c: number }>();
-  return json({ notifications: results ?? [], unread: unread?.c ?? 0 });
+  /* الخفة 2.1.5: رحلة واحدة بدل اثنتين — القائمة والعدّاد دفعة واحدة */
+  const [list, unread] = await env.DB.batch([
+    env.DB.prepare("SELECT * FROM notifications WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 30").bind(s!.userId),
+    env.DB.prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ?1 AND read = 0").bind(s!.userId),
+  ]);
+  return json({ notifications: list?.results ?? [], unread: (unread?.results as unknown as { c: number }[] | undefined)?.[0]?.c ?? 0 });
 }, { auth: true });
 
 route("POST", "/api/notifications/read", async (_r, env, s) => {
