@@ -83,7 +83,7 @@ const T = {
     ready: "جاهزية النشر", pro_tab: "المحترفون", pro_hero: "محترفو ناكساب في خدمة متجرك",
     pro_sub: "كتالوج موثّق من ناكساب: هويات ومواقع ومونتاج — الطلب والدفع عبر محفظة ناكساب المؤتمتة.",
     pro_open: "اطلب من ناكساب", pro_empty: "لا خدمات منشورة بعد — كل جديد من موثقي ناكساب يظهر هنا",
-    nk_field: "اسمك في ناكساب (لخصم العضوية)", nk_check: "تحقق", nk_ok: "خصم العضوية مطبق", nk_no: "لا عضوية نشطة بهذا الاسم", apply_org: "طبّق الاقتراحات",
+    nk_field: "اسمك في ناكساب (لخصم العضوية)", nk_check: "تحقق", nk_ok: "خصم العضوية مطبق", nk_no: "لا عضوية نشطة بهذا الاسم", apply_org: "طبّق الاقتراحات", err_generic: "حدث خطأ غير متوقع — حاول مجدداً", err_auth_required: "جلستك منتهية — سجّل دخولك من جديد", err_banned: "الحساب محظور — تواصل مع الاستوديو", err_csrf: "انتهت صلاحية الصفحة — حدّثها وحاول مجدداً", err_exists: "البريد أو رابط المتجر مستعمل مسبقاً", err_gone: "هذا العنصر لم يعد متوفراً", err_invalid: "المعلومات غير صحيحة — تحقق من الحقول", err_invalid_credentials: "البريد أو كلمة السر غير صحيحة", err_invalid_email: "البريد الإلكتروني غير صحيح", err_invalid_name: "الاسم غير صحيح — 3 أحرف على الأقل", err_invalid_slug: "رابط المتجر: أحرف إنجليزية صغيرة وأرقام و- فقط", err_invalid_title: "اسم المنتج: 3 أحرف على الأقل", err_invalid_price: "السعر غير صحيح — رقم من 1 إلى 99,000,000", err_invalid_compare: "«السعر قبل التخفيض» يجب أن يكون أعلى من السعر الحالي — أو اتركه فارغاً", err_invalid_image: "صورة المنتج غير صالحة — ارفع صورة من هاتفك أو ضع رابط https", err_invalid_category: "اختر صنفاً من القائمة", err_invalid_stock: "الكمية غير صحيحة — رقم أو اتركها فارغة", err_invalid_color: "اللون غير مدعوم", err_invalid_logo: "الشعار غير صالح — رابط https أو صورة مرفوعة", err_invalid_banner: "الغلاف غير صالح — رابط https أو صورة مرفوعة", err_invalid_phone: "رقم الهاتف غير صحيح — مثال: 0555123456", err_invalid_wilaya: "اختر الولاية", err_invalid_commune: "اختر البلدية", err_invalid_address: "العنوان غير صحيح — اكتبه بالتفصيل", err_invalid_label: "بيان المصروف غير صحيح", err_invalid_amount: "المبلغ غير صحيح", err_invalid_message: "الرسالة غير صحيحة", err_invalid_type: "نوع غير مدعوم", err_invalid_style: "اختر نمط الفيديو", err_invalid_url: "الرابط غير صالح — يجب أن يبدأ بـ https", err_invalid_plan: "الباقة غير معروفة", err_invalid_status: "حالة غير معروفة", err_invalid_product: "منتج غير صالح", err_invalid_setup: "بيانات الإعداد غير صالحة", err_not_found: "غير موجود", err_out_of_stock: "الكمية نفدت", err_product_unavailable: "المنتج غير متاح حالياً", err_plan_limit: "وصلت حد باقتك — أضف رصيداً أو رقِّ باقتك", err_too_large: "الملف كبير جداً — الحد 550KB", err_too_many: "طلبات كثيرة — انتظر قليلاً ثم حاول", err_too_small: "القيمة أصغر من الحد المسموح", err_quota_exhausted: "وصلت حد باقتك — أضف رصيداً أو رقِّ باقتك", err_agent_disabled: "الوكيل ينتظر مفاتيح المالك", err_fleet_down: "الوكيل غير متاح الآن — حاول لاحقاً", err_server: "خطأ في الخادم — حاول مجدداً", 
   },
   en: {
     tagline: "Merchant Market", home: "Home", explore: "Explore", mystore: "My Store", account: "Account",
@@ -165,7 +165,7 @@ const T = {
     ready: "Publish readiness", pro_tab: "Pros", pro_hero: "NAKSAB pros for your store",
     pro_sub: "Verified catalog from NAKSAB: branding, websites, video editing — order & pay via the automated NAKSAB wallet.",
     pro_open: "Order on NAKSAB", pro_empty: "No services yet — everything new from verified NAKSAB pros lands here",
-    nk_field: "Your NAKSAB username (member discount)", nk_check: "Check", nk_ok: "Member discount applied", nk_no: "No active membership for this name", apply_org: "Apply suggestions",
+    nk_field: "Your NAKSAB username (member discount)", nk_check: "Check", nk_ok: "Member discount applied", nk_no: "No active membership for this name", apply_org: "Apply suggestions", err_generic: "Unexpected error — try again", err_auth_required: "Session expired — sign in again", err_banned: "Account suspended — contact the studio", err_csrf: "Page expired — refresh and try again", err_exists: "Email or store link already used", err_gone: "This item is no longer available", err_invalid: "Invalid details — check the fields", err_invalid_credentials: "Wrong email or password", err_invalid_email: "Invalid email address", err_invalid_name: "Invalid name — at least 3 characters", err_invalid_slug: "Store link: lowercase letters, numbers and - only", err_invalid_title: "Product name: at least 3 characters", err_invalid_price: "Invalid price — number from 1 to 99,000,000", err_invalid_compare: "Compare-at price must be higher than the current price — or leave it empty", err_invalid_image: "Invalid product image — upload from your phone or use an https link", err_invalid_category: "Pick a category from the list", err_invalid_stock: "Invalid quantity — a number, or leave empty", err_invalid_color: "Unsupported color", err_invalid_logo: "Invalid logo — https link or uploaded image", err_invalid_banner: "Invalid banner — https link or uploaded image", err_invalid_phone: "Invalid phone — e.g. 0555123456", err_invalid_wilaya: "Pick a wilaya", err_invalid_commune: "Pick a commune", err_invalid_address: "Invalid address — write it in detail", err_invalid_label: "Invalid expense label", err_invalid_amount: "Invalid amount", err_invalid_message: "Invalid message", err_invalid_type: "Unsupported type", err_invalid_style: "Pick a video style", err_invalid_url: "Invalid link — must start with https", err_invalid_plan: "Unknown plan", err_invalid_status: "Unknown status", err_invalid_product: "Invalid product", err_invalid_setup: "Invalid setup data", err_not_found: "Not found", err_out_of_stock: "Out of stock", err_product_unavailable: "Product unavailable right now", err_plan_limit: "Plan limit reached — add credits or upgrade", err_too_large: "File too large — limit 550KB", err_too_many: "Too many requests — wait a moment and try again", err_too_small: "Value below the allowed minimum", err_quota_exhausted: "Plan limit reached — add credits or upgrade", err_agent_disabled: "Agent awaits owner keys", err_fleet_down: "Agent unavailable — try later", err_server: "Server error — try again", 
   },
 };
 
@@ -173,7 +173,7 @@ const T = {
 const S = {
   lang: localStorage.getItem("nx_lang") || "ar",
   csrf: sessionStorage.getItem("nx_csrf") || "",
-  user: null,
+  user: (() => { try { const u = JSON.parse(sessionStorage.getItem("nx_user") || "null"); return u && u.slug ? u : null; } catch { return null; } })(),
   dz: null,
   route: { name: "home" },
   feedDone: false,
@@ -187,6 +187,9 @@ const fdate = (ts) => new Date(ts).toLocaleDateString(S.lang === "ar" ? "ar-DZ" 
 const CATS = ["mode", "beauty", "electronics", "home", "kids", "food", "sport", "other"];
 const catName = (c) => t("cat_" + (CATS.includes(c) ? c : "other"));
 const vibrate = (p = 8) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+/* كل خطأ من الخادم يترجم لجملة مفهومة — المفتاح الخام لا يراه المستخدم أبداً */
+const emsg = (e) => { const k = e && e.error ? String(e.error) : ""; if (!k) return t("err_generic");
+  const m = t("err_" + k); return m && m !== "err_" + k ? m : t("err_generic"); };
 
 /* ───────── API ───────── */
 async function api(path, opts = {}) {
@@ -901,7 +904,7 @@ rr("/auth", async (v) => {
           S.csrf = r.csrf; sessionStorage.setItem("nx_csrf", r.csrf);
           toast(t("logged_in")); vibrate([10, 30, 10]);
           await me(); location.hash = "#/dash";
-        } catch (ex) { aerr(ex.error === "exists" ? t("exists") : t("req_field")); busy($("#r-go", form), false); }
+        } catch (ex) { aerr(ex.error === "exists" ? t("exists") : emsg(ex)); busy($("#r-go", form), false); }
       };
     }
   };
@@ -922,9 +925,10 @@ async function me() {
   try {
     const r = await api("/api/me");
     S.user = { ...r.user, plan: r.plan, credits: r.credits, agent_today: r.agent_today, agent_quota: r.agent_quota };
+    sessionStorage.setItem("nx_user", JSON.stringify(S.user));
     if (r.csrf) { S.csrf = r.csrf; sessionStorage.setItem("nx_csrf", r.csrf); }
     return r;
-  } catch { S.user = null; return null; }
+  } catch { S.user = null; sessionStorage.removeItem("nx_user"); return null; }
 }
 
 const DASH_TABS = [
@@ -976,7 +980,7 @@ async function openAdsOrder(style, price) {
       if (!wa) toast(t("wa_open_fail"));
       go("#/ads");
     } catch (ex) {
-      $("#ao-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "too_many" ? t("limit_reached") : ex.error || "error")}</span>`;
+      $("#ao-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "too_many" ? t("limit_reached") : emsg(ex))}</span>`;
     }
   };
 }
@@ -1057,18 +1061,20 @@ async function openBell() {
     ${rows || `<p class="hint">${esc(t("notif_empty"))}</p>`}
     <button class="btn ghost wide" id="n-mark" style="margin-top:10px">${esc(t("notif_mark"))}</button>`);
   $("#n-mark", sh.wrap).onclick = async () => {
-    try { await api("/api/notifications/read", { method: "POST" }); } catch {}
+    try { await api("/api/notifications/read", { method: "POST" }); sessionStorage.removeItem("nx_unread"); } catch {}
     const b = $("#bell-n"); if (b) b.classList.add("hidden");
   };
 }
 async function refreshBell() {
+  const b = $("#bell-n"); if (!b) return;
+  let n = -1;
   try {
-    const r = await api("/api/notifications");
-    const b = $("#bell-n"); if (!b) return;
-    const n = r.unread | 0;
-    b.textContent = n > 9 ? "9+" : String(n);
-    b.classList.toggle("hidden", n === 0);
-  } catch {}
+    const c = JSON.parse(sessionStorage.getItem("nx_unread") || "null");
+    if (c && c.exp > Date.now()) n = c.v | 0;
+    else { const r = await api("/api/notifications"); n = r.unread | 0; sessionStorage.setItem("nx_unread", JSON.stringify({ v: n, exp: Date.now() + 60000 })); }
+  } catch { return; }
+  b.textContent = n > 9 ? "9+" : String(n);
+  b.classList.toggle("hidden", n === 0);
 }
 function dashShell(v, active, contentHtml) {
   const u = S.user;
@@ -1082,11 +1088,9 @@ function dashShell(v, active, contentHtml) {
   refreshBell();
 }
 
-rr("/dash", async (v) => {
-  buildTabbar(true);
-  if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
-  dashShell(v, "overview", skeletons(3));
-  const [counts, fin] = await Promise.all([api("/api/me"), api("/api/finance")]);
+const dashCacheGet = () => { try { const d = JSON.parse(sessionStorage.getItem("nx_dash") || "null"); return d && d.finance ? d : null; } catch { return null; } };
+function renderDash(v, d) {
+  const fin = d.finance;
   const nb = Object.fromEntries((fin.by_status || []).map((x) => [x.status, x.n]));
   $("#dash-body").innerHTML = `
     <div class="kpis">
@@ -1102,12 +1106,32 @@ rr("/dash", async (v) => {
         <span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--danger)"></i> ${esc(t("expenses"))}</span>
       </div></div>
     <div style="display:flex;gap:10px;margin-top:16px">
-      <a class="btn" style="flex:1" href="#/s/${esc(S.user.slug)}">${esc(t("open_store"))}</a>
+      <a class="btn" style="flex:1" href="#/s/${esc((d.user && d.user.slug) || S.user.slug)}">${esc(t("open_store"))}</a>
       <a class="btn primary" style="flex:1" href="#/dash/products">${esc(t("add_product"))}</a>
       <a class="btn ghost" style="flex:1" href="#/plans">${esc(t("prices"))}</a>
     </div>`;
   $$("#dash-body .v[data-c]").forEach((el) => countUp(el, Number(el.dataset.c)));
   drawChart("ov-chart", fin.rev_series, fin.exp_series);
+}
+rr("/dash", async (v) => {
+  buildTabbar(true);
+  if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }
+  /* الخفة: الرسم الفوري من ذاكرة الجلسة ثم تحديث خلفي برحلة واحدة — العودة لمتجري بلا انتظار */
+  const cached = dashCacheGet();
+  dashShell(v, "overview", cached ? "" : skeletons(3));
+  if (cached) renderDash(v, cached);
+  let d = null;
+  try { d = await api("/api/dash/overview"); } catch {}
+  if (!d) {
+    try { const [m, fin] = await Promise.all([api("/api/me"), api("/api/finance")]);
+      d = { user: m.user, counts: m.counts, plan_products: m.plan_products, agent_today: m.agent_today, agent_quota: m.agent_quota, unread: 0, finance: fin };
+    } catch { if (!cached) $("#dash-body").innerHTML = `<div class="empty"><h3>${esc(t("err_generic"))}</h3></div>`; return; }
+  }
+  try { sessionStorage.setItem("nx_unread", JSON.stringify({ v: d.unread | 0, exp: Date.now() + 60000 })); } catch {}
+  const bj = JSON.stringify(d);
+  if (bj === sessionStorage.getItem("nx_dash")) return; /* لا تغيّر = لا إعادة رسم ولا وميض */
+  try { sessionStorage.setItem("nx_dash", bj); } catch {}
+  renderDash(v, d);
 });
 
 function drawChart(cid, rev, exp) {
@@ -1174,7 +1198,7 @@ function productEditor(p = null) {
     <div id="org-tips" class="tips-box" style="display:none"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field"><label>${esc(t("price"))}</label><input class="input" id="e-price" type="number" inputmode="numeric" dir="ltr" value="${p?.price ?? ""}"/></div>
-      <div class="field"><label>${esc(t("compare_at"))}</label><input class="input" id="e-compare" type="number" inputmode="numeric" dir="ltr" value="${p?.compare_at || ""}"/></div>
+      <div class="field"><label>${esc(t("compare_at"))}</label><input class="input" id="e-compare" type="number" inputmode="numeric" dir="ltr" value="${p?.compare_at || ""}"/><div class="hint" id="cmp-hint" style="display:none">${esc(t("err_invalid_compare"))}</div></div>
     </div>
     <div class="field"><label>${esc(t("image_url"))}</label>
       <button class="btn wide" id="e-pick" type="button">
@@ -1215,7 +1239,7 @@ function productEditor(p = null) {
     $("#ready-pct", sh.wrap).textContent = pts + "%";
     $("#ready-fill", sh.wrap).style.background = pts >= 80 ? "linear-gradient(90deg,#34d399,#2ad4f6)" : pts >= 50 ? "linear-gradient(90deg,#ffd166,#ff9f43)" : "linear-gradient(90deg,#ff5d73,#ff9f43)";
   };
-  ["#e-title", "#e-desc", "#e-image", "#e-compare"].forEach((id) => { const el = $(id, sh.wrap); if (el) el.addEventListener("input", readyCalc); });
+  ["#e-title", "#e-desc", "#e-image", "#e-compare", "#e-price"].forEach((id) => { const el = $(id, sh.wrap); if (el) el.addEventListener("input", () => { readyCalc(); const pv = Number($("#e-price", sh.wrap).value), cv = Number($("#e-compare", sh.wrap).value) || 0, h = $("#cmp-hint", sh.wrap); if (h) h.style.display = cv > 0 && pv > 0 && cv <= pv ? "block" : "none"; }); });
   readyCalc();
   /* منظّم المنتج: الوكيل يرتب الباقة ويقترح */
   $("#e-org", sh.wrap).onclick = async () => {
@@ -1253,12 +1277,14 @@ function productEditor(p = null) {
       showPrev();
       toast(S.lang === "ar" ? "رُفعت الصورة" : "Uploaded");
       vibrate(10);
-    } catch (ex) { toast(ex.error || "error", "err"); }
+    } catch (ex) { toast(emsg(ex), "err"); }
     pick.disabled = false;
     pick.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L7 19"/></svg> ' + esc(S.lang === "ar" ? "اختر صورة من هاتفك" : "Pick from phone");
   };
   $("#e-feat", sh.wrap).onclick = (e) => e.currentTarget.classList.toggle("on");
   $("#e-save", sh.wrap).onclick = async (e) => {
+    const pv = Number($("#e-price", sh.wrap).value), cv = Number($("#e-compare", sh.wrap).value) || 0;
+    if (cv > 0 && pv > 0 && cv <= pv) { $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(t("err_invalid_compare"))}</span>`; vibrate([8, 30, 8]); return; }
     const bbody = {
       title: $("#e-title", sh.wrap).value.trim(), descr: $("#e-desc", sh.wrap).value.trim(),
       price: Number($("#e-price", sh.wrap).value), compare_at: Number($("#e-compare", sh.wrap).value) || 0,
@@ -1267,16 +1293,16 @@ function productEditor(p = null) {
     try {
       if (isEdit) await api("/api/products/" + p.id, { method: "PUT", body: bbody });
       else await api("/api/products", { method: "POST", body: bbody });
-      toast(t("saved")); vibrate(10); sh.close(); render();
+      toast(t("saved")); vibrate(10); sh.close(); render(!0);
     } catch (ex) {
-      $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "plan_limit" ? t("limit_reached") : ex.error || "error")}</span>`;
+      $("#e-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error === "plan_limit" ? t("limit_reached") : emsg(ex))}</span>`;
       vibrate([8, 30, 8]);
     }
   };
   if (isEdit) $("#e-del", sh.wrap).onclick = (e) => {
     const b = e.currentTarget;
     if (b.dataset.armed) {
-      api("/api/products/" + p.id, { method: "DELETE" }).then(() => { toast(t("done")); sh.close(); render(); });
+      api("/api/products/" + p.id, { method: "DELETE" }).then(() => { toast(t("done")); sh.close(); render(!0); });
     } else { b.dataset.armed = "1"; b.textContent = t("confirm_delete"); vibrate([8, 30, 8]); }
   };
 }
@@ -1341,7 +1367,7 @@ function orderDetail(o) {
   $$("#st-btns [data-st]").forEach((b) => (b.onclick = async () => {
     try {
       await api("/api/orders/" + o.id, { method: "PATCH", body: { status: b.dataset.st } });
-      toast(t("saved")); vibrate(10); render();
+      toast(t("saved")); vibrate(10); render(!0);
     } catch { toast("error", "err"); }
   }));
 }
@@ -1424,13 +1450,13 @@ rr("/dash/finance", async (v) => {
     $("#x-save", sh.wrap).onclick = async () => {
       try {
         await api("/api/expenses", { method: "POST", body: { label: $("#x-label", sh.wrap).value.trim(), amount: Number($("#x-amount", sh.wrap).value) } });
-        toast(t("saved")); sh.close(); render();
-      } catch (ex) { $("#x-err", sh.wrap).innerHTML = `<span class="err-text">${esc(ex.error || "error")}</span>`; }
+        toast(t("saved")); sh.close(); render(!0);
+      } catch (ex) { $("#x-err", sh.wrap).innerHTML = `<span class="err-text">${esc(emsg(ex))}</span>`; }
     };
   };
   $$("[data-ex]", v).forEach((b) => (b.onclick = async () => {
     await api("/api/expenses/" + b.dataset.ex, { method: "DELETE" });
-    toast(t("done")); render();
+    toast(t("done")); render(!0);
   }));
 });
 
@@ -1467,7 +1493,7 @@ rr("/dash/settings", async (v) => {
     if (file.size > 550000) throw new Error("too_large");
     const r = await fetch("/api/media", { method: "POST", headers: { "content-type": file.type || "image/jpeg", "x-csrf": S.csrf }, body: await file.arrayBuffer() });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.url) throw new Error(d.error || "fail");
+    if (!r.ok || !d.url) throw new Error(emsg(d));
     return d.url;
   };
   $("#up-ava", v).onclick = () => $("#f-ava", v).click();
@@ -1491,7 +1517,7 @@ rr("/dash/settings", async (v) => {
     try {
       await api("/api/me", { method: "PUT", body: { store_name: $("#s-name", v).value.trim(), bio: $("#s-bio", v).value.trim(), logo, banner, whatsapp: $("#s-wa", v).value.trim(), color: tpl } });
       toast(t("saved")); vibrate([10, 30, 10]); await me();
-    } catch (ex) { $("#s-err", v).innerHTML = `<span class="err-text">${esc(ex.error || "error")}</span>`; }
+    } catch (ex) { $("#s-err", v).innerHTML = `<span class="err-text">${esc(emsg(ex))}</span>`; }
   };
 });
 
@@ -1501,7 +1527,7 @@ rr("/plans", async (v) => {
   v.innerHTML = `${topbar()}<div class="page" id="plans-body">${skeletons(2)}</div>`;
   let d;
   try { d = await api("/api/plans"); }
-  catch { $("#plans-body").innerHTML = `<div class="empty"><h3>error</h3></div>`; return; }
+  catch { $("#plans-body").innerHTML = `<div class="empty"><h3>${esc(t("err_generic"))}</h3></div>`; return; }
   const cur = S.user ? S.user.plan || "free" : "";
   $("#plans-body").innerHTML = `
     <div class="pl-hero">
@@ -1598,7 +1624,7 @@ rr("/adm", async (v) => {
           if (svc) await call("/api/adm/catalog/" + svc.id, { m: "PUT", b: body });
           else await call("/api/adm/catalog", { m: "POST", b: body });
           toast(t("saved")); vibrate(10); sh.close(); panelView();
-        } catch (e) { $("#sv-err", sh.wrap).textContent = e.error || "error"; }
+        } catch (e) { $("#sv-err", sh.wrap).textContent = emsg(e); }
       };
     };
     $("#adm-body").innerHTML = `
@@ -1770,7 +1796,7 @@ window.addEventListener("hashchange", render);
 (async () => {
   if (!location.hash) location.hash = location.pathname.startsWith("/panel/") ? "#/adm" : (localStorage.getItem("nx_seen") ? "#/" : "#/onb-check"); /* الرابط السري للمالك يفتح اللوحة — لا الرئيسية */
   render();
-  setTimeout(() => $("#boot")?.classList.add("off"), 650);
+  requestAnimationFrame(() => requestAnimationFrame(() => $("#boot")?.classList.add("off")));
   await me();
 })();
 window.go = go; window.productEditor = productEditor; window.setLang = setLang;

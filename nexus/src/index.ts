@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.5", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.5: صفحة متجري برحلة واحدة + ذاكرة فورية — /api/dash/overview يجمّع اللوحة كاملة، والإشعارات دفعة واحدة */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.6", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.6: صورة المنتج اختيارية + كل رقع الواجهة تصل فعلاً (المصدر ui/ — البناء لم يعد يمسح شيئاً) */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -193,7 +193,7 @@ function validateProduct(b: Record<string, unknown>): { error?: string; v?: Prod
   if (!isStr(title, 3, 120)) return { error: "invalid_title" };
   if (!Number.isFinite(price) || price < 1 || price > 99_000_000) return { error: "invalid_price" };
   if (compare_at && (compare_at < price || compare_at > 99_000_000)) return { error: "invalid_compare" };
-  if (!isHttpsUrl(image) && !isImagePath(image)) return { error: "invalid_image" };
+  if (image && !isHttpsUrl(image) && !isImagePath(image)) return { error: "invalid_image" }; /* الصورة اختيارية — الفراغ يقع على بديل الأيقونة */
   if (!CATEGORIES.includes(category)) return { error: "invalid_category" };
   if (stock < -1 || stock > 100_000) return { error: "invalid_stock" };
   return { v: { title, descr, price: Math.trunc(price), compare_at: Math.trunc(compare_at), image, category, stock, featured } };
