@@ -253,7 +253,8 @@ export class VDB {
 
   private async doReload(): Promise<void> {
     this.overlay.clear();
-    this.cache.clear();
+    /* النسخ-عند-الكتابة الصارم: الصفحات المعتمدة لا تُعاد كتابة أبداً —
+       الكاش يبقى حياً، والميتا (0) وحدها تُحدَّث. الخفة بلا تضحية بالصحة */
     const meta = await this.store.get(0);
     if (meta) {
       const m = parseMeta(meta);
