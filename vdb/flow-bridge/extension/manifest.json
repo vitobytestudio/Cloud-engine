@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "NEXUS Flow Bridge",
+  "version": "1.0.0",
+  "minimum_chrome_version": "116",
+  "description": "Connect your own Google Flow account to the NEXUS studio. Generation runs on your session inside your browser — no credentials ever leave it.",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://labs.google/*",
+    "https://*.googleusercontent.com/*"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://*.vitobytestudio.workers.dev/*"
+    ]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://labs.google/*"
+      ],
+      "js": [
+        "content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "NEXUS Flow Bridge"
+  }
+}
