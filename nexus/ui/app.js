@@ -90,7 +90,14 @@ st_f2t: "صفر تكلفة عليك وعلينا", st_f2d: "الرصيد الم�
 st_f3t: "خصوصية مطلقة", st_f3d: "لا كلمات سر ولا جلسات تصلنا — صورك تعاين على جهازك ونتائجك في معرضك حصراً.",
 st_f4t: "جاهز للنشر", st_f4d: "عربي أولاً، شعارك وسعارك، بأبعاد فيسبوك وإنستغرام وتيك توك (Veo 3.1: مدد 4/6/8ث وأبعاد 16:9 و9:16 و1:1).",
 st_human_t: "تحتاج لمسة بشرية سينمائية؟", st_human_s: "فريق VITO BYTE ينتج لك لقطات احترافية بالطرق التقليدية — للمنتجات الغالية والحملات الكبيرة.",
-st_human_go: "خدمات الاستوديو البشري", st_band_t: "استوديو الصور والفيديو بالذكاء الاصطناعي", st_band_s: "ولّد وعدّل بضغطة — من متصفحك وبحسابك أنت، مجاناً", st_band_go: "جرّب الاستوديو مجاناً", vbs_result: "جاهز — الفيديو في مشغلك الآن",  ads_tab: "الفيديوهات", ads_hero_t: "فيديوهات إعلانية تبيع عنك", ads_hero_s: "من استوديو VITO BYTE — لقطات سينمائية لمنتجاتك جاهزة لفيسبوك وإنستغرام وتيك توك.",
+st_human_go: "خدمات الاستوديو البشري", vbs_link_btn: "ربط حساب Google Flow بضغطة واحدة",
+vbs_link_line: "سجّل دخولك بحسابك في جوجل — أو أنشئ حساباً جديداً في نفس النافذة — لاستخدام رصيدك المجاني في توليد الصور والفيديوهات مباشرة هنا",
+vbs_link_open: "فُتحت نافذة الربط — أكمل الدخول هناك وسنتصل تلقائياً…",
+vbs_linked: "تم الربط بنجاح", vbs_conn_on: "مرتبط بحسابك في Google Flow ✓", vbs_unlink: "إلغاء الربط", vbs_unlinked: "أُلغي الربط", vbs_state_off2: "الحساب غير مرتبط بعد",
+vbs_signin_need: "سجّل الدخول إلى منصتك أولاً لربط حساب Google Flow",
+st_run: "توليد", st_q: "المهمة في الطابور…", st_running: "جارٍ الرندر على حسابك في Flow…", st_done: "جاهز — النتيجة في معرضك",
+st_need_img: "ارفع صورتك أولاً لهذا الوضع", st_uping: "نجهز صورتك للتنفيذ…", st_need_idea: "اكتب وصفاً أولاً (8 أحرف فأكثر)",
+st_band_t: "استوديو الصور والفيديو بالذكاء الاصطناعي", st_band_s: "ولّد وعدّل بضغطة — من متصفحك وبحسابك أنت، مجاناً", st_band_go: "جرّب الاستوديو مجاناً", vbs_result: "جاهز — الفيديو في مشغلك الآن",  ads_tab: "الفيديوهات", ads_hero_t: "فيديوهات إعلانية تبيع عنك", ads_hero_s: "من استوديو VITO BYTE — لقطات سينمائية لمنتجاتك جاهزة لفيسبوك وإنستغرام وتيك توك.",
     your_disc: "خصم باقتك", order_vid: "اطلب الفيديو", vid_note: "ملاحظات للاستوديو (اختياري)", vid_product: "المنتج المميز (اختياري)",
     send_order: "إرسال عبر واتساب", my_vids: "طلباتي", no_vids: "لا طلبات بعد", order_ok: "طلبك سجل — أكمل المحادثة في واتساب",
     wa_ask: "استفسر عن الفيديوهات على واتساب", wa_open_fail: "افتح واتساب ومراسلة: 0777 84 56 35",
@@ -192,7 +199,14 @@ st_f2t: "Zero cost for you and us", st_f2d: "Flow's daily free credits run insid
 st_f3t: "Absolute privacy", st_f3d: "No passwords or sessions ever reach us — your images preview on your device and results live in your gallery only.",
 st_f4t: "Publish-ready", st_f4d: "Arabic-first, your logo and price, sized for Facebook, Instagram and TikTok (Veo 3.1: 4/6/8s, 16:9, 9:16, 1:1).",
 st_human_t: "Need a human cinematic touch?", st_human_s: "The VITO BYTE team produces professional cuts the classic way — for premium products and big campaigns.",
-st_human_go: "Human studio services", st_band_t: "AI image & video studio", st_band_s: "Generate and edit in one tap — from your browser, on your own account, free", st_band_go: "Try the studio free", vbs_result: "Done — your video is playing now",  ads_tab: "Video ads", ads_hero_t: "Ad videos that sell for you", ads_hero_s: "By VITO BYTE studio — cinematic product cuts ready for Facebook, Instagram & TikTok.",
+st_human_go: "Human studio services", vbs_link_btn: "Connect your Google Flow account — one tap",
+vbs_link_line: "Sign in with your Google account — or create a new one right in the popup — and use your free credits to generate images and videos right here",
+vbs_link_open: "The connect window is open — finish signing in there and we'll connect automatically…",
+vbs_linked: "Connected successfully", vbs_conn_on: "Connected to your Google Flow account ✓", vbs_unlink: "Disconnect", vbs_unlinked: "Disconnected", vbs_state_off2: "Account not connected yet",
+vbs_signin_need: "Sign in to your platform account first to link Google Flow",
+st_run: "Generate", st_q: "Job queued…", st_running: "Rendering on your Flow account…", st_done: "Done — the result is in your gallery",
+st_need_img: "Upload your image first for this mode", st_uping: "Preparing your image…", st_need_idea: "Write a description first (8+ characters)",
+st_band_t: "AI image & video studio", st_band_s: "Generate and edit in one tap — from your browser, on your own account, free", st_band_go: "Try the studio free", vbs_result: "Done — your video is playing now",  ads_tab: "Video ads", ads_hero_t: "Ad videos that sell for you", ads_hero_s: "By VITO BYTE studio — cinematic product cuts ready for Facebook, Instagram & TikTok.",
     your_disc: "Your plan discount", order_vid: "Order this video", vid_note: "Notes for the studio (optional)", vid_product: "Featured product (optional)",
     send_order: "Send via WhatsApp", my_vids: "My orders", no_vids: "No orders yet", order_ok: "Order saved — continue the chat on WhatsApp",
     wa_ask: "Ask about video ads on WhatsApp", wa_open_fail: "Open WhatsApp and message: 0777 84 56 35",
@@ -1188,24 +1202,27 @@ function vbsStudioBody() {
         <button class="btn ghost" id="vbs-recraft" type="button" style="flex:1">${esc(t("vbs_recraft"))}</button>
         <button class="btn ghost" id="vbs-copy2" type="button" style="flex:1">${esc(t("vbs_copy"))}</button>
       </div></div>
-    <button class="btn primary wide" id="vbs-go">${esc(t("st_copy_open"))}</button>
-    <p class="hint" style="margin-top:8px">${esc(t("st_one_line"))}</p>
-    <div class="st-result">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button class="btn ghost" id="vbs-paste" style="flex:1">${esc(t("st_paste"))}</button>
-        <input class="input" id="vbs-url" dir="ltr" placeholder="${esc(t("st_paste_ph"))}" style="flex:2;min-width:160px"/>
-        <button class="btn" id="vbs-add" type="button">${esc(t("st_add_url"))}</button>
-      </div>
-    </div>
+    <div class="vbs-bar hidden" id="vbs-bar"><i></i></div>
+    <div class="vbs-msg" id="vbs-msg"></div>
+    <button class="btn primary wide" id="vbs-run">${esc(t("st_run"))}</button>
+    <video class="vbs-player hidden" id="vbs-play" playsinline controls></video>
     <h3 class="st-h3">${esc(t("st_gal"))}</h3>
     <div class="st-gal" id="vbs-gal"></div>
   </div>`;
 }
-function vbsWire(v) {
-  const cur = { mode: "t2i", style: "quick", dur: 8, asp: "9:16", cam: "push" };
+function vbsConnectUI() {
+  return `<div class="st-connect">
+    <button class="btn primary wide" id="vbs-link">${esc(t("vbs_link_btn"))}</button>
+    <p class="st-line">${esc(t("vbs_link_line"))}</p>
+    <div class="vbs-st"><span class="vbs-dot"></span><span>${esc(t("vbs_state_off2"))}</span></div>
+  </div>`;
+}
+function vbsWire(v, connected) {
+  const cur = { mode: "t2i", style: "quick", dur: 8, asp: "9:16", cam: "push", imgFile: null };
   const prod = (window.VBS_CTX || {}).product || null;
   const compose = () => { const el = $("#vbs-prompt", v); if (el) el.value = vbsCompose(cur.mode, { name: prod && prod.title, price: prod && prod.price, idea: $("#vbs-idea", v).value, style: cur.style, dur: cur.dur, asp: cur.asp, cam: cur.cam }); };
   const show = (sel, on) => { const el = $(sel, v); if (el) el.hidden = !on; };
+  const chipPick = (wrap, attr, fn) => $$(wrap + " .chip", v).forEach((c) => c.onclick = () => { $$(wrap + " .chip", v).forEach((x) => x.classList.remove("on")); c.classList.add("on"); fn(c.dataset[attr]); compose(); });
   const applyMode = (m) => {
     cur.mode = m;
     $$(".st-tab", v).forEach((x) => x.classList.toggle("on", x.dataset.m === m));
@@ -1215,8 +1232,46 @@ function vbsWire(v) {
     show("#vbs-dur-w", m === "t2v" || m === "i2v");
     compose();
   };
+  const copyPrompt = async () => {
+    const txt = $("#vbs-prompt", v).value;
+    try { await navigator.clipboard.writeText(txt); toast(t("st_copied_toast")); }
+    catch { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast(t("st_copied_toast")); } catch {} ta.remove(); }
+    return txt;
+  };
+  if (!connected) {
+    /* مسار الربط: زر واحد → نافذة الدخول الرسمية → الجلسة تعود مشفرة → الاتصال يكتشف تلقائياً */
+    const link = $("#vbs-link", v);
+    if (!link) return;
+    link.onclick = async () => {
+      link.disabled = true;
+      try {
+        const r = await api("/api/studio/link", { method: "POST", body: {} });
+        $("#vbs-msg") || (v.querySelector(".st-connect").insertAdjacentHTML("beforeend", `<div class="vbs-msg" id="vbs-msg"></div>`));
+        const msg = $("#vbs-msg", v);
+        if (msg) msg.textContent = t("vbs_link_open");
+        window.open(r.url, "vbs_link", "width=480,height=700,noopener");
+        const t0 = Date.now();
+        const iv = setInterval(async () => {
+          if (Date.now() - t0 > 6 * 60000) { clearInterval(iv); if (link.isConnected) link.disabled = false; return; }
+          try {
+            const c = await api("/api/studio/conn");
+            if (c.connected) {
+              clearInterval(iv);
+              toast(t("vbs_linked"));
+              vibrate([10, 40, 10]);
+              go("#/studio");
+            }
+          } catch {}
+        }, 2000);
+      } catch (e) {
+        link.disabled = false;
+        toast(emsg(e), "err");
+      }
+    };
+    return;
+  }
+  /* مسار العمل: الأوضاع الأربعة + توليد تلقائي بلا نسخ ولا لصق */
   $$(".st-tab", v).forEach((b) => (b.onclick = () => applyMode(b.dataset.m)));
-  const chipPick = (wrap, attr, fn) => $$(wrap + " .chip", v).forEach((c) => c.onclick = () => { $$(wrap + " .chip", v).forEach((x) => x.classList.remove("on")); c.classList.add("on"); fn(c.dataset[attr]); compose(); });
   chipPick("#vbs-styles", "st", (x) => (cur.style = x));
   chipPick("#vbs-durs", "d", (x) => (cur.dur = Number(x)));
   chipPick("#vbs-ars", "a", (x) => (cur.asp = x));
@@ -1225,36 +1280,66 @@ function vbsWire(v) {
   $("#vbs-up", v).onchange = (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f || !/^image\//.test(f.type)) return;
+    cur.imgFile = f;
     const pr = $("#vbs-up-prev", v);
     pr.src = URL.createObjectURL(f);
     pr.classList.remove("hidden");
   };
   $("#vbs-recraft", v).onclick = compose;
-  const copyPrompt = async () => {
-    const txt = $("#vbs-prompt", v).value;
-    try { await navigator.clipboard.writeText(txt); toast(t("st_copied_toast")); }
-    catch { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast(t("st_copied_toast")); } catch {} ta.remove(); }
-    return txt;
-  };
   $("#vbs-copy2", v).onclick = copyPrompt;
-  $("#vbs-go", v).onclick = async () => { await copyPrompt(); window.open(VBS_FLOW, "_blank", "noopener"); };
-  const addFrom = async (txt) => {
-    const it = vbsCapture(txt);
-    if (!it) { toast(t("st_bad_url"), "err"); return; }
-    vbsRenderGal();
-    toast(t("st_added_" + it.kind));
-  };
-  $("#vbs-add", v).onclick = () => addFrom($("#vbs-url", v).value);
-  $("#vbs-paste", v).onclick = async () => {
-    try { const txt = await navigator.clipboard.readText(); await addFrom(txt); }
-    catch { toast(t("st_paste_manual"), "err"); $("#vbs-url", v).focus(); }
-  };
-  window.VBS = { compose: vbsCompose, capture: vbsCapture, gal: VBS_GAL, cur };
   compose();
   vbsRenderGal();
+  const un = $("#vbs-unlink", v);
+  if (un) un.onclick = async () => {
+    try { await api("/api/studio/unlink", { method: "POST", body: {} }); toast(t("vbs_unlinked")); go("#/studio"); } catch (e) { toast(emsg(e), "err"); }
+  };
+  const run = $("#vbs-run", v), bar = $("#vbs-bar", v), barI = bar && bar.querySelector("i"), msg = $("#vbs-msg", v);
+  if (!run) return;
+  run.onclick = async () => {
+    const promptTxt = $("#vbs-prompt", v).value.trim();
+    if (promptTxt.length < 8) { toast(t("st_need_idea"), "err"); return; }
+    if ((cur.mode === "edit" || cur.mode === "i2v") && !cur.imgFile) { toast(t("st_need_img"), "err"); return; }
+    run.disabled = true;
+    bar.classList.remove("hidden"); barI.style.width = "3%"; msg.textContent = t("st_q");
+    try {
+      let image_url = null;
+      if (cur.imgFile) { msg.textContent = t("st_uping"); image_url = await uploadImage(cur.imgFile); }
+      const g = await api("/api/studio/generate", { method: "POST", body: { mode: cur.mode, prompt: promptTxt, dur: cur.dur, asp: cur.asp, image_url } });
+      barI.style.width = "18%";
+      let result = null;
+      for (let i = 0; i < 240; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const j = await api("/api/studio/job/" + encodeURIComponent(g.job_id));
+        if (j.state === "running") { barI.style.width = "55%"; msg.textContent = t("st_running"); }
+        else if (j.state === "done") { result = { url: j.url }; break; }
+        else if (j.state === "failed") throw new Error(j.error || "relay_failed");
+      }
+      if (!result) throw new Error("timeout");
+      barI.style.width = "100%";
+      msg.textContent = t("st_done");
+      vibrate([10, 40, 10]);
+      const it = vbsCapture(result.url);
+      if (it && it.kind === "video") {
+        const pl = $("#vbs-play", v);
+        pl.src = result.url;
+        pl.classList.remove("hidden");
+        const pp = pl.play();
+        if (pp && pp.catch) pp.catch(() => {});
+      }
+      run.disabled = false;
+    } catch (e) {
+      bar.classList.add("hidden");
+      msg.textContent = String((e && e.message) || t("ai_desc_fail"));
+      run.disabled = false;
+    }
+  };
+  window.VBS = { compose: vbsCompose, capture: vbsCapture, gal: VBS_GAL, cur };
 }
 rr("/studio", async (v) => {
   buildTabbar(true);
+  const logged = !!S.user;
+  let connected = false;
+  if (logged) { try { connected = (await api("/api/studio/conn")).connected; } catch {} }
   v.innerHTML = `${topbar(t("vbs_t"))}
     <div class="page" style="padding-top:6px">
       <div class="st-hero">
@@ -1262,11 +1347,13 @@ rr("/studio", async (v) => {
         <h1 class="st-h1">${esc(t("st_hero_t2"))} <b>${esc(t("st_hero_b2"))}</b></h1>
         <p class="st-sub">${esc(t("st_one_line"))}</p>
       </div>
-      ${vbsStudioBody()}
-      <p class="hint" style="margin-top:12px">${esc(t("vbs_note"))}</p>
+      ${!logged ? `<div class="st-connect"><p class="st-line">${esc(t("vbs_signin_need"))}</p><a class="btn primary wide" href="#/auth">${esc(t("login"))}</a></div>`
+        : !connected ? vbsConnectUI() + `<p class="hint" style="margin-top:10px">${esc(t("vbs_note"))}</p>`
+        : `<div class="st-conn-row"><span class="st-conn">${esc(t("vbs_conn_on"))}</span><button class="chip" id="vbs-unlink">${esc(t("vbs_unlink"))}</button></div>` + vbsStudioBody()}
     </div>`;
-  vbsWire(v);
+  vbsWire(v, logged && connected);
 });
+
 rr("/ads", async (v) => {
   buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }

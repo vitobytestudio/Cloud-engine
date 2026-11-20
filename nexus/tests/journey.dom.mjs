@@ -139,22 +139,44 @@ ok("الوصف دسمة بدل نجوم وبدون رموز خام", pdTxt.inclu
 ok("الوصف كاملا بآخر كلمة", d.querySelector(".pd-desc")?.textContent.includes("علامات مخربة"));
 ok("الأسطر فُصلت عرضياً", (pdTxt.match(/<br>/g) || []).length >= 2, "brs=" + (pdTxt.match(/<br>/g) || []).length);
 
-/* 4.6) بطاقة الاستوديو التسويقية في تبويب الفيديوهات → صفحته الرسمية */
+/* 4.6) بطاقة الاستوديو في تبويب الفيديوهات → صفحته الرسمية */
 await nav("#/ads"); await sleep(700);
 ok("بطاقة استوديو VITO BYTE في تبويب الفيديوهات", !!d.querySelector(".vbs-card") && bodyTxt().includes("VITO BYTE STUDIO"), bodyTxt().slice(0, 80));
 d.querySelector("#vbs-go")?.click(); await sleep(550);
-ok("زر البطاقة ينقل لصفحة الاستوديو الرسمية", (w.location.hash || "").startsWith("#/studio") && !!d.querySelector(".st-ws"), w.location.hash);
+ok("زر البطاقة ينقل لصفحة الاستوديو الرسمية", (w.location.hash || "").startsWith("#/studio") && !!d.querySelector(".st-hero"), w.location.hash);
 
-/* 4.7) صفحة الاستوديو الرسمية: أربعة أوضاع + صفر إضافات + المركّب والمعرض */
-ok("الاستوديو بأربعة أوضاع عمل", d.querySelectorAll(".st-tab").length === 4 && bodyTxt().includes("صورة من وصف") && bodyTxt().includes("تحريك صورة"), "tabs=" + d.querySelectorAll(".st-tab").length);
+/* 4.7) الربط بضغطة واحدة: زر واحد → نافذة الجلسة السحابية → اتصال تلقائي */
+const linkBtn = d.querySelector("#vbs-link");
+ok("حالة ما قبل الربط: زر واحد واضح بسطر الشرح", !!linkBtn && linkBtn.textContent.includes("ربط حساب Google Flow") && bodyTxt().includes("أنشئ حساباً"), linkBtn && linkBtn.textContent);
 ok("صفر ذكر للإضافات في صفحة الاستوديو", !bodyTxt().includes("chrome://extensions") && !bodyTxt().includes("وضع المطوّر") && !bodyTxt().includes("الإضافة"));
+const __open = w.open; w.open = (u) => { w.__vbsLink = String(u); return { closed: false, close() {} }; };
+linkBtn.click(); await sleep(900);
+ok("الضغطة فتحت نافذة الربط برابط التوكن", (w.__vbsLink || "").includes("/studio/link/"), w.__vbsLink);
+const linkTok = (w.__vbsLink || "").split("/").pop();
+const ck0 = Object.entries(jar).map(([k, v]) => k + "=" + v).join("; ");
+const liRes = await fetch(BASE + "/api/studio/link-info?token=" + encodeURIComponent(linkTok), { headers: { cookie: ck0 } }).then((r) => r.json()).catch(() => null);
+ok("رابط الربط يوجّه لعقدة الجلسة السحابية", !!(liRes && liRes.relay && liRes.relay.includes("/login/")), JSON.stringify(liRes || {}).slice(0, 80));
+await fetch(liRes.relay).catch(() => {});
+let connUI = false;
+for (let i = 0; i < 15 && !connUI; i++) { await sleep(1000); connUI = !!d.querySelector(".st-conn"); }
+ok("الجلسة تعود مشفرة والاتصال يكتشف تلقائياً بلا تحديث", connUI && bodyTxt().includes("مرتبط بحسابك في Google Flow"), bodyTxt().slice(0, 90));
+ok("أربعة أوضاع عمل بعد الربط", d.querySelectorAll(".st-tab").length === 4 && bodyTxt().includes("تحريك صورة"), "tabs=" + d.querySelectorAll(".st-tab").length);
+
+/* 4.8) التوليد التلقائي: يختار الوضع يكتب الفكرة يضغط توليد — والنتيجة في المعرض بلا نسخ ولا لصق */
+wireInline();
 const t2vP = (w.VBS || {}).compose ? w.VBS.compose("t2v", { name: "عطر فاخر من ثواني", price: 4900, idea: "هدية مثالية", style: "lux", dur: 8, asp: "9:16" }) : "";
 ok("مركّب المشهد يصوغ برومبت Veo 3.1 باللقطات والهوية", t2vP.includes("Veo 3.1") && t2vP.includes("لقطة 3") && t2vP.includes("VITO BYTE STUDIO"), t2vP.slice(0, 60));
-const capV = (w.VBS || {}).capture ? w.VBS.capture("https://storage.googleapis.com/ltx/x1.mp4") : null;
-ok("التقاط نتيجة فيديو يبني المعرض محلياً", capV && capV.kind === "video" && !!d.querySelector("#vbs-gal .st-gi video"), "gal=" + ((w.VBS.gal || []).length));
-const capI = w.VBS.capture("https://lh3.googleusercontent.com/abc/def=w1000");
-ok("روابط الصور تُصنَّف وتعرض بالمعرض", capI && capI.kind === "image" && !!d.querySelector("#vbs-gal .st-gi img"));
-ok("النص العاري يُرفض — لا نتائج وهمية", w.VBS.capture("نص بلا رابط") === null);
+setVFire("#vbs-idea", "هدية مثالية");
+await sleep(600);
+d.querySelector("#vbs-run")?.click();
+let genDone = false;
+for (let i = 0; i < 30 && !genDone; i++) { await sleep(1000); genDone = !!d.querySelector("#vbs-gal .st-gi video"); }
+ok("التوليد التلقائي يعود للمعرض بلا نسخ ولا لصق", genDone && (w.VBS.gal || []).length >= 1, "gal=" + ((w.VBS.gal || []).length));
+ok("الفيديو يظهر في مشغل المنصة تلقائياً", !!d.querySelector("#vbs-play") && !!d.querySelector("#vbs-play").getAttribute("src"), d.querySelector("#vbs-play")?.getAttribute("src") || "");
+ok("فصل الربط متاح بضغطة", !!d.querySelector("#vbs-unlink"));
+w.open = __open;
+
+
 /* 5) طلبية زبون حقيقية (مسار الزائر العام) */
 const slug = d.body.querySelector('a[href^="#/s/"]')?.getAttribute("href")?.slice(4) || JSON.parse(w.sessionStorage.getItem("nx_user") || "{}").slug;
 /* نجلب معرف المنتج من قائمة التاجر عبر جلسة الجرة */
