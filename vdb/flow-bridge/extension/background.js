@@ -55,6 +55,14 @@ async function loadJobs() {
 }
 loadJobs();
 
+/* ═══ التثبيت/التحديث: نبثّ EXT_HELLO في صفحات المنصة المفتوحة فوراً — الزر يتحول «متصل» بلا تحديث ═══ */
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    const tabs = await chrome.tabs.query({ url: CFG.ALLOWED_ORIGINS.map((o) => o + "/*") });
+    for (const t of tabs) chrome.scripting.executeScript({ target: { tabId: t.id }, files: ["content-beacon.js"] }).catch(() => {});
+  } catch {}
+});
+
 /* ─── مغلف الرسائل الموحد ─── */
 const env = (type, jobId, payload) => ({ v: CFG.V, ns: CFG.NS, type, jobId: jobId || null, ts: Date.now(), payload: payload || {} });
 
@@ -344,6 +352,38 @@ async function watchRender(job) {
   }, CFG.RENDER_POLL_MS);
 }
 
+/* ═══ مراقبة الدخول: popup صغير للجلسة، عند النجاح يُغلق ويُعلن SESSION_OK ═══ */
+let loginWatcher = null;
+function startLoginWatcher(studioTab, jobId) {
+  return (async () => {
+    if (loginWatcher) { clearInterval(loginWatcher._iv); try { await chrome.windows.remove(loginWatcher.winId); } catch {} loginWatcher = null; }
+    const win = await chrome.windows.create({ url: CFG.FLOW_URL, type: "popup", width: 480, height: 700 });
+    loginWatcher = { winId: win.id, tabId: (win.tabs && win.tabs[0] ? win.tabs[0].id : null), studioTab, jobId: jobId || null, expires: Date.now() + 5 * 60000 };
+    const finish = async (ok, why) => {
+      const w = loginWatcher; if (!w) return; clearInterval(w._iv); loginWatcher = null;
+      if (ok) { try { await chrome.windows.remove(w.winId); } catch {} }
+      if (w.studioTab) chrome.tabs.sendMessage(w.studioTab, env(ok ? "SESSION_OK" : "SESSION_CLOSED", w.jobId, why ? { why } : {})).catch(() => {});
+    };
+    loginWatcher._iv = setInterval(async () => {
+      const w = loginWatcher; if (!w) return;
+      if (Date.now() > w.expires) return finish(false, "login_timeout");
+      try {
+        const tab = await chrome.tabs.get(w.tabId).catch(() => null);
+        if (!tab) return;
+        await injectMain(w.tabId);
+        const sess = await flowRPC(w.tabId, "session", {}, 8000).catch(() => null);
+        if (sess && sess.loggedIn) await finish(true);
+      } catch {}
+    }, 2500);
+  })();
+}
+chrome.windows.onRemoved.addListener((winId) => {
+  if (loginWatcher && loginWatcher.winId === winId) {
+    const w = loginWatcher; clearInterval(w._iv); loginWatcher = null;
+    if (w.studioTab) chrome.tabs.sendMessage(w.studioTab, env("SESSION_CLOSED", w.jobId, {})).catch(() => {});
+  }
+});
+
 /* ═══ الراوتر الخارجي: صفحة الأستوديو → الإضافة ═══ */
 chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
   if (!originAllowed(sender)) return void sendResponse({ v: CFG.V, ns: CFG.NS, type: "ERR", payload: { error: "origin_denied" } });
@@ -382,9 +422,19 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
         }
       }
 
+      if (msg.type === "WATCH_LOGIN") {
+        await startLoginWatcher(studioTab, msg.jobId || null);
+        return sendResponse(env("WATCHING", msg.jobId, {}));
+      }
+
       if (msg.type === "CANCEL") {
         const j = jobs.get(msg.jobId);
         if (j) { setJob(j, "cancelled", j.progress, "أُلغي من الأستوديو"); keepAlive(false); }
+        if (loginWatcher && (msg.jobId == null || loginWatcher.jobId === msg.jobId)) {
+          clearInterval(loginWatcher._iv);
+          try { await chrome.windows.remove(loginWatcher.winId); } catch {}
+          loginWatcher = null;
+        }
         return sendResponse(env("CANCELLED", msg.jobId, {}));
       }
 

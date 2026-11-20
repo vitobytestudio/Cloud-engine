@@ -139,6 +139,17 @@ ok("الوصف دسمة بدل نجوم وبدون رموز خام", pdTxt.inclu
 ok("الوصف كاملا بآخر كلمة", d.querySelector(".pd-desc")?.textContent.includes("علامات مخربة"));
 ok("الأسطر فُصلت عرضياً", (pdTxt.match(/<br>/g) || []).length >= 2, "brs=" + (pdTxt.match(/<br>/g) || []).length);
 
+/* 4.6) استوديو VITO BYTE STUDIO — البطاقة والحالات ومركِّب المشهد */
+await nav("#/ads"); await sleep(700);
+ok("بطاقة استوديو VITO BYTE في تبويب الفيديوهات", !!d.querySelector(".vbs-card") && bodyTxt().includes("VITO BYTE STUDIO"), bodyTxt().slice(0, 80));
+const vbsBtn = d.querySelector("#vbs-go");
+ok("حالة أ: زر التفعيل السريع (لا إضافة في jsdom)", vbsBtn && vbsBtn.dataset.vbs === "A" && vbsBtn.textContent.includes("خطوة واحدة"), vbsBtn && vbsBtn.textContent);
+vbsBtn?.click(); await sleep(350);
+ok("لوحة الربط السريع تُفتح بثلاث خطوات", d.querySelectorAll(".vbs-steps .stp").length === 3 && bodyTxt().includes("chrome://extensions"));
+d.querySelector(".sheet-bd")?.click(); await sleep(300);
+const vbsTxt = (w.vbsCompose || (() => ""))({ title: "عطر فاخر من ثواني", price: 4900 }, "هدية مثالية", "lux", 8, "9:16");
+ok("مركِّب المشهد يصوغ برومبتاً سينمائياً بالمنتج واللقطات", vbsTxt.includes("عطر فاخر من ثواني") && vbsTxt.includes("لقطة 3") && vbsTxt.includes("VITO BYTE STUDIO"), vbsTxt.slice(0, 70));
+
 /* 5) طلبية زبون حقيقية (مسار الزائر العام) */
 const slug = d.body.querySelector('a[href^="#/s/"]')?.getAttribute("href")?.slice(4) || JSON.parse(w.sessionStorage.getItem("nx_user") || "{}").slug;
 /* نجلب معرف المنتج من قائمة التاجر عبر جلسة الجرة */

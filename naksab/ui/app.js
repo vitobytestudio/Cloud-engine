@@ -57,7 +57,17 @@ en: {
   media_url: "Media URL (https://)", thumb_url: "Thumbnail URL (optional)", publish: "Publish",
   published_t: "Published",
   dash_sub_admin: "Platform control.", dash_sub_freelancer: "Your professional presence and pipeline.", dash_sub_client: "Your projects and requests.",
-  tab_profile: "Profile", tab_services: "My services", tab_open: "Open requests", tab_proposals: "My proposals", tab_requests: "My requests", tab_portfolio: "Portfolio", tab_projects: "Projects",
+  vbs_nav: "Studio", vbs_t: "VITO BYTE Studio", vbs_s: "Generate an AI promo video for your service — from your browser, on your own Google Flow account, at zero cost.",
+vbs_btn_a: "Quick connect (one step)", vbs_btn_b: "Connect Google Flow account", vbs_btn_c: "Generate video",
+vbs_state_off: "Bridge not detected — connecting in seconds", vbs_state_on: "Connected & ready", vbs_state_sess: "Connected — checking session…",
+vbs_pick: "Pick your service", vbs_idea: "Video idea (one line is enough)", vbs_idea_ph: "e.g. brand identity in 5 days, unlimited revisions",
+vbs_style: "Style", vbs_dur: "Duration", vbs_aspect: "Aspect", vbs_scene: "Your cinematic scene — crafted by the studio, edit freely",
+vbs_recraft: "Re-craft the scene", vbs_do: "Generate", vbs_copy: "Copy prompt", vbs_copied: "Prompt copied", vbs_need_scene: "Write your idea first so the studio crafts the scene",
+vbs_msg_login: "Waiting for your Google Flow sign-in…", vbs_msg_send: "Dispatching on your session…", vbs_msg_render: "Rendering in Flow…", vbs_msg_prep: "Preparing the video in the player…",
+vbs_install_t: "Quick connect — one step", vbs_install_s: "Install the NAKSAB Flow Bridge extension once — the platform connects to it automatically. No keys, no setup.",
+vbs_step1: "Open your browser extensions page (chrome://extensions)", vbs_step2: "Enable Developer mode, then click Load unpacked", vbs_step3: "Select the flow-bridge/extension folder from the platform repo",
+vbs_open_repo: "Open the extension page", vbs_note: "Generation runs on your session and free credits — we store nothing; the result lives on your device only.",
+vbs_result: "Done — your video is playing now", vbs_nosvc: "Create your first service, then come back to generate its video — the studio needs a service to craft the scene.", tab_profile: "Profile", tab_services: "My services", tab_open: "Open requests", tab_proposals: "My proposals", tab_requests: "My requests", tab_portfolio: "Portfolio", tab_projects: "Projects",
   headline: "Headline", country: "Country", bio: "Bio",
   cats_hint: "Categories (comma-separated slugs)", skills_hint: "Skills (comma-separated)",
   avatar_url: "Avatar URL (https://)", status: "Status", avail_work: "Available for work",
@@ -241,7 +251,17 @@ ar: {
   media_url: "رابط الوسائط (https://)", thumb_url: "رابط المصغرة (اختياري)", publish: "نشر",
   published_t: "تم النشر",
   dash_sub_admin: "تحكم بالمنصة.", dash_sub_freelancer: "حضورك المهني وخط أعمالك.", dash_sub_client: "مشاريعك وطلباتك.",
-  tab_profile: "الملف", tab_services: "خدماتي", tab_open: "الطلبات المفتوحة", tab_proposals: "عروضي", tab_requests: "طلباتي", tab_portfolio: "أعمالي", tab_projects: "المشاريع",
+  vbs_nav: "الاستوديو", vbs_t: "استوديو VITO BYTE", vbs_s: "ولّد فيديو ترويجي لخدمتك بالذكاء الاصطناعي — من متصفحك وبحسابك أنت في Google Flow، وصفر تكلفة.",
+vbs_btn_a: "تفعيل الربط السريع (خطوة واحدة)", vbs_btn_b: "ربط حساب Google Flow", vbs_btn_c: "توليد الفيديو",
+vbs_state_off: "الإضافة غير مكتشفة — بضع ثوانٍ وتتصل", vbs_state_on: "متصل وجاهز", vbs_state_sess: "متصل — تحقق من الجلسة…",
+vbs_pick: "اختر خدمتك", vbs_idea: "فكرة الفيديو (سطر واحد يكفي)", vbs_idea_ph: "مثال: هوية بصرية في 5 أيام، تعديلات بلا حدود",
+vbs_style: "الأسلوب", vbs_dur: "المدة", vbs_aspect: "الأبعاد", vbs_scene: "مشهدك السينمائي — صيّغه الاستوديو، عدّله كما تشاء",
+vbs_recraft: "أعد صياغة المشهد", vbs_do: "توليد", vbs_copy: "نسخ البرومبت", vbs_copied: "نُسخ البرومبت", vbs_need_scene: "اكتب فكرتك أولاً ليصيغ الاستوديو المشهد",
+vbs_msg_login: "بانتظار دخولك إلى Google Flow…", vbs_msg_send: "إرسال الأمر بجلستك…", vbs_msg_render: "جارٍ الرندر في Flow…", vbs_msg_prep: "تجهيز الفيديو في المشغل…",
+vbs_install_t: "الربط السريع — خطوة واحدة", vbs_install_s: "ثبّت إضافة NAKSAB Flow Bridge مرة واحدة في متصفحك، وتتصل المنصة بها تلقائياً — بلا مفاتيح ولا إعدادات.",
+vbs_step1: "افتح صفحة الإضافات في متصفحك (chrome://extensions)", vbs_step2: "فعّل «وضع المطوّر» ثم اضغط «تحميل غير محزم»", vbs_step3: "اختر مجلد flow-bridge/extension من مستودع المنصة",
+vbs_open_repo: "فتح صفحة الإضافة", vbs_note: "التوليد يعمل بجلستك ورصيدك المجاني — لا يُخزن أي فيديو عندنا، النتيجة في جهازك حصراً.",
+vbs_result: "جاهز — الفيديو في مشغلك الآن", vbs_nosvc: "أنشئ خدمتك الأولى ثم عد لتوليد فيديوها — الاستوديو يحتاج خدمة ليصيغ المشهد.", tab_profile: "الملف", tab_services: "خدماتي", tab_open: "الطلبات المفتوحة", tab_proposals: "عروضي", tab_requests: "طلباتي", tab_portfolio: "أعمالي", tab_projects: "المشاريع",
   headline: "العنوان المهني", country: "البلد", bio: "نبذة",
   cats_hint: "التصنيفات (مفصولة بفواصل)", skills_hint: "المهارات (مفصولة بفواصل)",
   avatar_url: "رابط الصورة (https://)", status: "الحالة", avail_work: "متاح للعمل",
@@ -456,6 +476,7 @@ function shell(content, active = "") {
     ["#/talent", T.browse_talent, "talent"],
     ["#/services", T.services, "services"],
     ["#/discover", T.discover, "discover"],
+      ["#/studio", T.vbs_nav, "studio"],
     ["#/pricing", T.pricing, "pricing"],
   ];
   $app.innerHTML = `
@@ -507,7 +528,7 @@ function footerHtml() {
         <a href="#/talent">${T.f_talent}</a><a href="#/services">${T.services}</a><a href="#/discover">${T.discover}</a><a href="#/request/new">${T.f_post}</a>
       </div>
       <div class="foot-col"><h4>${T.foot_account}</h4>
-        <a href="#/dashboard">${T.f_dash}</a><a href="#" data-auth="register">${T.f_join}</a><a href="#" data-auth="register">${T.f_hire}</a>
+        <a href="#/studio">${T.vbs_nav}</a><a href="#/dashboard">${T.f_dash}</a><a href="#" data-auth="register">${T.f_join}</a><a href="#" data-auth="register">${T.f_hire}</a>
       </div>
       <div class="foot-col"><h4>${T.foot_platform}</h4>
         <a href="#/ads">${T.f_ads}</a><a href="#/pricing">${T.pricing}</a><a href="#/about">${T.f_about}</a><a href="#/about">${T.f_trust}</a>
@@ -1327,6 +1348,136 @@ async function viewProject(id) {
 }
 
 // ═══════════ ADS ═══════════
+/* ═══ استوديو VITO BYTE STUDIO — التوليد الذاتي عبر جسر المتصفح (BYOA) ═══ */
+const VBS_REPO = "https://github.com/vitobytestudio/Cloud-engine/tree/main/vdb/flow-bridge/extension";
+function vbsCompose(sv, idea, style, dur, aspect) {
+  const ar = S.lang === "ar";
+  const name = (sv && sv.title) || (ar ? "الخدمة" : "the service");
+  const price = sv && sv.price_min ? money(sv.price_min) : "";
+  const ideaTxt = (idea || "").trim();
+  const LIB = ar ? {
+    quick: ["تقديم الخدمة بإيقاع واثق وسريع", "إضاءة استوديو ناعمة مع حواف بنفسجية سماوية", "لقطة افتتاحية بعنوان الخدمة|عرض النقاط الأساسية بخط متحرك|لقطة ختامية بالسعر وزر التواصل"],
+    lifestyle: ["الخدمة تعيش عند زبون حقيقي", "ضوء نهاري دافئ بملمس واقعي", "لحظة قبل التسليم والتوتر|لحظة التسليم والانبهار|لقطة تقييم خمس نجوم"],
+    sale: ["عرض محدود بإحكام قصير", "نيون مسرحي مع عد سريع", "السعر القديم ينكسر|المزايا تنبثق واحداً واحداً|عد تنازلي وإغلاق حاد"],
+    lux: ["فخامة مهنية بحركة انسيابية", "إضاءة ذهبية منخفضة وظلال طويلة", "انزلاق بطيء على عناصر الهوية|لمعان ذهبي على الحواف|ختام مهيب بالاسم والسعر"]
+  } : {
+    quick: ["confident fast-paced service intro", "soft studio light with violet-cyan edges", "opening title of the service|animated key points|ending with price and contact"],
+    lifestyle: ["the service landing with a real client", "warm daylight, realistic texture", "the tension before delivery|the wow moment on handover|five-star review shot"],
+    sale: ["limited offer, tight cut", "theatrical neon with fast countdown", "old price cracks apart|benefits pop one by one|countdown and hard close"],
+    lux: ["professional luxury with fluid motion", "low golden light and long shadows", "slow glide over brand elements|golden glints on edges|majestic name and price ending"]
+  };
+  const stl = LIB[style] || LIB.quick;
+  const shots = stl[2].split("|").map((x, i) => `${ar ? "لقطة" : "Shot"} ${i + 1}: ${x}`).join("\n");
+  return ar ?
+`فيديو ترويجي ${dur} ثانية بنسبة ${aspect} للخدمة: ${name}${price ? " ابتداءً من " + price : ""}.
+الفكرة: ${ideaTxt || stl[0]}.
+${shots}
+الكاميرا: عدسة 35mm، عمق ميدان ضحل، حركة انسيابية بطيئة.
+الإضاءة: ${stl[1]}.
+الألوان: هوية بنفسجي-سماوي (#8B7CFF → #00D4FF) مع تدرج سينمائي متوازن.
+نص الشاشة: اسم الخدمة والسعر بخط عربي عريض، ختام بشعار VITO BYTE STUDIO.
+الصوت: موسيقى تصويرية بلا كلام منطوق، تناسب ${style === "lux" ? "الفخامة المهنية" : style === "sale" ? "حدة العرض" : "روح الخدمة"}.` :
+`A ${dur}-second ${aspect} promo video for the service: ${name}${price ? " starting at " + price : ""}.
+Idea: ${ideaTxt || stl[0]}.
+${shots}
+Camera: 35mm lens, shallow depth of field, slow fluid motion.
+Lighting: ${stl[1]}.
+Palette: violet-cyan brand identity (#8B7CFF → #00D4FF), balanced cinematic grade.
+On-screen text: service name and price in bold, closing with the VITO BYTE STUDIO wordmark.
+Audio: instrumental score only, matching ${style === "lux" ? "professional luxury" : style === "sale" ? "sale energy" : "the service mood"}.`;
+}
+async function viewStudio() {
+  const nx = window.NXFlow;
+  const connected = !!(nx && nx.state && nx.state().connected);
+  const states = connected ? "C" : "A";
+  shell(`<div class="wrap page-head"><h1>${T.vbs_t}</h1><p>${T.vbs_s}</p></div>
+  <div class="wrap" style="max-width:760px;padding-bottom:60px">
+    <div class="vbs-card">
+      <span class="vbs-mark"><svg width="14" height="14" viewBox="0 0 64 64" fill="none" aria-hidden="true"><defs><linearGradient id="vbsg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" stroke="url(#vbsg)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> VITO BYTE STUDIO</span>
+      <button class="btn primary" id="vbs-go" data-vbs="${states}">${esc(T(states ? "vbs_btn_c" : "vbs_btn_a"))}</button>
+      <div class="vbs-st"><span class="vbs-dot${connected ? " on" : ""}" id="vbs-dot"></span><span id="vbs-state">${esc(T(connected ? "vbs_state_on" : "vbs_state_off"))}</span></div>
+    </div>
+    ${!S.user ? `<div class="msg info">${esc(T.signin_interact)}</div>` : ""}
+    <div class="panel" id="vbs-inst" ${connected ? "hidden" : ""}>
+      <h3 style="font-size:15px;margin-bottom:10px">${esc(T.vbs_install_t)}</h3>
+      <p class="tiny muted" style="line-height:1.9">${esc(T.vbs_install_s)}</p>
+      <div class="vbs-steps">
+        <div class="stp"><b>1</b><span>${esc(T.vbs_step1)}</span></div>
+        <div class="stp"><b>2</b><span>${esc(T.vbs_step2)}</span></div>
+        <div class="stp"><b>3</b><span>${esc(T.vbs_step3)}</span></div>
+      </div>
+      <a class="btn ghost" style="margin-top:14px" href="${VBS_REPO}" target="_blank" rel="noopener">${esc(T.vbs_open_repo)} →</a>
+      <p class="tiny muted" style="margin-top:10px">${esc(T.vbs_note)}</p>
+    </div>
+    <div class="panel" id="vbs-form" ${connected ? "" : "hidden"}>
+      <div class="field"><label>${esc(T.vbs_pick)}</label><select id="vbs-prod"></select></div>
+      <div class="field"><label>${esc(T.vbs_idea)}</label><input id="vbs-idea" placeholder="${esc(T.vbs_idea_ph)}"/></div>
+      <div class="field"><label>${esc(T.vbs_style)}</label><div class="chips" id="vbs-styles">${["quick", "lifestyle", "sale", "lux"].map((k, i) => `<button type="button" class="chip${i === 0 ? " on" : ""}" data-st="${k}">${esc(T("s_" + k) || k)}</button>`).join("")}</div></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="field"><label>${esc(T.vbs_dur)}</label><div class="chips" id="vbs-durs">${[5, 8].map((n, i) => `<button type="button" class="chip${i === 1 ? " on" : ""}" data-d="${n}">${n}s</button>`).join("")}</div></div>
+        <div class="field"><label>${esc(T.vbs_aspect)}</label><div class="chips" id="vbs-ars">${["9:16", "16:9"].map((a2, i) => `<button type="button" class="chip${i === 0 ? " on" : ""}" data-a="${a2}" dir="ltr">${a2}</button>`).join("")}</div></div>
+      </div>
+      <div class="field"><label>${esc(T.vbs_scene)}</label><textarea id="vbs-prompt" rows="7"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button class="btn ghost sm" id="vbs-recraft" type="button">${esc(T.vbs_recraft)}</button>
+          <button class="btn ghost sm" id="vbs-copy" type="button">${esc(T.vbs_copy)}</button>
+        </div></div>
+      <div class="vbs-bar" id="vbs-bar" hidden><i></i></div>
+      <div class="vbs-msg" id="vbs-msg"></div>
+      <button class="btn primary" id="vbs-run">${esc(T.vbs_do)}</button>
+      <video class="vbs-player" id="vbs-vid" hidden playsinline controls></video>
+      <p class="tiny muted" style="margin-top:8px">${esc(T.vbs_note)}</p>
+    </div>
+  </div>`, "studio");
+  if (!nx || !nx.onState) return;
+  nx.onState((st2) => { if ((st2.connected ? "C" : "A") !== $("#vbs-go").dataset.vbs) route(); });
+  if (!connected) { $("#vbs-go").onclick = () => { $("#vbs-inst").scrollIntoView({ behavior: "smooth" }); }; return; }
+  if (!S.user) { $("#vbs-go").onclick = () => authModal("signin"); return; }
+  /* الخدمات الخاصة بالمستخدم */
+  let services = [];
+  try { const r = await api("/api/u/" + encodeURIComponent(S.user.username)); services = (r.data.services || []); } catch {}
+  const sel = $("#vbs-prod");
+  sel.innerHTML = services.length ? services.map((sv) => `<option value="${esc(sv.id)}">${esc(sv.title)}</option>`).join("") : `<option value="">${esc(T.vbs_nosvc)}</option>`;
+  let curStyle = "quick", curDur = 8, curAr = "9:16";
+  const cur = () => services.find((x) => x.id === sel.value) || services[0] || null;
+  const compose = () => { $("#vbs-prompt").value = vbsCompose(cur(), $("#vbs-idea").value, curStyle, curDur, curAr); };
+  const chipPick = (sel2, attr, fn) => $$(sel2 + " .chip").forEach((c) => c.onclick = () => { $$(sel2 + " .chip").forEach((x) => x.classList.remove("on")); c.classList.add("on"); fn(c.dataset[attr]); compose(); });
+  chipPick("#vbs-styles", "st", (v) => (curStyle = v));
+  chipPick("#vbs-durs", "d", (v) => (curDur = Number(v)));
+  chipPick("#vbs-ars", "a", (v) => (curAr = v));
+  $("#vbs-idea").oninput = () => { clearTimeout(viewStudio._iv); viewStudio._iv = setTimeout(compose, 500); };
+  sel.onchange = compose;
+  $("#vbs-recraft").onclick = () => { const m = $("#vbs-msg"); m.textContent = T.vbs_msg_craft; compose(); setTimeout(() => { if (m.textContent === T.vbs_msg_craft) m.textContent = ""; }, 700); };
+  $("#vbs-copy").onclick = async () => {
+    const txt = $("#vbs-prompt").value;
+    try { await navigator.clipboard.writeText(txt); toast(T.vbs_copied); }
+    catch { const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast(T.vbs_copied); } catch {} ta.remove(); }
+  };
+  compose();
+  window.vbsCompose = vbsCompose;
+  $("#vbs-run").onclick = async () => {
+    const run = $("#vbs-run"), bar = $("#vbs-bar"), barI = bar.querySelector("i"), msg = $("#vbs-msg");
+    const promptTxt = $("#vbs-prompt").value.trim();
+    if (!promptTxt) { toast(T.vbs_need_scene); return; }
+    if (!services.length) { toast(T.vbs_nosvc); return; }
+    run.disabled = true; bar.hidden = false; barI.style.width = "2%"; msg.textContent = T.vbs_msg_craft;
+    const msgs = { discovery: T.vbs_msg_login, session: T.vbs_msg_login, login_needed: T.vbs_msg_login, sending: T.vbs_msg_send, rendering: T.vbs_msg_render, link_probe: T.vbs_msg_prep, transferring: T.vbs_msg_prep };
+    try {
+      const result = await window.NXFlow.generate({ prompt: promptTxt, aspect: curAr, duration: curDur }, (state, pct, note) => {
+        if (pct != null) barI.style.width = Math.max(2, pct) + "%";
+        msg.textContent = msgs[state] || note || msg.textContent;
+      });
+      barI.style.width = "100%"; msg.textContent = T.vbs_result;
+      const vid = $("#vbs-vid"); vid.hidden = false;
+      if (curAr === "16:9") vid.style.setProperty("--vbs-ar", "16/9");
+      window.NXFlow.attach(vid, result);
+    } catch (e) {
+      bar.hidden = true;
+      msg.textContent = String((e && e.message) || T.err_generic || "");
+      run.disabled = false;
+    }
+  };
+}
 async function viewAds() {
   const r = await api("/api/ads/approved");
   shell(`<div class="wrap page-head"><h1>${T.ads_h}</h1><p>${T.ads_sub}</p></div>
@@ -1663,6 +1814,7 @@ async function route() {
     if (parts[0] === "dashboard") return viewDashboard();
     if (parts[0] === "request") return parts[1] === "new" ? viewRequestNew() : viewRequest(parts[1]);
     if (parts[0] === "project" || parts[0] === "projects") return parts[1] ? viewProject(parts[1]) : viewDashboard(); /* المفرد: أزرار القبول وفتح الغرفة ولوحة المشاريع كلها تنقّل إليه */
+    if (parts[0] === "studio") return viewStudio();
     if (parts[0] === "ads") return viewAds();
     if (parts[0] === "wallet") return viewWallet();
     if (parts[0] === "pricing") return viewPricing();
