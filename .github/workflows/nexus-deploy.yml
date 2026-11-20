@@ -203,6 +203,33 @@ jobs:
         env:
           ADMIN_SETUP_TOKEN: ${{ secrets.ADMIN_SETUP_TOKEN }}
 
+      - name: أسرار الجلسة السحابية (VBS — إن وُجدت؛ بدونها الربط يرد «الخدمة تُجهَّز» بلا انهيار)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        working-directory: nexus
+        run: |
+          if [ -n "$VBS_RELAY_TOKEN" ]; then
+            echo "$VBS_RELAY_TOKEN" | npx wrangler secret put VBS_RELAY_TOKEN
+            echo "::notice::VBS_RELAY_TOKEN نُقل كسر للعامل — توكن العقدة"
+          else
+            echo "::warning::VBS_RELAY_TOKEN غير مضبوط في أسرار GitHub — نقاط العقدة مرفوضة حتى ضبطه"
+          fi
+          if [ -n "$VBS_SESSION_KEY" ]; then
+            echo "$VBS_SESSION_KEY" | npx wrangler secret put VBS_SESSION_KEY
+            echo "::notice::VBS_SESSION_KEY نُقل كسر للعامل — تشفير AES-GCM لجلسات الزبائن"
+          else
+            echo "::warning::VBS_SESSION_KEY غير مضبوط — تخزين جلسات الربط مرفوض حتى ضبطه (64 خانة hex)"
+          fi
+          if [ -n "$VBS_RELAY_ORIGIN" ]; then
+            echo "$VBS_RELAY_ORIGIN" | npx wrangler secret put VBS_RELAY_ORIGIN
+            echo "::notice::VBS_RELAY_ORIGIN نُقل كسر للعامل — عنوان عقدة الأتمتة"
+          else
+            echo "::warning::VBS_RELAY_ORIGIN غير مضبوط — زر الربط يرد «الخدمة تُجهَّز» حتى ضبط عنوان عقدة الأتمتة"
+          fi
+        env:
+          VBS_RELAY_TOKEN: ${{ secrets.VBS_RELAY_TOKEN }}
+          VBS_SESSION_KEY: ${{ secrets.VBS_SESSION_KEY }}
+          VBS_RELAY_ORIGIN: ${{ secrets.VBS_RELAY_ORIGIN }}
+
       - name: النشر
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: nexus

@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.3", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.4", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 /* ═══ استوديو VITO BYTE — الجلسة السحابية المعزولة (قرار المالك) ═══
    الربط: توكن لمرة واحدة → نافذة عقدة الأتمتة (دخول جوجل الرسمي — وإن لم يكن له حساب أنشئه) →
@@ -126,7 +126,7 @@ route("GET", "/api/studio/link-info", async (req, env, s) => {
 route("GET", "/studio/link/:token", async (req, env, _s, p) => {
   if (!(await env.CACHE_KV.get("vbs_link:" + p.token))) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
   const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ربط حساب Google Flow — VITO BYTE STUDIO</title><style>body{background:#05060a;color:#eef0f6;font-family:system-ui,'IBM Plex Sans Arabic',sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.c{max-width:420px;padding:28px;text-align:center}.m{font-weight:700;letter-spacing:.26em;font-size:12px;color:#cdbaff}h1{font-size:19px}p{color:#939ab1;line-height:1.9;font-size:14px}a{color:#2ad4f6}</style></head><body><div class="c"><div class="m">VITO BYTE STUDIO</div><h1>جارٍ فتح نافذة الربط الآمنة…</h1><p id="st">لحظات وتنتقل إلى تسجيل دخول جوجل الرسمي — سجّل دخولك أو أنشئ حساباً جديداً، ثم تعود الجلسة مشفرة إلى حسابك هنا.</p><p id="fb" hidden><a id="fb-a" href="#">متابعة الربط يدوياً ←</a></p></div><script>
-(async()=>{try{const r=await fetch("/api/studio/link-info?token="+encodeURIComponent(location.pathname.split("/").pop()),{credentials:"same-origin"});if(!r.ok){document.getElementById("st").textContent=r.status===404?"انتهت صلاحية رابط الربط — أعد الضغط على زر الربط في المنصة.":"سجّل الدخول إلى المنصة أولاً ثم أعد المحاولة.";return}const d=await r.json();document.getElementById("fb-a").href=d.relay;document.getElementById("fb").hidden=false;location.replace(d.relay)}catch(e){document.getElementById("st").textContent="تعذر الاتصال — أعد المحاولة."}})();
+(async()=>{try{const r=await fetch("/api/studio/link-info?token="+encodeURIComponent(location.pathname.split("/").pop()),{credentials:"same-origin"});if(!r.ok){document.getElementById("st").textContent=r.status===404?"انتهت صلاحية رابط الربط — أعد الضغط على زر الربط في المنصة.":r.status===503?"خدمة الربط السحابية تُجهَّز الآن — عد بعد دقائق وأعد المحاولة.":"سجّل الدخول إلى المنصة أولاً ثم أعد المحاولة.";return}const d=await r.json();document.getElementById("fb-a").href=d.relay;document.getElementById("fb").hidden=false;location.replace(d.relay)}catch(e){document.getElementById("st").textContent="تعذر الاتصال — أعد المحاولة."}})();
 </script></body></html>`;
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 });
