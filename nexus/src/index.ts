@@ -79,7 +79,139 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.2", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.3", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+
+/* ═══ استوديو VITO BYTE — الجلسة السحابية المعزولة (قرار المالك) ═══
+   الربط: توكن لمرة واحدة → نافذة عقدة الأتمتة (دخول جوجل الرسمي — وإن لم يكن له حساب أنشئه) →
+   الجلسة تعود مشفرة AES-GCM ومرتبطة بحسابه في KV — لا تُقرأ إلا عند تنفيذ مهمته.
+   التوليد: مهمة في الطابور → عقدة الأتمتة تسحبها بجلسته وينفذها على حسابه → الرابط يعود للمشغل.
+   صفر تخزين للفيديو: النتيجة رابط حي من خوادم جوجل لمشغله حصراً. */
+const vbsKey = async (env: any) => {
+  const raw = new Uint8Array((env.VBS_SESSION_KEY || "").match(/../g)?.map((h: string) => parseInt(h, 16)) || []);
+  if (raw.length !== 32) throw new Error("no_session_key");
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+};
+const vbsEnc = async (env: any, obj: any) => {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const b = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await vbsKey(env), new TextEncoder().encode(JSON.stringify(obj))));
+  return { iv: [...iv].map((x) => x.toString(16).padStart(2, "0")).join(""), b: [...b].map((x) => x.toString(16).padStart(2, "0")).join("") };
+};
+const vbsDec = async (env: any, o: any) => {
+  const iv = new Uint8Array((o.iv.match(/../g) || []).map((h: string) => parseInt(h, 16)));
+  const b = new Uint8Array((o.b.match(/../g) || []).map((h: string) => parseInt(h, 16)));
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, await vbsKey(env), b)));
+};
+const vbsRelay = (req: any, env: any) => !!env.VBS_RELAY_TOKEN && ctEqual((req.headers.get("x-relay-token") || "").trim(), String(env.VBS_RELAY_TOKEN).trim());
+const vbsSess = (env: any, uid: string) => env.CACHE_KV.get("vbs_sess:" + uid);
+
+route("POST", "/api/studio/link", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const tok = hex(12);
+  await env.CACHE_KV.put("vbs_link:" + tok, JSON.stringify({ uid: s.userId, ts: Date.now() }), { expirationTtl: 900 });
+  const origin = new URL(req.url).origin;
+  return json({ ok: true, url: origin + "/studio/link/" + tok, token: tok });
+}, { auth: true, csrf: true });
+
+route("GET", "/api/studio/link-info", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  const tok = new URL(req.url).searchParams.get("token") || "";
+  const raw = await env.CACHE_KV.get("vbs_link:" + tok);
+  if (!raw) return bad("not_found", 404);
+  const li = JSON.parse(raw);
+  if (li.uid !== s.userId) return bad("not_found", 404);
+  if (!env.VBS_RELAY_ORIGIN) return bad("relay_down", 503);
+  return json({ ok: true, relay: String(env.VBS_RELAY_ORIGIN).replace(/\/+$/, "") + "/login/" + tok });
+}, { auth: true });
+
+route("GET", "/studio/link/:token", async (req, env, _s, p) => {
+  if (!(await env.CACHE_KV.get("vbs_link:" + p.token))) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ربط حساب Google Flow — VITO BYTE STUDIO</title><style>body{background:#05060a;color:#eef0f6;font-family:system-ui,'IBM Plex Sans Arabic',sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.c{max-width:420px;padding:28px;text-align:center}.m{font-weight:700;letter-spacing:.26em;font-size:12px;color:#cdbaff}h1{font-size:19px}p{color:#939ab1;line-height:1.9;font-size:14px}a{color:#2ad4f6}</style></head><body><div class="c"><div class="m">VITO BYTE STUDIO</div><h1>جارٍ فتح نافذة الربط الآمنة…</h1><p id="st">لحظات وتنتقل إلى تسجيل دخول جوجل الرسمي — سجّل دخولك أو أنشئ حساباً جديداً، ثم تعود الجلسة مشفرة إلى حسابك هنا.</p><p id="fb" hidden><a id="fb-a" href="#">متابعة الربط يدوياً ←</a></p></div><script>
+(async()=>{try{const r=await fetch("/api/studio/link-info?token="+encodeURIComponent(location.pathname.split("/").pop()),{credentials:"same-origin"});if(!r.ok){document.getElementById("st").textContent=r.status===404?"انتهت صلاحية رابط الربط — أعد الضغط على زر الربط في المنصة.":"سجّل الدخول إلى المنصة أولاً ثم أعد المحاولة.";return}const d=await r.json();document.getElementById("fb-a").href=d.relay;document.getElementById("fb").hidden=false;location.replace(d.relay)}catch(e){document.getElementById("st").textContent="تعذر الاتصال — أعد المحاولة."}})();
+</script></body></html>`;
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+});
+
+route("POST", "/api/studio/session", async (req, env) => {
+  if (!vbsRelay(req, env)) return bad("not_found", 404);
+  const b: any = await req.json().catch(() => null);
+  if (!b?.token || !b?.session) return bad("invalid", 400);
+  const raw = await env.CACHE_KV.get("vbs_link:" + b.token);
+  if (!raw) return bad("not_found", 404);
+  const li = JSON.parse(raw);
+  await env.CACHE_KV.put("vbs_sess:" + li.uid, JSON.stringify(await vbsEnc(env, { ...b.session, ts: Date.now() })));
+  await env.CACHE_KV.delete("vbs_link:" + b.token);
+  return json({ ok: true });
+});
+
+route("GET", "/api/studio/conn", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  return json({ ok: true, connected: !!(await vbsSess(env, s.userId)) });
+}, { auth: true });
+
+route("POST", "/api/studio/unlink", async (_r, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  await env.CACHE_KV.delete("vbs_sess:" + s.userId);
+  return json({ ok: true });
+}, { auth: true, csrf: true });
+
+route("POST", "/api/studio/generate", async (req, env, s) => {
+  if (!s) return bad("auth_required", 401);
+  if (!(await vbsSess(env, s.userId))) return bad("not_linked", 409);
+  const b: any = await req.json().catch(() => null);
+  const mode = String(b?.mode || "");
+  if (!["t2i", "edit", "t2v", "i2v"].includes(mode)) return bad("invalid_type", 400);
+  const prompt = clip(String(b?.prompt || "").trim(), 6000);
+  if (prompt.length < 8) return bad("invalid_message", 400);
+  const kq = "vbs_g:" + s.userId + ":" + new Date().toISOString().slice(0, 10);
+  const used = Number((await env.CACHE_KV.get(kq)) ?? "0");
+  if (used >= 24) return bad("too_many", 429);
+  const id = "vb_" + hex(8);
+  const job = { id, uid: s.userId, state: "queued", spec: { mode, prompt, dur: [4, 6, 8].includes(Number(b?.dur)) ? Number(b.dur) : 8, asp: ["9:16", "16:9", "1:1"].includes(String(b?.asp)) ? String(b.asp) : "9:16", image_url: isHttpsUrl(String(b?.image_url || "")) ? String(b.image_url) : null, ts: Date.now() } };
+  await env.CACHE_KV.put("vbs_job:" + id, JSON.stringify(job));
+  await env.CACHE_KV.put("vbs_q:" + String(Date.now()).padStart(15, "0") + ":" + id, id);
+  await env.CACHE_KV.put(kq, String(used + 1), { expirationTtl: 86400 });
+  return json({ ok: true, job_id: id }, 202);
+}, { auth: true, csrf: true });
+
+route("GET", "/api/studio/job/:id", async (_r, env, s, p) => {
+  if (!s) return bad("auth_required", 401);
+  const raw = await env.CACHE_KV.get("vbs_job:" + p.id);
+  if (!raw) return bad("not_found", 404);
+  const j = JSON.parse(raw);
+  if (j.uid !== s.userId) return bad("not_found", 404);
+  return json({ ok: true, state: j.state, url: j.url || null, error: j.error || null });
+}, { auth: true });
+
+route("POST", "/api/studio/relay/next", async (req, env) => {
+  if (!vbsRelay(req, env)) return bad("not_found", 404);
+  const { keys } = await env.CACHE_KV.list({ prefix: "vbs_q:", limit: 1 });
+  if (!keys.length) return json({ ok: true, job: null });
+  const k = keys[0]?.name;
+  if (!k) return json({ ok: true, job: null });
+  const id = (await env.CACHE_KV.get(k)) || k.split(":")[2];
+  const raw = await env.CACHE_KV.get("vbs_job:" + id);
+  if (!raw) { await env.CACHE_KV.delete(k); return json({ ok: true, job: null }); }
+  const j = JSON.parse(raw);
+  j.state = "running";
+  await env.CACHE_KV.put("vbs_job:" + id, JSON.stringify(j));
+  await env.CACHE_KV.delete(k);
+  const enc = await vbsSess(env, j.uid);
+  if (!enc) return json({ ok: true, job: null });
+  return json({ ok: true, job: { id: j.id, spec: j.spec }, session: await vbsDec(env, JSON.parse(enc)) });
+});
+
+route("POST", "/api/studio/relay/result", async (req, env) => {
+  if (!vbsRelay(req, env)) return bad("not_found", 404);
+  const b: any = await req.json().catch(() => null);
+  if (!b?.id) return bad("invalid", 400);
+  const raw = await env.CACHE_KV.get("vbs_job:" + b.id);
+  if (!raw) return bad("not_found", 404);
+  const j = JSON.parse(raw);
+  if (b.url && isHttpsUrl(String(b.url))) { j.state = "done"; j.url = String(b.url); }
+  else { j.state = "failed"; j.error = clip(String(b?.error || "relay_failed"), 200); }
+  await env.CACHE_KV.put("vbs_job:" + b.id, JSON.stringify(j));
+  return json({ ok: true });
+});
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {

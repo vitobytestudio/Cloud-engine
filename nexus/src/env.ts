@@ -14,4 +14,7 @@ export interface Env {
   NAKSAB_ORIGIN?: string;
   GH_VDB_TOKEN?: string; /* مرآة الأقراص الأبدية — توكن أرشيف المستودع */
   GH_VDB_REPO?: string; /* owner/name */ /* مصدر كتالوج المحترفين — جسر ناكساب */
+  VBS_RELAY_TOKEN?: string; /* عقدة الأتمتة السحابية — توكن مشترك حصري */
+  VBS_SESSION_KEY?: string; /* مفتاح تشفير جلسات Flow (64 hex = 32 بايت) */
+  VBS_RELAY_ORIGIN?: string; /* أصل عقدة الربط/التنفيذ — https://host:port */
 }
