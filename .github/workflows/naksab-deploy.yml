@@ -109,11 +109,11 @@ jobs:
           TABLES=$(npx wrangler d1 execute DB --remote -y --json --command "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table'" 2>/dev/null | grep -oE '"n":[0-9]+' | head -1)
           echo "::notice::قاعدة naksab-db جاهزة — $TABLES"
 
-      - name: أسرار قراءة بريدي موب (تُنقل كسر للعامل إن وُجدت — حساب الاستقبال في wrangler.toml [vars])
+      - name: أسرار قراءة بريدي موب + توكن عقدة الأتمتة (تُنقل كسر للعامل إن وُجدت — حساب الاستقبال في wrangler.toml [vars])
         if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
         working-directory: naksab
         run: |
-          for S in BARIDI_USER BARIDI_PASS BARIDI_ANSWER BARIDI_ENDPOINT; do
+          for S in BARIDI_USER BARIDI_PASS BARIDI_ANSWER BARIDI_ENDPOINT VBS_RELAY_TOKEN; do
             V="${!S}"
             if [ -n "$V" ]; then
               echo "$V" | npx wrangler secret put "$S"
@@ -127,6 +127,7 @@ jobs:
           BARIDI_PASS: ${{ secrets.BARIDI_PASS }}
           BARIDI_ANSWER: ${{ secrets.BARIDI_ANSWER }}
           BARIDI_ENDPOINT: ${{ secrets.BARIDI_ENDPOINT }}
+          VBS_RELAY_TOKEN: ${{ secrets.VBS_RELAY_TOKEN }}
 
       - name: بريد المدير الأولي (من متغيرات GitHub إن عُرِّف)
         if: github.event_name != 'pull_request' # الإنتاج وأسراره وترحيلاته على main حصراً — الـPR يُفحص فقط
@@ -249,7 +250,7 @@ jobs:
           npx wrangler d1 execute naksab-db --local -y --file seed.sql
           npx wrangler d1 execute naksab-db --local -y --command "ALTER TABLE users ADD COLUMN plan_id TEXT NOT NULL DEFAULT 'free'" || true
           npx wrangler d1 execute naksab-db --local -y --command "ALTER TABLE users ADD COLUMN site_template TEXT NOT NULL DEFAULT 'aurora'" || true
-          npx wrangler dev --port 8791 --local --ip 0.0.0.0 --var "ADMIN_SETUP_TOKEN:nk-drill-token" > dev.log 2>&1 &
+          npx wrangler dev --port 8791 --local --ip 0.0.0.0 --var "ADMIN_SETUP_TOKEN:nk-drill-token" --var "VBS_RELAY_TOKEN:nk-relay-token" > dev.log 2>&1 &
           for i in $(seq 1 60); do sleep 1; curl -s -m 2 http://127.0.0.1:8791/api/health >/dev/null 2>&1 && break; done
           curl -s -m 3 http://127.0.0.1:8791/api/health | grep -q '"ok":true' || { echo "::error::خادم البوابة لم يقلع"; tail -n 20 dev.log; exit 1; }
           node tests/harness.mjs

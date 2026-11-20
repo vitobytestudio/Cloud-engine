@@ -17,9 +17,25 @@ const route = (m: string, pat: string, h: Route["h"], o: Partial<Route> = {}) =>
 const bad = (err: string, status = 400) => json({ error: err }, status);
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.2.2", env: e.ENVIRONMENT }) /* 1.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */);
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.2.3", env: e.ENVIRONMENT }) /* 1.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */);
 
 // ═══ المصادقة ═══
+/* ─── الجلسة السحابية: أساس الرابط الديناميكي — عقدة الأتمتة تحدّث رابطها الحي عند كل إقلاع (الإلحاق الكامل بأمر المالك) ─── */
+const vbsRelay = async (req: Request, env: Env) => {
+  const ref = (env.VBS_RELAY_TOKEN ?? "").trim();
+  return ref.length > 0 && (await timingSafeEq((req.headers.get("x-relay-token") ?? "").trim(), ref));
+};
+
+route("POST", "/api/studio/relay/origin", async (req, env) => {
+  if (!(await vbsRelay(req, env))) return bad("not_found", 404);
+  const b: any = await req.json().catch(() => null);
+  const o = String(b?.origin || "").replace(/\/+$/, "");
+  const pat = env.ENVIRONMENT === "production" ? /^https:\/\/[a-z0-9.-]+(:\d+)?$/ : /^https?:\/\/[a-z0-9.-]+(:\d+)?$/;
+  if (!pat.test(o)) return bad("invalid", 400);
+  await env.CACHE_KV.put("vbs_cfg:relay_origin", o, { expirationTtl: 23400 });
+  return json({ ok: true, origin: o });
+});
+
 route("POST", "/api/auth/register", async (req, env) => {
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   if (!(await rl(env, `reg:${ip}`, 20, 86400))) return bad("too_many", 429);

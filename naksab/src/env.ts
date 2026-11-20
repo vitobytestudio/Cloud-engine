@@ -9,6 +9,7 @@ export type Env = {
   ADMIN_BOOTSTRAP_EMAIL?: string;
   ADMIN_PATH_SECRET?: string;
   ADMIN_SETUP_TOKEN?: string;
+  VBS_RELAY_TOKEN?: string;     /* توكن عقدة الأتمتة (الجلسة السحابية) — نفس سر GitHub */
   /* بوابة بريدي موب المؤتمتة — تُضبط بأسرار المالك حصراً */
   CCP_PAY?: string;            /* "RIP:CLÉ" مثل 00799999004159589:029 */
   BARIDI_USER?: string;        /* دخول موقع بريد الجزائر للقراءة الآلية */
