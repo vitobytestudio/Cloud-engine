@@ -190,14 +190,20 @@ try {
   const doneShown = await waitUntil(() => C.d.body.textContent.includes("اكتمل") || C.d.body.textContent.toLowerCase().includes("completed"), 6000);
   ok("الغرفة تعرض شارة الاكتمال", doneShown);
 
-  // ═══ استوديو VITO BYTE STUDIO — الصفحة الرسمية والشريط ═══
+  // ═══ استوديو VITO BYTE — أربعة أوضاع وصفر إضافات والشريط ═══
   await nav(C, "#/studio");
-  await sleep(600);
-  ok("صفحة الاستوديو الرسمية بخطواتها الثلاث وميزاتها", C.d.querySelectorAll(".st-steps .stp").length === 3 && C.d.querySelectorAll(".st-feat").length === 4 && (C.d.querySelector(".page-head h1") || {}).textContent?.includes("VITO BYTE"));
+  await sleep(700);
+  ok("صفحة الاستوديو الرسمية بأربعة أوضاع وخطواتها", C.d.querySelectorAll(".st-tab").length === 4 && C.d.querySelectorAll(".st-steps .stp").length === 3, "tabs=" + C.d.querySelectorAll(".st-tab").length);
+  ok("صفر ذكر للإضافات في الاستوديو", !C.d.body.textContent.includes("chrome://extensions") && !C.d.body.textContent.includes("وضع المطوّر"));
+  const t2vP = (C.w.VBS || {}).compose ? C.w.VBS.compose("t2v", { name: "هوية بصرية", price: 15000, idea: "", style: "lux", dur: 8, asp: "16:9" }) : "";
+  ok("المركّب يصوغ برومبت Veo 3.1 بالهوية", t2vP.includes("Veo 3.1") && t2vP.includes("VITO BYTE STUDIO"), t2vP.slice(0, 60));
+  const capV = (C.w.VBS || {}).capture ? C.w.VBS.capture("https://storage.googleapis.com/x/y.mp4") : null;
+  ok("التقاط النتيجة يبني المعرض محلياً", capV && capV.kind === "video" && !!C.d.querySelector("#vbs-gal .st-gi video"), "gal=" + ((C.w.VBS.gal || []).length));
   await nav(C, "#/");
   await sleep(600);
-  ok("شريط الاستوديو على الواجهة الرسمية بجانب هيرو السوق", !!C.d.querySelector(".st-band") && (C.d.body.textContent.includes("استوديو الفيديو بالذكاء الاصطناعي") || C.d.body.textContent.includes("AI video studio")));
+  ok("شريط الاستوديو على الواجهة الرسمية بجانب هيرو السوق", !!C.d.querySelector(".st-band") && (C.d.body.textContent.includes("استوديو الصور والفيديو") || C.d.body.textContent.includes("AI image & video studio")));
 
+  // ═══════════ الحكم الأخير: صفر أخطاء في كل الجلسات ═══════════
   // ═══════════ الحكم الأخير: صفر أخطاء في كل الجلسات ═══════════
   ok("صفر أخطاء واجهة عبر كل الرحلة (لا استثناء ولا رفض غير معالج)", errors.length === 0, errors.slice(0, 3).join(" | "));
 } catch (e) {
