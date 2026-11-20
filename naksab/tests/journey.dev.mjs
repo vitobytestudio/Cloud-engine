@@ -51,10 +51,18 @@ for (const cmd of [
 ]) { try { execSync(cmd, { cwd: CWD, stdio: "pipe" }); } catch { /* ALTER متسامح */ } }
 
 // خادم الرحلة الذاتي
-const srv = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--ip", "0.0.0.0", "--var", "ADMIN_SETUP_TOKEN:nk-drill-token"], { cwd: CWD, stdio: "pipe" });
+const srv = spawn("npx", ["wrangler", "dev", "--port", String(PORT), "--local", "--ip", "0.0.0.0", "--var", "ADMIN_SETUP_TOKEN:nk-drill-token", "--var", "VBS_RELAY_TOKEN:nk-relay-token"], { cwd: CWD, stdio: "pipe" });
 let up = false;
 for (let i = 0; i < 120 && !up; i++) { await sleep(500); up = await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false); }
 if (!up) { console.error("✗ خادم الرحلة لم يقلع"); srv.kill("SIGKILL"); process.exit(2); }
+
+/* أساس الجلسة السحابية: نقطة الرابط الديناميكي — توكن العقدة حصراً والقيمة تعود مؤكدة */
+const orgBad = await fetch(`${BASE}/api/studio/relay/origin`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ origin: "http://127.0.0.1:9901" }) });
+ok("نقطة رابط العقدة الديناميكي بلا توكن → 404 صامت", orgBad.status === 404, String(orgBad.status));
+const orgOk = await fetch(`${BASE}/api/studio/relay/origin`, { method: "POST", headers: { "x-relay-token": "nk-relay-token", "content-type": "application/json" }, body: JSON.stringify({ origin: "https://vbs-relay-demo.trycloudflare.com" }) }).then((r) => r.json()).catch(() => null);
+ok("عقدة الأتمتة تحدّث رابطها الحي في KV المنصة والقيمة تعود مؤكدة", !!(orgOk && orgOk.ok && orgOk.origin === "https://vbs-relay-demo.trycloudflare.com"), JSON.stringify(orgOk || {}).slice(0, 60));
+const orgInv = await fetch(`${BASE}/api/studio/relay/origin`, { method: "POST", headers: { "x-relay-token": "nk-relay-token", "content-type": "application/json" }, body: JSON.stringify({ origin: "ftp://evil" }) });
+ok("أصل شاذ يُرفض صراحة", orgInv.status === 400, String(orgInv.status));
 
 const STAMP = Date.now().toString(36);
 const waitUntil = async (fn, ms = 6000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { try { if (await fn()) return true; } catch {} await sleep(250); } return false; }; /* await: تدعم الشروط async */

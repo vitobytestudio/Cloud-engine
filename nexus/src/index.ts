@@ -46,9 +46,16 @@ function secure(res: Response, csp?: string): Response {
   return new Response(res.body, { status: res.status, headers: h });
 }
 
+/* مصدر رابط عقدة الأتمتة: السر الثابت يتفوق (نفق ثابت) — وإلا الرابط الديناميكي من KV الذي تُحدّثه العقدة عند كل إقلاع (نفق سريع متجدد على GitHub Actions) */
+async function vbsOrigin(env: Env): Promise<string> {
+  if (env.VBS_RELAY_ORIGIN) return String(env.VBS_RELAY_ORIGIN).replace(/\/+$/, "");
+  const dyn = await env.CACHE_KV.get("vbs_cfg:relay_origin");
+  return dyn ? String(dyn).replace(/\/+$/, "") : "";
+}
+
 /* CSP صفحة نافذة الربط التفاعلية: script من ملفنا الثابت فقط + إطار عقدة الترحيل حصراً */
-function linkCsp(env: Env): string {
-  const ro = env.VBS_RELAY_ORIGIN ? String(env.VBS_RELAY_ORIGIN).replace(/\/+$/, "") : "";
+async function linkCsp(env: Env): Promise<string> {
+  const ro = await vbsOrigin(env);
   return "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-src 'self'" + (ro ? " " + ro : "") + "; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
 }
 
@@ -86,7 +93,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.5", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.6", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 /* ═══ استوديو VITO BYTE — الجلسة السحابية المعزولة (قرار المالك) ═══
    الربط: توكن لمرة واحدة → نافذة عقدة الأتمتة (دخول جوجل الرسمي — وإن لم يكن له حساب أنشئه) →
@@ -119,6 +126,16 @@ route("POST", "/api/studio/link", async (req, env, s) => {
   return json({ ok: true, url: origin + "/studio/link/" + tok, token: tok });
 }, { auth: true, csrf: true });
 
+route("POST", "/api/studio/relay/origin", async (req, env) => {
+  if (!vbsRelay(req, env)) return bad("not_found", 404);
+  const b: any = await req.json().catch(() => null);
+  const o = String(b?.origin || "").replace(/\/+$/, "");
+  const pat = env.ENVIRONMENT === "production" ? /^https:\/\/[a-z0-9.-]+(:\d+)?$/ : /^https?:\/\/[a-z0-9.-]+(:\d+)?$/;
+  if (!pat.test(o)) return bad("invalid", 400);
+  await env.CACHE_KV.put("vbs_cfg:relay_origin", o, { expirationTtl: 23400 });
+  return json({ ok: true, origin: o });
+});
+
 route("GET", "/api/studio/link-info", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   const tok = new URL(req.url).searchParams.get("token") || "";
@@ -126,8 +143,9 @@ route("GET", "/api/studio/link-info", async (req, env, s) => {
   if (!raw) return bad("not_found", 404);
   const li = JSON.parse(raw);
   if (li.uid !== s.userId) return bad("not_found", 404);
-  if (!env.VBS_RELAY_ORIGIN) return bad("relay_down", 503);
-  return json({ ok: true, relay: String(env.VBS_RELAY_ORIGIN).replace(/\/+$/, "") + "/login/" + tok });
+  const ro = await vbsOrigin(env);
+  if (!ro) return bad("relay_down", 503);
+  return json({ ok: true, relay: ro + "/login/" + tok });
 }, { auth: true });
 
 route("GET", "/studio/link/:token", async (req, env, _s, _p) => {
@@ -1408,7 +1426,8 @@ export default {
         }
         try {
           const rr = await r.h(req, env, s, params);
-          return secure(rr, req.url.includes("/studio/link/") ? linkCsp(env) : undefined);
+          const csp = req.url.includes("/studio/link/") ? await linkCsp(env) : undefined;
+          return secure(rr, csp);
         } catch (e) {
           return secure(json({ error: "server", detail: String(e).slice(0, 200) }, 500));
         }

@@ -1,0 +1,143 @@
+name: "FLOW RELAY — عقدة الأتمتة التفاعلية 24/7 (Actions + نفق كلاودفلير)"
+
+# ─── كيف تعمل 24/7 بلا انقطاع ───
+# كل دورة تعيش 5 ساعات و25 دقيقة (دون سقف الـ6 ساعات للواحدة الواحدة بهامش)،
+# وقبل انتهائها بعشر دقائق تُطلق الدورة التالية عبر workflow_dispatch —
+# المجموعة بلا إلغاء فتنتظر الدورة الجديدة في الطابور ثم تقلع بمتصفحها ونفقها
+# الجديدين بينما العقدة الحية ما تزال تخدم — تسليم دافئ بلا انقطاع.
+# حارس دوري كل 6 ساعات يعيد الإقلاع إن انقطعت السلسلة لأي سبب.
+
+on:
+  workflow_dispatch:
+    inputs:
+      chained:
+        description: "دورة متسلسلة ذاتياً (اتركه كما هو)"
+        required: false
+        default: "1"
+  schedule:
+    - cron: "17 1,7,13,19 * * *" # حارس الانقطاع — ينتظر في الطابور إن كانت العقدة حية
+
+permissions:
+  actions: write # السلسلة الذاتية: إطلاق الدورة التالية — GITHUB_TOKEN يكفي، بلا أسرار إضافية
+  contents: read
+
+concurrency:
+  group: flow-relay
+  cancel-in-progress: false # لا تُقتل العقدة الحية أبداً — الدورة الجديدة تنتظرها في الطابور
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 336 # 5س36د — أعلى من دورة التشغيل بهامش التسليم
+    env:
+      NEXUS_ORIGIN: https://nexus.vitobytestudio.workers.dev
+      RELAY_PORT: "8801"
+      RUN_MIN: "325" # 5 ساعات و25 دقيقة
+      CHAIN_AT: "315" # إطلاق الدورة التالية قبل الانتهاء بعشر دقائق
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: شاشة افتراضية للدخول التفاعلي (Xvfb)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb >/dev/null
+          which xvfb-run
+
+      - name: متصفح غير مكشوف (Patchright + Chromium)
+        working-directory: vdb/flow-relay
+        run: |
+          npm i patchright --no-audit --no-fund
+          npx patchright install --with-deps chromium
+
+      - name: تثبيت cloudflared
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          sudo chmod +x /usr/local/bin/cloudflared
+          cloudflared --version
+
+      - name: إقلاع العقدة التفاعلية (DRIVER=flow داخل Xvfb)
+        env:
+          VBS_RELAY_TOKEN: ${{ secrets.VBS_RELAY_TOKEN }}
+        run: |
+          if [ -z "$VBS_RELAY_TOKEN" ]; then
+            echo "::error::سر VBS_RELAY_TOKEN مفقود في أسرار GitHub — ضبطه إلزامي (نفس توكن المنصة)"
+            exit 1
+          fi
+          cd vdb/flow-relay
+          DRIVER=flow PORT="$RELAY_PORT" NEXUS_ORIGIN="$NEXUS_ORIGIN" VBS_RELAY_TOKEN="$VBS_RELAY_TOKEN" \
+            xvfb-run -a node node.mjs > node.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -s "http://localhost:$RELAY_PORT/health" 2>/dev/null | grep -q '"ok":true' && break
+            sleep 1
+          done
+          curl -s "http://localhost:$RELAY_PORT/health" | grep -q '"ok":true' \
+            || { echo "::error::العقدة التفاعلية لم تقلع"; tail -n 25 node.log; exit 1; }
+          echo "::notice::العقدة التفاعلية حية على :$RELAY_PORT (سائق flow — دخول جوجل التفاعلي داخل Xvfb)"
+
+      - name: النفق وتحديث الرابط الديناميكي في KV المنصة
+        env:
+          VBS_RELAY_TOKEN: ${{ secrets.VBS_RELAY_TOKEN }}
+          CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
+        run: |
+          if [ -n "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+            # نفق ثابت الرابط — الرابط المعتمد هو VBS_RELAY_ORIGIN الثابت على المنصة (يتفوق على KV)
+            cloudflared tunnel run --token "$CLOUDFLARE_TUNNEL_TOKEN" > tunnel.log 2>&1 &
+            echo "TUNNEL_MODE=stable" >> "$GITHUB_ENV"
+            echo "::notice::نفق ثابت (token) — الرابط الثابت من VBS_RELAY_ORIGIN على المنصة"
+            sleep 8
+          else
+            # نفق سريع مجاني — الرابط يتغير كل دورة، فنُحدّثه في KV المنصة عند الإقلاع
+            cloudflared tunnel --url "http://localhost:$RELAY_PORT" --no-autoupdate --protocol http2 > tunnel.log 2>&1 &
+            ORIGIN=""
+            for i in $(seq 1 45); do
+              ORIGIN=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' tunnel.log | head -1 || true)
+              [ -n "$ORIGIN" ] && break
+              sleep 2
+            done
+            if [ -z "$ORIGIN" ]; then echo "::error::تعذر استخراج رابط النفق السريع"; tail -n 30 tunnel.log; exit 1; fi
+            echo "TUNNEL_ORIGIN=$ORIGIN" >> "$GITHUB_ENV"
+            echo "::notice::رابط النفق السريع: $ORIGIN"
+            for i in $(seq 1 15); do
+              curl -s --max-time 15 "$ORIGIN/health" 2>/dev/null | grep -q '"ok":true' && break
+              sleep 2
+            done
+            curl -s --max-time 15 "$ORIGIN/health" | grep -q '"ok":true' \
+              || { echo "::error::النفق قام لكن العقدة خلفه لا تستجيب"; exit 1; }
+            RESP=$(curl -s --max-time 20 -X POST "$NEXUS_ORIGIN/api/studio/relay/origin" \
+              -H "x-relay-token: $VBS_RELAY_TOKEN" -H "content-type: application/json" \
+              -d "{\"origin\":\"$ORIGIN\"}")
+            echo "$RESP" | grep -q '"ok":true' \
+              || { echo "::error::تعذر تحديث رابط العقدة في KV المنصة: $RESP"; exit 1; }
+            echo "::notice::الرابط الديناميكي حُدّث في KV المنصة (TTL 6س30د — تُجدّده كل دورة تلقائياً)"
+          fi
+
+      - name: القلب النابض والسلسلة الذاتية (24/7)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          END=$(( $(date +%s) + RUN_MIN * 60 ))
+          CHAIN_AT_S=$(( $(date +%s) + CHAIN_AT * 60 ))
+          CHAINED=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            NOW=$(date +%s)
+            if [ "$CHAINED" -eq 0 ] && [ "$NOW" -ge "$CHAIN_AT_S" ]; then
+              if gh workflow run flow-relay.yml -R "$GITHUB_REPOSITORY" -f chained=1 2>chain.err; then
+                CHAINED=1
+                echo "::notice::الدورة التالية أُطلقت — التسليم الدافئ قبل انتهاء هذه بعشر دقائق"
+              else
+                echo "::warning::فشل إطلاق الدورة التالية — يعاد المحاولة كل دقيقة حتى الانتهاء: $(head -c 200 chain.err)"
+              fi
+            fi
+            H=$(curl -s --max-time 10 "http://localhost:$RELAY_PORT/health" 2>/dev/null || echo '{"ok":false}')
+            echo "[$(date -u +%H:%M:%S)] node=$H chained=$CHAINED elapsed=$(( NOW - END + RUN_MIN * 60 ))s/${RUN_MIN}m"
+            sleep 60
+          done
+          if [ "$CHAINED" -ne 1 ]; then
+            echo "::warning::انتهت الدورة دون دورة تالية — حارس الـ6 ساعات يعيد الإقلاع تلقائياً"
+          fi
+          echo "::notice::دورة الـ${RUN_MIN} دقيقة اكتملت — العقدة تسلّم (الطابور على المنصة يحفظ مهام الزبائن بلا فقد)"
