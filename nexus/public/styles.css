@@ -276,6 +276,9 @@ select.input {
 
 .p-card .ph { aspect-ratio: 1; background: var(--card2); overflow: hidden; position: relative; }
 
+.ph-empty { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; color: var(--muted); background: linear-gradient(135deg, var(--card2), rgba(122,92,255,.12)); }
+.ph-empty i, .ph-empty .meta { font-style: normal; font-size: 11px; letter-spacing: .34em; opacity: .8; }
+
 .p-card .ph img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s, transform 0.7s var(--ease-out); }
 
 .p-card .ph img.ld { opacity: 1; }
