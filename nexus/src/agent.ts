@@ -16,7 +16,8 @@ const GEMINI_MODELS = [
 ];
 const GROQ_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]; /* كل المجاني في غروق */
 const OPENROUTER_MODELS = [
-  "openrouter/free", "gemma-3-27b:free", "gpt-oss-20b:free", "qwen3-235b:free", "glm-4.7:free", "mistral-large-3:free",
+  "openrouter/free", "openai/gpt-oss-120b:free", "openai/gpt-oss-20b:free", "google/gemma-3-27b-it:free",
+  "qwen/qwen3-235b-a22b:free", "meta-llama/llama-3.3-70b-instruct:free",
 ];
 
 export function parseFleet(raw: string | undefined): Target[] {
@@ -31,7 +32,8 @@ export function parseFleet(raw: string | undefined): Target[] {
   };
   /* الماسح الخام أولاً: مفاتيح عارية أو قوائم نصية بأي صيغة — بلا حاجة إلى JSON أصلاً */
   const grab = (re: RegExp, p: Provider, models: string[]) => {
-    for (const m of raw.matchAll(new RegExp(re.source, "g"))) push(p, { name: "raw", key: m[0] }, models);
+    /* بصمة المفتاح اسم الحساب — مفتاح ميت لا يقتل أخوته أبداً */
+    for (const m of raw.matchAll(new RegExp(re.source, "g"))) push(p, { name: "raw-" + m[0].slice(-6), key: m[0] }, models);
   };
   grab(/AIza[A-Za-z0-9_-]{30,}/, "gemini", GEMINI_MODELS);
   grab(/AQ[A-Za-z0-9._-]{30,}/, "gemini", GEMINI_MODELS);          /* صيغة جوجل الجديدة */
@@ -39,7 +41,7 @@ export function parseFleet(raw: string | undefined): Target[] {
   grab(/sk-or-[A-Za-z0-9_-]{20,}/, "openrouter", OPENROUTER_MODELS); /* كل صيغ sk-or */
   /* احتياط: مفتاح sk- عاري طويل بلا تصنيف أدق → أوبن راوتر (قرار المالك) */
   if (!out.some((t) => t.p === "openrouter")) {
-    for (const m of raw.matchAll(/sk-[A-Za-z0-9_-]{30,}/g)) { push("openrouter", { name: "raw-sk", key: m[0] }, OPENROUTER_MODELS); break; }
+    for (const m of raw.matchAll(/sk-[A-Za-z0-9_-]{30,}/g)) { push("openrouter", { name: "raw-" + m[0].slice(-6), key: m[0] }, OPENROUTER_MODELS); break; }
   }
   const creds = (v: unknown): Cred[] => {
     if (typeof v === "string") return [{ name: "acc", key: v }];
@@ -58,13 +60,13 @@ export function parseFleet(raw: string | undefined): Target[] {
       }
       return [];
     };
-    const first = (...cs: (Cred | undefined)[]): Cred | undefined => cs.find(Boolean);
-    const gm = first(creds(j.gemini)[0], creds(j.Gemini)[0], creds(j.GEMINI)[0], flatKey("gemini")[0], flatKey("google")[0]);
-    const gq = first(creds(j.groq)[0], creds(j.Groq)[0], creds(j.GROQ)[0], flatKey("groq")[0]);
-    const or = first(creds(j.openrouter)[0], creds(j.OpenRouter)[0], creds(j.OPENROUTER)[0], flatKey("openrouter")[0]);
-    if (gm) push("gemini", gm, GEMINI_MODELS);
-    if (gq) push("groq", gq, GROQ_MODELS);
-    if (or) push("openrouter", or, OPENROUTER_MODELS);
+    const all = (...cs: Cred[][]): Cred[] => cs.find((c) => c.length) ?? [];
+    const gms = all(creds(j.gemini), creds(j.Gemini), creds(j.GEMINI), flatKey("gemini"), flatKey("google"));
+    const gqs = all(creds(j.groq), creds(j.Groq), creds(j.GROQ), flatKey("groq"));
+    const ors = all(creds(j.openrouter), creds(j.OpenRouter), creds(j.OPENROUTER), flatKey("openrouter"));
+    for (const c of gms) push("gemini", c, GEMINI_MODELS);
+    for (const c of gqs) push("groq", c, GROQ_MODELS);
+    for (const c of ors) push("openrouter", c, OPENROUTER_MODELS);
     /* الماسح الشامل: تعرف بمسماك المفتاح أينما كان — AIza=gemini، gsk_=groq، sk-or-v1-=openrouter */
     const scan = (v: unknown) => {
       if (typeof v === "string") {
@@ -82,30 +84,55 @@ export function parseFleet(raw: string | undefined): Target[] {
 
 const DAY_S = 86400;
 const COOLDOWN_MS = 10 * 60_000;
+const MODEL_DEAD_MS = 60 * 60_000;
+const KEY_DEAD_MS = 24 * 60 * 60_000;
+const CALL_TIMEOUT_MS = 15_000;
+const timeoutOf = (env: unknown) => { const v = Number((env as { AI_TIMEOUT_MS?: number })?.AI_TIMEOUT_MS); return Number.isFinite(v) && v > 0 ? v : CALL_TIMEOUT_MS; };
+
+export const cooldownCount = async (env: Env): Promise<number> => {
+  const { keys } = await env.CACHE_KV.list({ prefix: "ai:cd:" });
+  const now = Date.now();
+  let n = 0;
+  for (const k of keys) {
+    const v = await env.CACHE_KV.get(k.name);
+    if (v && Number(v) > now) n++;
+  }
+  return n;
+};
 
 async function healthy(env: Env, t: Target): Promise<boolean> {
   const cd = await env.CACHE_KV.get(`ai:cd:${t.p}:${t.acct}:${t.model}`);
-  return !(cd && Number(cd) > Date.now());
+  if (cd && Number(cd) > Date.now()) return false;
+  const kd = await env.CACHE_KV.get(`ai:kd:${t.p}:${t.acct}`);
+  if (kd && Number(kd) > Date.now()) return false;
+  return true;
 }
-async function markFail(env: Env, t: Target): Promise<void> {
+async function markFail(env: Env, t: Target, err: string): Promise<void> {
+  /* التصنيف: مفتاح مرفوض (401/403) يبرّد الحساب كله 24 ساعة — لا حرق باقي نماذجه بلا فائدة.
+     نموذج غير موجود (404) ساعة. ضغط أو خادم مزود عشر دقائق. */
+  if (/:(401|403)$/.test(err)) {
+    await env.CACHE_KV.put(`ai:kd:${t.p}:${t.acct}`, String(Date.now() + KEY_DEAD_MS), { expirationTtl: DAY_S });
+    return;
+  }
+  const ttl = /:404$/.test(err) ? MODEL_DEAD_MS : COOLDOWN_MS;
   const k = `ai:cd:${t.p}:${t.acct}:${t.model}`;
-  const n = Number((await env.CACHE_KV.get(k)) ?? "0") + 1;
-  await env.CACHE_KV.put(k, String(Date.now() + COOLDOWN_MS), { expirationTtl: DAY_S });
+  await env.CACHE_KV.put(k, String(Date.now() + ttl), { expirationTtl: DAY_S });
 }
 
 export type Msg = { role: "user" | "assistant"; content: string };
 
-async function callGemini(t: Target, sys: string, msgs: Msg[]): Promise<string> {
+async function callGemini(env: unknown, t: Target, sys: string, msgs: Msg[]): Promise<string> {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${t.model}:generateContent?key=${t.key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${t.model}:generateContent`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-goog-api-key": t.key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: sys }] },
         contents: msgs.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
         generationConfig: { maxOutputTokens: 400, temperature: 0.7 },
       }),
+      signal: AbortSignal.timeout(timeoutOf(env)),
     }
   );
   if (!res.ok) throw new Error(`gemini:${res.status}`);
@@ -115,7 +142,7 @@ async function callGemini(t: Target, sys: string, msgs: Msg[]): Promise<string> 
   return text;
 }
 
-async function callOpenAIish(url: string, t: Target, sys: string, msgs: Msg[]): Promise<string> {
+async function callOpenAIish(env: unknown, url: string, t: Target, sys: string, msgs: Msg[]): Promise<string> {
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${t.key}` },
@@ -125,6 +152,7 @@ async function callOpenAIish(url: string, t: Target, sys: string, msgs: Msg[]): 
       max_tokens: 400,
       temperature: 0.7,
     }),
+    signal: AbortSignal.timeout(timeoutOf(env)),
   });
   if (!res.ok) throw new Error(`${t.p}:${res.status}`);
   const j = (await res.json()) as any;
@@ -140,11 +168,12 @@ export async function fleetChat(env: Env, sys: string, msgs: Msg[]): Promise<str
   for (const t of parseFleet(env.AI_KEYS)) {
     if (!(await healthy(env, t))) continue;
     try {
-      if (t.p === "gemini") return await callGemini(t, sys, msgs);
-      if (t.p === "groq") return await callOpenAIish("https://api.groq.com/openai/v1/chat/completions", t, sys, msgs);
-      return await callOpenAIish("https://openrouter.ai/api/v1/chat/completions", t, sys, msgs);
+      if (t.p === "gemini") return await callGemini(env, t, sys, msgs);
+      if (t.p === "groq") return await callOpenAIish(env, "https://api.groq.com/openai/v1/chat/completions", t, sys, msgs);
+      return await callOpenAIish(env, "https://openrouter.ai/api/v1/chat/completions", t, sys, msgs);
     } catch (e) {
-      await markFail(env, t);
+      const msg = String((e as Error)?.message || e);
+      await markFail(env, t, /:(\d{3})$/.test(msg) ? msg : `${t.p}:599`); /* 599 = مهلة/شبكة */
     }
   }
   return null;

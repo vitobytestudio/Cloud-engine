@@ -75,6 +75,9 @@ jobs:
           node tests/harness.dev.mjs
           node tests/harness.dev.mjs
           node tests/dom.dev.mjs
+          node tests/journey.dom.mjs
+          ./node_modules/.bin/esbuild src/agent.ts --format=esm --charset=utf8 --outfile=tests/_agent.mjs
+          node tests/agent.dev.mjs
           node tests/attack.dev.mjs
           node tests/visual.dev.mjs
           kill $WPID 2>/dev/null || true
@@ -255,7 +258,9 @@ jobs:
           echo "dz.json: $DZ"
           [ "$DZ" = 200 ] || { echo "::error::داتا الولايات غير مخدومة"; exit 1; }
           CF=$(curl -s "$URL/api/store/vito-store/agent")
-          echo "::notice::fleet-counts=$(echo "$CF" | jq -c '.fleet // "{}"')"
+          echo "::notice::fleet-counts=$(echo "$CF" | jq -c '.fleet // "{}"') cooled=$(echo "$CF" | jq -r '.cooled // "?"')"
+          AH=$(curl -s "$URL/api/store/vito-store/agent")
+          echo "$AH" | grep -q '"enabled":true' || echo "::error::حالة الوكيل معطلة على الإنتاج — مفاتيح الأسطول أو الحصة"
           AG=$(curl -s -X POST "$URL/api/agent/chat" -H "content-type: application/json" \
             -d '{"store_slug":"vito-store","message":"شحال الساعة؟","lang":"ar","buyer":"ci-smoke"}')
           echo "::notice::agent-reply=${AG:0:300}"

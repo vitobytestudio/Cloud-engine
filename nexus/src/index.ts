@@ -1,6 +1,6 @@
 // ——— NEXUS — منصة التجار: متجر برابط مستقل + سوق/فيد + طلبيات + مالية ———
 import type { Env, Session, Plan } from "./env";
-import { fleetChat, buildSystemPrompt, parseFleet, PLAN_QUOTA, PLAN_PRODUCTS } from "./agent";
+import { fleetChat, buildSystemPrompt, parseFleet, cooldownCount, PLAN_QUOTA, PLAN_PRODUCTS } from "./agent";
 import {
   json, bad, id, now, clip, parseCookies, getSession, createSession, sessionCookie, clearCookie,
   destroySession, hex, ctEqual, rl, isEmail, isK0, isSlug, isPhoneDZ, isHttpsUrl, isImagePath, sniffImage, isStr, RESERVED_SLUGS,
@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.6", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.6: صورة المنتج اختيارية + كل رقع الواجهة تصل فعلاً (المصدر ui/ — البناء لم يعد يمسح شيئاً) */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.7", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -401,6 +401,19 @@ route("GET", "/api/dash/overview", async (_r, env, s) => {
   });
 }, { auth: true });
 
+/* صحة أسطول الذكاء — للإدارة حصراً: الحجم والمبرَّد والمفتاح، بلا أي أسرار خام */
+route("GET", "/api/adm/ai-health", async (_r, env) => {
+  const fleet = parseFleet(env.AI_KEYS);
+  const byProvider = { gemini: 0, groq: 0, openrouter: 0 };
+  for (const t of fleet) byProvider[t.p]++;
+  const { keys } = await env.CACHE_KV.list({ prefix: "ai:kd:" });
+  return json({
+    fleet_size: fleet.length, by_provider: byProvider,
+    cooled_models: env.AI_KEYS ? await cooldownCount(env) : 0,
+    dead_keys: keys.length,
+  });
+});
+
 route("POST", "/api/expenses", async (req, env, s) => {
   if (!s) return bad("auth_required", 401);
   if (!(await rl(env, `exp:${s.userId}`, 80, DAY_S))) return bad("too_many", 429);
@@ -504,12 +517,14 @@ route("GET", "/api/store/:slug/agent", async (_r, env, _s, p) => {
   const fleet = parseFleet(env.AI_KEYS);
   const out = { counts: { gemini: 0, groq: 0, openrouter: 0 } };
   for (const f of fleet) out.counts[f.p as "gemini" | "groq" | "openrouter"]++;
+  const cd = env.AI_KEYS ? await cooldownCount(env) : 0;
   return json({
     enabled: !!env.AI_KEYS && used < quota,
     store_name: u.store_name || u.name,
     plan: u.plan ?? "free", verified: u.verified ?? 0,
     remaining: Math.max(0, quota - used),
     fleet: { gemini: out.counts.gemini, groq: out.counts.groq, openrouter: out.counts.openrouter },
+    cooled: cd,
   });
 });
 
