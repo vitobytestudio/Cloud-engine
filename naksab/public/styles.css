@@ -514,3 +514,19 @@ html[dir="rtl"] .foot-col a:hover { transform: translateX(-3px); }
 .vbs-steps { display: grid; gap: 9px; margin-top: 12px; }
 .vbs-steps .stp { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.75; }
 .vbs-steps .stp b { flex: none; width: 22px; height: 22px; border-radius: 50%; background: rgba(124,108,255,.22); color: #cfc6ff; font-size: 12px; display: grid; place-items: center; margin-top: 2px; }
+
+
+/* — الصفحة الرسمية للاستوديو + شريط الواجهة — */
+.st-band { display: block; padding: 20px 22px; border-radius: var(--r-lg); background: linear-gradient(135deg, rgba(124,108,255,.18), rgba(0,212,255,.08) 60%, rgba(124,108,255,.05)); border: 1px solid rgba(124,108,255,.38); position: relative; overflow: hidden; }
+.st-band .vbs-mark { font-size: 12px; }
+.st-band-t { display: block; font-size: 17px; font-weight: 700; margin-top: 8px; }
+.st-band-s { display: block; font-size: 14px; color: var(--dim); margin-top: 4px; line-height: 1.8; }
+.st-band-go { display: inline-block; margin-top: 12px; font-size: 13px; font-weight: 700; color: #cfc6ff; background: rgba(124,108,255,.18); padding: 7px 14px; border-radius: 99px; }
+.st-steps { display: grid; gap: 10px; margin-bottom: 18px; }
+.st-steps .stp { display: flex; gap: 11px; align-items: flex-start; font-size: 14px; line-height: 1.8; color: var(--dim); background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px; }
+.st-steps .stp b { flex: none; width: 24px; height: 24px; border-radius: 50%; background: rgba(124,108,255,.22); color: #cfc6ff; font-size: 13px; display: grid; place-items: center; margin-top: 2px; }
+.st-steps .stt { display: block; color: var(--fg); font-size: 14px; margin-bottom: 2px; }
+.st-feats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.st-feat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 15px; }
+.st-feat b { display: block; font-size: 14px; margin-bottom: 3px; color: #cfc6ff; }
+.st-feat span { font-size: 13px; color: var(--dim); line-height: 1.75; }

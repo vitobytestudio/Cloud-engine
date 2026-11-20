@@ -79,7 +79,19 @@ vbs_recraft: "أعد صياغة المشهد", vbs_do: "توليد", vbs_copy: "
 vbs_msg_login: "بانتظار دخولك إلى Google Flow…", vbs_msg_send: "إرسال الأمر بجلستك…", vbs_msg_render: "جارٍ الرندر في Flow…", vbs_msg_prep: "تجهيز الفيديو في المشغل…",
 vbs_install_t: "الربط السريع — خطوة واحدة", vbs_install_s: "ثبّت إضافة NEXUS Flow Bridge مرة واحدة في متصفحك، وتتصل المنصة بها تلقائياً — بلا مفاتيح ولا إعدادات.",
 vbs_step1: "افتح صفحة الإضافات في متصفحك (chrome://extensions)", vbs_step2: "فعّل «وضع المطوّر» ثم اضغط «تحميل غير محزم»", vbs_step3: "اختر مجلد flow-bridge/extension من مستودع المنصة",
-vbs_open_repo: "فتح صفحة الإضافة", vbs_note: "التوليد يعمل بجلستك ورصيدك المجاني — لا يُخزن أي فيديو عندنا، النتيجة في جهازك حصراً.", vbs_result: "جاهز — الفيديو في مشغلك الآن",  ads_tab: "الفيديوهات", ads_hero_t: "فيديوهات إعلانية تبيع عنك", ads_hero_s: "من استوديو VITO BYTE — لقطات سينمائية لمنتجاتك جاهزة لفيسبوك وإنستغرام وتيك توك.",
+vbs_open_repo: "فتح صفحة الإضافة", vbs_note: "التوليد يعمل بجلستك ورصيدك المجاني — لا يُخزن أي فيديو عندنا، النتيجة في جهازك حصراً.", st_hero_tag: "من استوديو VITO BYTE",
+st_hero_t: "فيديو إعلاني بالذكاء الاصطناعي", st_hero_b: "يبيع عنك",
+st_hero_s: "ولّد لقطات سينمائية لمنتجك من متصفحك مباشرة — بحسابك أنت في Google Flow وبرصيدك المجاني. صفر تكلفة، صفر مفاتيح، والنتيجة في جهازك فوراً.",
+st_how: "كيف يعمل؟ ثلاث نقطات وفقط",
+st_h1t: "اربط حسابك بنقرة", st_h1d: "أضف إضافة الجسر مرة واحدة — تتعرف عليها المنصة تلقائياً ويتصل الزر وحده.",
+st_h2t: "اختر منتجك واكتب فكرة", st_h2d: "سطر واحد يكفي — الاستوديو يصوغه مشهداً سينمائياً كاملاً: لقطات وإضاءة وكاميرا وألوان هويتك.",
+st_h3t: "استلم الفيديو جاهزاً", st_h3d: "الرندر يجري بجلستك، والفيديو يظهر في مشغل المنصة فوراً — مع شعارك وسعارك بالعربي.",
+st_f1t: "مشهد سينمائي تلقائي", st_f1d: "هندسة أوامر احترافية مخفية — أنت تكتب الفكرة والاستوديو يكتب السينما.",
+st_f2t: "صفر تكلفة عليك وعلينا", st_f2d: "الرصيد المجاني اليومي لمنصات التوليد يشتغل في حسابك أنت — لا GPU ولا فوترة.",
+st_f3t: "خصوصية مطلقة", st_f3d: "لا مفاتيح ولا كلمات سر تصلنا — والفيديو لا يُخزن عندنا، في جهازك حصراً.",
+st_f4t: "جاهز للنشر", st_f4d: "عربي أولاً، شعارك وسعارك على الشاشة، بأبعاد فيسبوك وإنستغرام وتيك توك.",
+st_human_t: "تحتاج لمسة بشرية سينمائية؟", st_human_s: "فريق VITO BYTE ينتج لك لقطات احترافية بالطرق التقليدية — للمنتجات الغالية والحملات الكبيرة.",
+st_human_go: "خدمات الاستوديو البشري", st_band_t: "استوديو الفيديو بالذكاء الاصطناعي", st_band_s: "فيديو يبيع عنك — من متصفحك وبحسابك أنت، مجاناً", st_band_go: "جرّب الاستوديو مجاناً", vbs_result: "جاهز — الفيديو في مشغلك الآن",  ads_tab: "الفيديوهات", ads_hero_t: "فيديوهات إعلانية تبيع عنك", ads_hero_s: "من استوديو VITO BYTE — لقطات سينمائية لمنتجاتك جاهزة لفيسبوك وإنستغرام وتيك توك.",
     your_disc: "خصم باقتك", order_vid: "اطلب الفيديو", vid_note: "ملاحظات للاستوديو (اختياري)", vid_product: "المنتج المميز (اختياري)",
     send_order: "إرسال عبر واتساب", my_vids: "طلباتي", no_vids: "لا طلبات بعد", order_ok: "طلبك سجل — أكمل المحادثة في واتساب",
     wa_ask: "استفسر عن الفيديوهات على واتساب", wa_open_fail: "افتح واتساب ومراسلة: 0777 84 56 35",
@@ -170,7 +182,19 @@ vbs_recraft: "Re-craft the scene", vbs_do: "Generate", vbs_copy: "Copy prompt", 
 vbs_msg_login: "Waiting for your Google Flow sign-in…", vbs_msg_send: "Dispatching on your session…", vbs_msg_render: "Rendering in Flow…", vbs_msg_prep: "Preparing the video in the player…",
 vbs_install_t: "Quick connect — one step", vbs_install_s: "Install the NEXUS Flow Bridge extension once — the platform connects to it automatically. No keys, no setup.",
 vbs_step1: "Open your browser extensions page (chrome://extensions)", vbs_step2: "Enable Developer mode, then click Load unpacked", vbs_step3: "Select the flow-bridge/extension folder from the platform repo",
-vbs_open_repo: "Open the extension page", vbs_note: "Generation runs on your session and free credits — we store nothing; the result lives on your device only.", vbs_result: "Done — your video is playing now",  ads_tab: "Video ads", ads_hero_t: "Ad videos that sell for you", ads_hero_s: "By VITO BYTE studio — cinematic product cuts ready for Facebook, Instagram & TikTok.",
+vbs_open_repo: "Open the extension page", vbs_note: "Generation runs on your session and free credits — we store nothing; the result lives on your device only.", st_hero_tag: "By VITO BYTE studio",
+st_hero_t: "AI ad videos", st_hero_b: "that sell for you",
+st_hero_s: "Generate cinematic cuts for your product straight from your browser — on your own Google Flow account and its free credits. Zero cost, zero keys, instant results on your device.",
+st_how: "How it works — three taps, that's all",
+st_h1t: "Connect with one tap", st_h1d: "Install the bridge extension once — the platform detects it automatically and the button connects itself.",
+st_h2t: "Pick a product, write an idea", st_h2d: "One line is enough — the studio crafts it into a full cinematic scene: shots, lighting, camera and your brand palette.",
+st_h3t: "Get a ready video", st_h3d: "Rendering runs on your session and the video lands in the platform player instantly — with your logo and price in Arabic.",
+st_f1t: "Automatic cinematic scene", st_f1d: "Hidden professional prompt engineering — you write the idea, the studio writes the cinema.",
+st_f2t: "Zero cost for you and us", st_f2d: "Daily free credits of generation platforms run inside your own account — no GPUs, no billing.",
+st_f3t: "Absolute privacy", st_f3d: "No keys or passwords ever reach us — the video is never stored on our side, your device only.",
+st_f4t: "Publish-ready", st_f4d: "Arabic-first, your logo and price on screen, sized for Facebook, Instagram and TikTok.",
+st_human_t: "Need a human cinematic touch?", st_human_s: "The VITO BYTE team produces professional cuts the classic way — for premium products and big campaigns.",
+st_human_go: "Human studio services", st_band_t: "AI video studio", st_band_s: "A video that sells for you — from your browser, on your own account, free", st_band_go: "Try the studio free", vbs_result: "Done — your video is playing now",  ads_tab: "Video ads", ads_hero_t: "Ad videos that sell for you", ads_hero_s: "By VITO BYTE studio — cinematic product cuts ready for Facebook, Instagram & TikTok.",
     your_disc: "Your plan discount", order_vid: "Order this video", vid_note: "Notes for the studio (optional)", vid_product: "Featured product (optional)",
     send_order: "Send via WhatsApp", my_vids: "My orders", no_vids: "No orders yet", order_ok: "Order saved — continue the chat on WhatsApp",
     wa_ask: "Ask about video ads on WhatsApp", wa_open_fail: "Open WhatsApp and message: 0777 84 56 35",
@@ -524,6 +548,14 @@ function recepChat() {
   $("#rec-in", sh.wrap).onkeydown = (e) => { if (e.key === "Enter") { const i = $("#rec-in", sh.wrap); send(i.value); i.value = ""; } };
   $$(".qchip", sh.wrap).forEach((c) => (c.onclick = () => send(c.dataset.q)));
 }
+function vbsBand() {
+  return `<a class="st-band" href="#/studio">
+    <span class="vbs-mark"><svg width="13" height="13" viewBox="0 0 64 64" fill="none" aria-hidden="true"><defs><linearGradient id="vbsg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#2ad4f6"/></linearGradient></defs><path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" stroke="url(#vbsg2)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> VITO BYTE STUDIO</span>
+    <b class="st-band-t">${esc(t("st_band_t"))}</b>
+    <span class="st-band-s">${esc(t("st_band_s"))}</span>
+    <span class="st-band-go">${esc(t("st_band_go"))} ←</span>
+  </a>`;
+}
 function heroHtml() {
   return `<section class="hero-nx">
     <div class="hero-orbs"><i></i><i></i><i></i></div>
@@ -541,6 +573,7 @@ rr("/", async (v) => {
   resetFeed();
   v.innerHTML = `${topbar()}
     ${heroHtml()}
+    ${vbsBand()}
     <div class="chips-row" id="feed-cats" style="padding-top:12px"></div>
     <div id="feed-list"></div>`;
   renderCats();
@@ -1171,6 +1204,35 @@ async function vbsStudioSheet() {
     }
   };
 }
+/* ═══ الصفحة الرسمية لاستوديو VITO BYTE — تسويق كامل + زر بثلاث حالات ═══ */
+rr("/studio", async (v) => {
+  buildTabbar(true);
+  v.innerHTML = `${topbar(t("vbs_t"))}
+    <div class="page" style="padding-top:6px">
+      <div class="st-hero">
+        <span class="vbs-mark"><svg width="15" height="15" viewBox="0 0 64 64" fill="none" aria-hidden="true"><defs><linearGradient id="vbsg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#2ad4f6"/></linearGradient></defs><path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" stroke="url(#vbsg3)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> ${esc(t("st_hero_tag"))}</span>
+        <h1 class="st-h1">${esc(t("st_hero_t"))} <b>${esc(t("st_hero_b"))}</b></h1>
+        <p class="st-sub">${esc(t("st_hero_s"))}</p>
+        <button class="btn primary wide" id="vbs-go" data-vbs="A">${esc(t("vbs_btn_a"))}</button>
+        <div class="vbs-st"><span class="vbs-dot" id="vbs-dot"></span><span id="vbs-state">${esc(t("vbs_state_off"))}</span></div>
+      </div>
+      <h3 class="st-h3">${esc(t("st_how"))}</h3>
+      <div class="st-steps">
+        <div class="stp"><b>1</b><span><b class="stt">${esc(t("st_h1t"))}</b>${esc(t("st_h1d"))}</span></div>
+        <div class="stp"><b>2</b><span><b class="stt">${esc(t("st_h2t"))}</b>${esc(t("st_h2d"))}</span></div>
+        <div class="stp"><b>3</b><span><b class="stt">${esc(t("st_h3t"))}</b>${esc(t("st_h3d"))}</span></div>
+      </div>
+      <div class="st-feats">
+        ${[1, 2, 3, 4].map((n) => `<div class="st-feat"><b>${esc(t("st_f" + n + "t"))}</b><span>${esc(t("st_f" + n + "d"))}</span></div>`).join("")}
+      </div>
+      <div class="st-human">
+        <b>${esc(t("st_human_t"))}</b><span>${esc(t("st_human_s"))}</span>
+        <a class="btn ghost wide" href="#/ads">${esc(t("st_human_go"))} →</a>
+      </div>
+      <p class="hint" style="margin-top:12px">${esc(t("vbs_note"))}</p>
+    </div>`;
+  vbsBind(v);
+});
 rr("/ads", async (v) => {
   buildTabbar(true);
   if (!S.user) { const m = await me(); if (!m) { location.hash = "#/auth"; return; } }

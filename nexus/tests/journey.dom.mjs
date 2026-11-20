@@ -150,6 +150,14 @@ d.querySelector(".sheet-bd")?.click(); await sleep(300);
 const vbsTxt = (w.vbsCompose || (() => ""))({ title: "عطر فاخر من ثواني", price: 4900 }, "هدية مثالية", "lux", 8, "9:16");
 ok("مركِّب المشهد يصوغ برومبتاً سينمائياً بالمنتج واللقطات", vbsTxt.includes("عطر فاخر من ثواني") && vbsTxt.includes("لقطة 3") && vbsTxt.includes("VITO BYTE STUDIO"), vbsTxt.slice(0, 70));
 
+/* 4.7) الصفحة الرسمية للاستوديو + الشريط على الواجهة الرسمية */
+await nav("#/studio"); await sleep(700);
+ok("صفحة الاستوديو الرسمية: هيرو وثلاث خطوات وأربع ميزات", !!d.querySelector(".st-h1") && d.querySelectorAll(".st-steps .stp").length === 3 && d.querySelectorAll(".st-feat").length === 4, bodyTxt().slice(0, 90));
+const sBtn = d.querySelector("#vbs-go");
+ok("زر الاستوديو بحالته الذكية على صفحته الرسمية", sBtn && sBtn.dataset.vbs === "A" && (sBtn.textContent.includes("خطوة واحدة") || sBtn.dataset.vbs === "C"), sBtn && sBtn.textContent);
+await nav("#/"); await sleep(700);
+ok("شريط الاستوديو بجانب تسويق المتجر على الواجهة الرسمية", !!d.querySelector(".st-band") && bodyTxt().includes("استوديو الفيديو بالذكاء الاصطناعي"), bodyTxt().slice(0, 70));
+
 /* 5) طلبية زبون حقيقية (مسار الزائر العام) */
 const slug = d.body.querySelector('a[href^="#/s/"]')?.getAttribute("href")?.slice(4) || JSON.parse(w.sessionStorage.getItem("nx_user") || "{}").slug;
 /* نجلب معرف المنتج من قائمة التاجر عبر جلسة الجرة */

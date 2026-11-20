@@ -57,7 +57,15 @@ en: {
   media_url: "Media URL (https://)", thumb_url: "Thumbnail URL (optional)", publish: "Publish",
   published_t: "Published",
   dash_sub_admin: "Platform control.", dash_sub_freelancer: "Your professional presence and pipeline.", dash_sub_client: "Your projects and requests.",
-  vbs_nav: "Studio", vbs_t: "VITO BYTE Studio", vbs_s: "Generate an AI promo video for your service — from your browser, on your own Google Flow account, at zero cost.",
+  st_how: "How it works — three taps, that's all",
+st_h1t: "Connect with one tap", st_h1d: "Install the bridge extension once — the platform detects it automatically.",
+st_h2t: "Pick your service, write an idea", st_h2d: "One line is enough — the studio crafts it into a full cinematic scene.",
+st_h3t: "Get a ready video", st_h3d: "Rendering runs on your session — the video lands in the player instantly, publish-ready.",
+st_f1t: "Automatic cinematic scene", st_f1d: "Hidden professional prompt engineering — you write the idea, the studio writes the cinema.",
+st_f2t: "Zero cost", st_f2d: "Generation platforms' free daily credits run in your own account — no GPUs, no billing.",
+st_f3t: "Absolute privacy", st_f3d: "No keys or passwords ever reach us — the video lives on your device only.",
+st_f4t: "Publish-ready", st_f4d: "Arabic-first, your brand on screen, sized for social platforms.",
+st_band_t: "AI video studio", st_band_s: "A promo video for your service — from your browser, on your own account, free", st_band_go: "Try the studio free", vbs_nav: "Studio", vbs_t: "VITO BYTE Studio", vbs_s: "Generate an AI promo video for your service — from your browser, on your own Google Flow account, at zero cost.",
 vbs_btn_a: "Quick connect (one step)", vbs_btn_b: "Connect Google Flow account", vbs_btn_c: "Generate video",
 vbs_state_off: "Bridge not detected — connecting in seconds", vbs_state_on: "Connected & ready", vbs_state_sess: "Connected — checking session…",
 vbs_pick: "Pick your service", vbs_idea: "Video idea (one line is enough)", vbs_idea_ph: "e.g. brand identity in 5 days, unlimited revisions",
@@ -251,7 +259,15 @@ ar: {
   media_url: "رابط الوسائط (https://)", thumb_url: "رابط المصغرة (اختياري)", publish: "نشر",
   published_t: "تم النشر",
   dash_sub_admin: "تحكم بالمنصة.", dash_sub_freelancer: "حضورك المهني وخط أعمالك.", dash_sub_client: "مشاريعك وطلباتك.",
-  vbs_nav: "الاستوديو", vbs_t: "استوديو VITO BYTE", vbs_s: "ولّد فيديو ترويجي لخدمتك بالذكاء الاصطناعي — من متصفحك وبحسابك أنت في Google Flow، وصفر تكلفة.",
+  st_how: "كيف يعمل؟ ثلاث نقطات وفقط",
+st_h1t: "اربط حسابك بنقرة", st_h1d: "أضف إضافة الجسر مرة واحدة — تتعرف عليها المنصة تلقائياً.",
+st_h2t: "اختر خدمتك واكتب فكرة", st_h2d: "سطر واحد يكفي — الاستوديو يصوغه مشهداً سينمائياً كاملاً.",
+st_h3t: "استلم الفيديو جاهزاً", st_h3d: "الرندر يجري بجلستك والفيديو في المشغل فوراً — جاهز للنشر.",
+st_f1t: "مشهد سينمائي تلقائي", st_f1d: "هندسة أوامر احترافية مخفية — أنت تكتب الفكرة والاستوديو يكتب السينما.",
+st_f2t: "صفر تكلفة", st_f2d: "الرصيد المجاني اليومي لمنصات التوليد يشتغل في حسابك أنت — لا GPU ولا فوترة.",
+st_f3t: "خصوصية مطلقة", st_f3d: "لا مفاتيح ولا كلمات سر تصلنا — والفيديو في جهازك حصراً.",
+st_f4t: "جاهز للنشر", st_f4d: "عربي أولاً وهويتك على الشاشة وبأبعاد المنصات الاجتماعية.",
+st_band_t: "استوديو الفيديو بالذكاء الاصطناعي", st_band_s: "فيديو ترويجي لخدمتك — من متصفحك وبحسابك أنت، مجاناً", st_band_go: "جرّب الاستوديو مجاناً", vbs_nav: "الاستوديو", vbs_t: "استوديو VITO BYTE", vbs_s: "ولّد فيديو ترويجي لخدمتك بالذكاء الاصطناعي — من متصفحك وبحسابك أنت في Google Flow، وصفر تكلفة.",
 vbs_btn_a: "تفعيل الربط السريع (خطوة واحدة)", vbs_btn_b: "ربط حساب Google Flow", vbs_btn_c: "توليد الفيديو",
 vbs_state_off: "الإضافة غير مكتشفة — بضع ثوانٍ وتتصل", vbs_state_on: "متصل وجاهز", vbs_state_sess: "متصل — تحقق من الجلسة…",
 vbs_pick: "اختر خدمتك", vbs_idea: "فكرة الفيديو (سطر واحد يكفي)", vbs_idea_ph: "مثال: هوية بصرية في 5 أيام، تعديلات بلا حدود",
@@ -640,6 +656,17 @@ async function viewHome() {
         </div>
         <div class="mock-ok">${T.mock_hired}</div>
       </div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0">
+    <div class="wrap">
+      <a class="st-band" href="#/studio">
+        <span class="vbs-mark"><svg width="13" height="13" viewBox="0 0 64 64" fill="none" aria-hidden="true"><defs><linearGradient id="vbsg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" stroke="url(#vbsg2)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> VITO BYTE STUDIO</span>
+        <b class="st-band-t">${T.st_band_t}</b>
+        <span class="st-band-s">${T.st_band_s}</span>
+        <span class="st-band-go">${T.st_band_go} →</span>
+      </a>
     </div>
   </section>
 
@@ -1391,11 +1418,22 @@ async function viewStudio() {
   const connected = !!(nx && nx.state && nx.state().connected);
   const states = connected ? "C" : "A";
   shell(`<div class="wrap page-head"><h1>${T.vbs_t}</h1><p>${T.vbs_s}</p></div>
+  <div class="wrap" style="max-width:760px">
+    <h3 style="font-size:15px;margin:4px 0 12px">${T.st_how}</h3>
+    <div class="st-steps">
+      <div class="stp"><b>1</b><span><b class="stt">${T.st_h1t}</b>${T.st_h1d}</span></div>
+      <div class="stp"><b>2</b><span><b class="stt">${T.st_h2t}</b>${T.st_h2d}</span></div>
+      <div class="stp"><b>3</b><span><b class="stt">${T.st_h3t}</b>${T.st_h3d}</span></div>
+    </div>
+    <div class="st-feats">
+      ${[1, 2, 3, 4].map((n) => `<div class="st-feat"><b>${T["st_f" + n + "t"]}</b><span>${T["st_f" + n + "d"]}</span></div>`).join("")}
+    </div>
+  </div>
   <div class="wrap" style="max-width:760px;padding-bottom:60px">
     <div class="vbs-card">
       <span class="vbs-mark"><svg width="14" height="14" viewBox="0 0 64 64" fill="none" aria-hidden="true"><defs><linearGradient id="vbsg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><path d="M14 50V14l18 22V14h18v36h-9V28L23 50z" stroke="url(#vbsg)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> VITO BYTE STUDIO</span>
-      <button class="btn primary" id="vbs-go" data-vbs="${states}">${esc(T(states ? "vbs_btn_c" : "vbs_btn_a"))}</button>
-      <div class="vbs-st"><span class="vbs-dot${connected ? " on" : ""}" id="vbs-dot"></span><span id="vbs-state">${esc(T(connected ? "vbs_state_on" : "vbs_state_off"))}</span></div>
+      <button class="btn primary" id="vbs-go" data-vbs="${states}">${esc(T[states ? "vbs_btn_c" : "vbs_btn_a"])}</button>
+      <div class="vbs-st"><span class="vbs-dot${connected ? " on" : ""}" id="vbs-dot"></span><span id="vbs-state">${esc(T[connected ? "vbs_state_on" : "vbs_state_off"])}</span></div>
     </div>
     ${!S.user ? `<div class="msg info">${esc(T.signin_interact)}</div>` : ""}
     <div class="panel" id="vbs-inst" ${connected ? "hidden" : ""}>
@@ -1412,7 +1450,7 @@ async function viewStudio() {
     <div class="panel" id="vbs-form" ${connected ? "" : "hidden"}>
       <div class="field"><label>${esc(T.vbs_pick)}</label><select id="vbs-prod"></select></div>
       <div class="field"><label>${esc(T.vbs_idea)}</label><input id="vbs-idea" placeholder="${esc(T.vbs_idea_ph)}"/></div>
-      <div class="field"><label>${esc(T.vbs_style)}</label><div class="chips" id="vbs-styles">${["quick", "lifestyle", "sale", "lux"].map((k, i) => `<button type="button" class="chip${i === 0 ? " on" : ""}" data-st="${k}">${esc(T("s_" + k) || k)}</button>`).join("")}</div></div>
+      <div class="field"><label>${esc(T.vbs_style)}</label><div class="chips" id="vbs-styles">${["quick", "lifestyle", "sale", "lux"].map((k, i) => `<button type="button" class="chip${i === 0 ? " on" : ""}" data-st="${k}">${esc(T["s_" + k] || k)}</button>`).join("")}</div></div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <div class="field"><label>${esc(T.vbs_dur)}</label><div class="chips" id="vbs-durs">${[5, 8].map((n, i) => `<button type="button" class="chip${i === 1 ? " on" : ""}" data-d="${n}">${n}s</button>`).join("")}</div></div>
         <div class="field"><label>${esc(T.vbs_aspect)}</label><div class="chips" id="vbs-ars">${["9:16", "16:9"].map((a2, i) => `<button type="button" class="chip${i === 0 ? " on" : ""}" data-a="${a2}" dir="ltr">${a2}</button>`).join("")}</div></div>

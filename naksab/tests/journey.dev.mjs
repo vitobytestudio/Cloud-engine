@@ -190,6 +190,14 @@ try {
   const doneShown = await waitUntil(() => C.d.body.textContent.includes("اكتمل") || C.d.body.textContent.toLowerCase().includes("completed"), 6000);
   ok("الغرفة تعرض شارة الاكتمال", doneShown);
 
+  // ═══ استوديو VITO BYTE STUDIO — الصفحة الرسمية والشريط ═══
+  await nav(C, "#/studio");
+  await sleep(600);
+  ok("صفحة الاستوديو الرسمية بخطواتها الثلاث وميزاتها", C.d.querySelectorAll(".st-steps .stp").length === 3 && C.d.querySelectorAll(".st-feat").length === 4 && (C.d.querySelector(".page-head h1") || {}).textContent?.includes("VITO BYTE"));
+  await nav(C, "#/");
+  await sleep(600);
+  ok("شريط الاستوديو على الواجهة الرسمية بجانب هيرو السوق", !!C.d.querySelector(".st-band") && (C.d.body.textContent.includes("استوديو الفيديو بالذكاء الاصطناعي") || C.d.body.textContent.includes("AI video studio")));
+
   // ═══════════ الحكم الأخير: صفر أخطاء في كل الجلسات ═══════════
   ok("صفر أخطاء واجهة عبر كل الرحلة (لا استثناء ولا رفض غير معالج)", errors.length === 0, errors.slice(0, 3).join(" | "));
 } catch (e) {
