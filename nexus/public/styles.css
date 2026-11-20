@@ -305,6 +305,10 @@ select.input {
 
 .store-line { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-top: 2px; }
 
+.p-card.dash-p { cursor: pointer; }
+.badge-draft { position: absolute; bottom: 10px; inset-inline-start: 10px; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); color: var(--muted); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; z-index: 2; }
+.edit-pill { margin-inline-start: auto; font-size: 11px; font-weight: 600; color: #b9a7ff; background: rgba(122,92,255,0.16); padding: 4px 10px; border-radius: 99px; }
+
 .store-line img { width: 15px; height: 15px; border-radius: 50%; object-fit: cover; }
 
 @keyframes cardIn { from { opacity: 0; transform: translateY(22px) scale(0.96); } to { opacity: 1; transform: none; } }

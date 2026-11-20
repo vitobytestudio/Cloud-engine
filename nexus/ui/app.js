@@ -32,7 +32,7 @@ const T = {
     add_product: "إضافة منتج", edit_product: "تعديل المنتج", product_title: "اسم المنتج", description: "الوصف",
     price: "السعر", compare_at: "السعر قبل التخفيض", image_url: "رابط الصورة (https)", category: "الصنف",
     featured: "منتج مميز", save: "حفظ", delete: "حذف", confirm_delete: "حذف نهائي؟", cancel: "إلغاء",
-    no_products: "لا منتجات بعد", no_products_sub: "أضف أول منتج ليظهر في متجرك وفي سوق NEXUS.",
+    p_hidden: "مخفي", no_products: "لا منتجات بعد", no_products_sub: "أضف أول منتج ليظهر في متجرك وفي سوق NEXUS.",
     st_new: "جديد", st_confirmed: "مؤكد", st_shipped: "قيد التوصيل", st_delivered: "مسلّم", st_cancelled: "ملغى",
     customer: "الزبون", order_details: "تفاصيل الطلبية", call: "اتصال", whatsapp: "واتساب", mark: "تحديث الحالة",
     income_note: "الإيرادات تُحسب من الطلبيات المسلَّمة", add_expense: "إضافة مصروف", expense_label: "بيان المصروف",
@@ -114,7 +114,7 @@ const T = {
     add_product: "Add product", edit_product: "Edit product", product_title: "Product title", description: "Description",
     price: "Price", compare_at: "Price before discount", image_url: "Image URL (https)", category: "Category",
     featured: "Featured", save: "Save", delete: "Delete", confirm_delete: "Delete permanently?", cancel: "Cancel",
-    no_products: "No products yet", no_products_sub: "Add your first product to appear in your store and the NEXUS market.",
+    p_hidden: "Hidden", no_products: "No products yet", no_products_sub: "Add your first product to appear in your store and the NEXUS market.",
     st_new: "New", st_confirmed: "Confirmed", st_shipped: "Shipping", st_delivered: "Delivered", st_cancelled: "Cancelled",
     customer: "Customer", order_details: "Order details", call: "Call", whatsapp: "WhatsApp", mark: "Update status",
     income_note: "Revenue counts delivered orders", add_expense: "Add expense", expense_label: "Expense label",
@@ -415,6 +415,20 @@ function productCard(p, i = 0) {
   </a>`;
 }
 /* عرض الوصف الحي: رموز التخفيض تتحول شكلاً أنيقاً — النجوم دسمة والمربعات عناوين والشرطات نقاط */
+/* بطاقة «منتجاتي» في لوحة التاجر — نفس احترافية بطاقة السوق، والنقر في أي مكان يفتح المحرر */
+function dashCard(p, i = 0) {
+  const off = p.compare_at > p.price ? Math.round((1 - p.price / p.compare_at) * 100) : 0;
+  return `<div class="p-card dash-p" data-edit="${esc(p.id)}" style="animation-delay:${Math.min(i * 55, 500)}ms">
+    ${off ? `<span class="badge-off">-${off}%</span>` : ""}
+    ${p.featured ? '<span class="badge-feat"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6z"/></svg></span>' : ""}
+    ${p.active ? "" : `<span class="badge-draft">${esc(t("p_hidden"))}</span>`}
+    <div class="ph">${imgTag(p.image, "", p.title)}</div>
+    <div class="meta">
+      <div class="ttl">${esc(p.title)}</div>
+      <div class="row"><span class="price">${money(p.price)}</span>${p.compare_at > p.price ? `<span class="compare">${money(p.compare_at)}</span>` : ""}<span class="edit-pill">${esc(t("edit_product"))}</span></div>
+    </div>
+  </div>`;
+}
 const richDescr = (raw) => esc(raw || "")
   .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
   .replace(/(^|\n)#{1,3}\s*(.+)/g, "$1<b>$2</b>")
@@ -1178,13 +1192,7 @@ rr("/dash/products", async (v) => {
   const data = await api("/api/products");
   const list = data.products || [];
   $("#dash-body").innerHTML = list.length
-    ? `<div class="card" style="padding:6px 16px">${list.map((p) => `
-      <div class="list-item">
-        ${imgTag(p.image, "th", p.title)}
-        <div class="bd"><div class="t">${esc(p.title)}</div>
-          <div class="s">${money(p.price)} · ${esc(catName(p.category))} ${p.featured ? "· ★" : ""} ${p.active ? "" : "· ↩"}</div></div>
-        <button class="icon-btn" data-edit="${esc(p.id)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
-      </div>`).join("")}</div>`
+    ? `<div class="grid">${list.map((p, i) => dashCard(p, i)).join("")}</div>`
     : `<div class="empty"><div class="orb"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="url(#xg)" stroke-width="1.6"><defs><linearGradient id="xg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5cff"/><stop offset="1" stop-color="#2ad4f6"/></linearGradient></defs><path d="M3 9 5 3h14l2 6M3 9v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9M3 9h18"/></svg></div><h3>${esc(t("no_products"))}</h3><p>${esc(t("no_products_sub"))}</p>
       <button class="btn primary" style="margin-top:18px" onclick="productEditor()">${esc(t("add_product"))}</button></div>`;
   $$("[data-edit]", v).forEach((b) => (b.onclick = () => productEditor(list.find((x) => x.id === b.dataset.edit))));
