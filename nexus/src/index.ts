@@ -79,7 +79,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.7", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.1.8", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 // ═══ المصادقة ═══
 route("POST", "/api/auth/register", async (req, env) => {
@@ -846,7 +846,7 @@ route("POST", "/api/agent/organize", async (req, env, s) => {
   const quota = PLAN_QUOTA[(u.plan ?? "free") as Plan] ?? 15;
   if (used >= quota) return json({ error: "quota_exhausted" }, 429);
   const sys = `أنت منظّم منتجات محترف في منصة NEXUS الجزائرية. رتب بطاقة المنتج التالية قبل نشرها. أرجع JSON فقط بهذا الشكل بلا أي نص إضافي:
-{"title":"عنوان بيعي قصير واضح","descr":"وصف من 30 إلى 60 كلمة بالدارجة المبسطة يبرز الميزة والدفع عند الاستلام، بلا أسعار ولا هواتف","category":"واحد من: ${CATEGORIES.join("/")}","tips":["نصيحة تحسينية قصيرة","نصيحة قصيرة","نصيحة قصيرة"]}
+{"title":"عنوان بيعي قصير واضح","descr":"وصف من 30 إلى 60 كلمة بالدارجة المبسطة يبرز الميزة والدفع عند الاستلام، بلا أسعار ولا هواتف، نص عادي بلا نجوم أو رموز تخفيض وافصل الأفكار بأسطر جديدة","category":"واحد من: ${CATEGORIES.join("/")}","tips":["نصيحة تحسينية قصيرة","نصيحة قصيرة","نصيحة قصيرة"]}
 المنتج: العنوان "${title}" — الوصف الحالي "${descr || "(فارغ)"}" — السعر ${price || "(غير محدد)"} دج.`;
   const text = await fleetChat(env, sys, [{ role: "user", content: title }]);
   if (text === null) return json({ error: "fleet_down" }, 502);

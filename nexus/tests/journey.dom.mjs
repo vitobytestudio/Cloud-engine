@@ -19,12 +19,14 @@ const d = w.document;
 
 /* جسور البيئة — مع جرة كوكي تحاكي المتصفح (set-cookie يُحفظ ويُرسل تلقائياً) */
 let jar = {};
+const netlog = [];
 w.fetch = async (p, o = {}) => {
   const url = typeof p === "string" && p.startsWith("/") ? BASE + p : p;
   const headers = { ...(o.headers || {}) };
   const ck = Object.entries(jar).map(([k, v]) => k + "=" + v).join("; ");
   if (ck) headers.cookie = ck;
   const r = await fetch(url, { ...o, headers });
+  if (String(url).includes("/api/products") && (o.method || "GET") !== "GET") netlog.push(o.method + " " + url + " -> " + r.status);
   for (const c of (r.headers.getSetCookie?.() || [])) {
     const [kv] = c.split(";");
     const i = kv.indexOf("=");
@@ -55,6 +57,7 @@ const setV = (sel, v) => { const el = $(sel); if (!el) throw new Error("missing 
 const setVFire = (sel, v) => { setV(sel, v); $(sel).dispatchEvent(new w.Event("input", { bubbles: true })); };
 const click = (sel) => { const el = $(sel); if (!el) throw new Error("missing " + sel); el.click(); };
 const bodyTxt = () => d.body.textContent.replace(/\s+/g, " ");
+const slug2 = () => { try { const u = JSON.parse(w.sessionStorage.getItem("nx_user") || "null"); if (u?.slug) return u.slug; } catch {} return d.body.querySelector('a[href^="#/s/"]')?.getAttribute("href")?.slice(4) || ""; };
 const wireInline = () => d.querySelectorAll('button[onclick="productEditor()"]').forEach(b => { b.onclick = () => w.productEditor(); });
 const noRawKeys = () => !/(invalid_|auth_required|too_many|too_large|quota_exhausted|plan_limit|fleet_down)/.test(bodyTxt());
 
@@ -108,6 +111,33 @@ setV("#e-compare", "3000");
 click("#e-save");
 await sleep(900);
 ok("التعديل حُفظ", bodyTxt().includes("بريميوم V2"));
+
+/* 4.5) منتج بلا صورة ووصف برموز مخربة — البطاقة أنيقة والوصف حي وكامل */
+await nav("#/dash/products"); await sleep(400);
+wireInline();
+(d.querySelector('button[onclick="productEditor()"]') || d.body).click();
+await sleep(350);
+setV("#e-title", "عطر فاخر من ثواني");
+setVFire("#e-price", "4900");
+setV("#e-desc", "عطر **فاخر** يدوم\n## ثبات 12 ساعة\n- نفحة شرقية\n- مناسب للمناسبات <و> علامات مخربة");
+setV("#e-compare", "");
+click("#e-save");
+await sleep(900);
+ok("المنتج الثاني (بلا صورة) حُفظ", d.querySelectorAll("[data-edit]").length === 2, "items=" + d.querySelectorAll("[data-edit]").length);
+/* البطاقة في السوق: مقبض أنيق لا img مكسور */
+const storeUrl = "#/s/" + slug2();
+
+await nav(storeUrl); await sleep(600);
+const cards = d.querySelectorAll(".p-card");
+ok("بطاقة منتجنا الجديد في متجره", [...cards].some((c) => c.textContent.includes("عطر فاخر")) && [...cards].some((c) => c.textContent.includes("قميص صيفي بريميوم V2")), "cards=" + cards.length + " diag=" + (d.querySelector("#store-body")?.textContent || "").slice(0, 60));
+ok("المنتج بلا صورة يعرض مقبض NEXUS لا img مكسور", !!d.querySelector(".p-card .ph-empty") && !d.querySelector('.p-card img[src=""]'));
+/* صفحة المنتج: الوصف حي وكامل — دسمة بدل نجوم، لا رموز خام، لا حقن */
+const pdCard = [...cards].find(c => c.textContent.includes("عطر فاخر"));
+pdCard?.click(); await sleep(650);
+const pdTxt = d.querySelector(".pd-desc")?.innerHTML || "";
+ok("الوصف دسمة بدل نجوم وبدون رموز خام", pdTxt.includes("<b>") && !pdTxt.includes("**") && !pdTxt.includes("##") && !pdTxt.includes("<و>"), pdTxt.slice(0, 120));
+ok("الوصف كاملا بآخر كلمة", d.querySelector(".pd-desc")?.textContent.includes("علامات مخربة"));
+ok("الأسطر فُصلت عرضياً", (pdTxt.match(/<br>/g) || []).length >= 2, "brs=" + (pdTxt.match(/<br>/g) || []).length);
 
 /* 5) طلبية زبون حقيقية (مسار الزائر العام) */
 const slug = d.body.querySelector('a[href^="#/s/"]')?.getAttribute("href")?.slice(4) || JSON.parse(w.sessionStorage.getItem("nx_user") || "{}").slug;
@@ -167,12 +197,25 @@ await sleep(900);
 await nav("#/dash/products");
 await sleep(500);
 d.querySelector("[data-edit]")?.click(); await sleep(350);
-const del = $("#e-del");
+const delRoot = [...d.querySelectorAll(".sheet-wrap")].pop();
+const del = delRoot?.querySelector("#e-del") || $("#e-del");
 ok("زر الحذف موجود", !!del);
 del.click(); await sleep(250);
 ok("النقرة الأولى تسلّح الزر بتأكيد", (del.textContent || "").includes("حذف نهائي"));
-del.click(); await sleep(900);
-ok("المنتج حُذف والقائمة فارغة", !d.querySelector("[data-edit]") && bodyTxt().includes("لا منتجات بعد"), bodyTxt().slice(0, 100));
+for (let g = 0; g < 4 && d.querySelector("[data-edit]"); g++) {
+  /* مسار حقيقي بالتبديل: النظرة ثم المنتجات — hashchange فعلي يولد رسماً جديداً بلا عتقة */
+  w.location.hash = "#/dash"; await sleep(600);
+  w.location.hash = "#/dash/products"; await sleep(700);
+    const btns = [...d.querySelectorAll("[data-edit]")];
+  btns[0]?.click(); await sleep(400);
+  /* الورقة الأخيرة حصراً — الأقدم انطبقت أوراقها لا تُمسّ */
+  const root = [...d.querySelectorAll(".sheet-wrap")].pop();
+  if (!root || !(root.querySelector("#e-title") || {}).value) { (root?.querySelector(".sheet-bd") || d.body).click?.(); await sleep(300); continue; }
+  const dd = root.querySelector("#e-del"); if (!dd) break;
+  dd.click(); await sleep(300); dd.click(); await sleep(1100);
+}
+console.log("NET: " + netlog.join(" | "));
+ok("كل المنتجات حُذفت والقائمة فارغة", !d.querySelector("[data-edit]") && bodyTxt().includes("لا منتجات بعد"), bodyTxt().slice(0, 100));
 
 /* 10) المسح الشامل: صفر مفاتيح خام في كامل الجلسة */
 ok("المسح الشامل: لا مفاتيح خام في أي شاشة زرناها", noRawKeys(), bodyTxt().slice(0, 200));

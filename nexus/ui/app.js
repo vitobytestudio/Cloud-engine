@@ -322,8 +322,10 @@ function sheet(html, { onOpen } = {}) {
   return { wrap, close };
 }
 
+/* صورة فارغة = مقبض بهوية NEXUS بدل img مكسور — البطاقات بلا صورة تظهر أنيقة وكاملة */
+const phEmpty = `<div class="ph-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><path d="M3 15.5l4.6-4.6a1.8 1.8 0 0 1 2.5 0l4.4 4.4"/><circle cx="15.5" cy="9" r="1.6"/></svg><i class="meta">NEXUS</i></div>`;
 const imgTag = (src, cls = "", alt = "") =>
-  `<img ${cls} src="${esc(src)}" alt="${esc(alt)}" loading="lazy" onload="this.classList.add('ld')" onerror="this.src='/icon.png'">`;
+  src ? `<img ${cls} src="${esc(src)}" alt="${esc(alt)}" loading="lazy" onload="this.classList.add('ld')" onerror="this.src='/icon.png'">` : phEmpty;
 
 /* ───────── الراوتر ───────── */
 const routes = [];
@@ -412,6 +414,12 @@ function productCard(p, i = 0) {
     </div>
   </a>`;
 }
+/* عرض الوصف الحي: رموز التخفيض تتحول شكلاً أنيقاً — النجوم دسمة والمربعات عناوين والشرطات نقاط */
+const richDescr = (raw) => esc(raw || "")
+  .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+  .replace(/(^|\n)#{1,3}\s*(.+)/g, "$1<b>$2</b>")
+  .replace(/(^|\n)-\s+/g, "$1• ")
+  .replace(/\n/g, "<br>");
 const skeletons = (n = 6) => `<div class="grid">${Array.from({ length: n }, () => '<div class="skel"><div class="ph"></div><div class="ln" style="width:80%"></div><div class="ln" style="width:45%"></div></div>').join("")}</div>`;
 
 /* ═══════════ الشاشات ═══════════ */
@@ -741,7 +749,7 @@ rr("/p/:id", async (v, p) => {
     <div class="pd-head"><h1>${esc(prod.title)}</h1></div>
     <div class="pd-price"><span class="now">${money(prod.price)}</span>${prod.compare_at > prod.price ? `<span class="was">${money(prod.compare_at)}</span>` : ""}</div>
     <a class="store-line" href="#/s/${esc(prod.store_slug)}" style="padding:0 16px 8px">${prod.store_logo ? imgTag(prod.store_logo) : ""}<span>${esc(prod.store_name || "")}</span> <span style="color:var(--cyan)">›</span></a>
-    <div class="pd-desc">${esc(prod.descr || "")}</div>
+    <div class="pd-desc">${richDescr(prod.descr)}</div>
     <div class="cta-dock">
       <div class="price-mini">${esc(t("cod"))}<b>${money(prod.price)}</b></div>
       <span style="flex:1"></span>
@@ -1302,7 +1310,8 @@ function productEditor(p = null) {
   if (isEdit) $("#e-del", sh.wrap).onclick = (e) => {
     const b = e.currentTarget;
     if (b.dataset.armed) {
-      api("/api/products/" + p.id, { method: "DELETE" }).then(() => { toast(t("done")); sh.close(); render(!0); });
+      api("/api/products/" + p.id, { method: "DELETE" }).then(() => { toast(t("done")); sh.close(); render(!0); })
+        .catch((ex) => { toast(emsg(ex), "err"); vibrate([8, 30, 8]); });
     } else { b.dataset.armed = "1"; b.textContent = t("confirm_delete"); vibrate([8, 30, 8]); }
   };
 }
