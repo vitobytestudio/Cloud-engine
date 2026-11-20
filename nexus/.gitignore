@@ -2,3 +2,5 @@ node_modules/
 .wrangler/
 .dev.vars
 public/styles.min.css
+
+tests/_agent.mjs
