@@ -139,25 +139,22 @@ ok("الوصف دسمة بدل نجوم وبدون رموز خام", pdTxt.inclu
 ok("الوصف كاملا بآخر كلمة", d.querySelector(".pd-desc")?.textContent.includes("علامات مخربة"));
 ok("الأسطر فُصلت عرضياً", (pdTxt.match(/<br>/g) || []).length >= 2, "brs=" + (pdTxt.match(/<br>/g) || []).length);
 
-/* 4.6) استوديو VITO BYTE STUDIO — البطاقة والحالات ومركِّب المشهد */
+/* 4.6) بطاقة الاستوديو التسويقية في تبويب الفيديوهات → صفحته الرسمية */
 await nav("#/ads"); await sleep(700);
 ok("بطاقة استوديو VITO BYTE في تبويب الفيديوهات", !!d.querySelector(".vbs-card") && bodyTxt().includes("VITO BYTE STUDIO"), bodyTxt().slice(0, 80));
-const vbsBtn = d.querySelector("#vbs-go");
-ok("حالة أ: زر التفعيل السريع (لا إضافة في jsdom)", vbsBtn && vbsBtn.dataset.vbs === "A" && vbsBtn.textContent.includes("خطوة واحدة"), vbsBtn && vbsBtn.textContent);
-vbsBtn?.click(); await sleep(350);
-ok("لوحة الربط السريع تُفتح بثلاث خطوات", d.querySelectorAll(".vbs-steps .stp").length === 3 && bodyTxt().includes("chrome://extensions"));
-d.querySelector(".sheet-bd")?.click(); await sleep(300);
-const vbsTxt = (w.vbsCompose || (() => ""))({ title: "عطر فاخر من ثواني", price: 4900 }, "هدية مثالية", "lux", 8, "9:16");
-ok("مركِّب المشهد يصوغ برومبتاً سينمائياً بالمنتج واللقطات", vbsTxt.includes("عطر فاخر من ثواني") && vbsTxt.includes("لقطة 3") && vbsTxt.includes("VITO BYTE STUDIO"), vbsTxt.slice(0, 70));
+d.querySelector("#vbs-go")?.click(); await sleep(550);
+ok("زر البطاقة ينقل لصفحة الاستوديو الرسمية", (w.location.hash || "").startsWith("#/studio") && !!d.querySelector(".st-ws"), w.location.hash);
 
-/* 4.7) الصفحة الرسمية للاستوديو + الشريط على الواجهة الرسمية */
-await nav("#/studio"); await sleep(700);
-ok("صفحة الاستوديو الرسمية: هيرو وثلاث خطوات وأربع ميزات", !!d.querySelector(".st-h1") && d.querySelectorAll(".st-steps .stp").length === 3 && d.querySelectorAll(".st-feat").length === 4, bodyTxt().slice(0, 90));
-const sBtn = d.querySelector("#vbs-go");
-ok("زر الاستوديو بحالته الذكية على صفحته الرسمية", sBtn && sBtn.dataset.vbs === "A" && (sBtn.textContent.includes("خطوة واحدة") || sBtn.dataset.vbs === "C"), sBtn && sBtn.textContent);
-await nav("#/"); await sleep(700);
-ok("شريط الاستوديو بجانب تسويق المتجر على الواجهة الرسمية", !!d.querySelector(".st-band") && bodyTxt().includes("استوديو الفيديو بالذكاء الاصطناعي"), bodyTxt().slice(0, 70));
-
+/* 4.7) صفحة الاستوديو الرسمية: أربعة أوضاع + صفر إضافات + المركّب والمعرض */
+ok("الاستوديو بأربعة أوضاع عمل", d.querySelectorAll(".st-tab").length === 4 && bodyTxt().includes("صورة من وصف") && bodyTxt().includes("تحريك صورة"), "tabs=" + d.querySelectorAll(".st-tab").length);
+ok("صفر ذكر للإضافات في صفحة الاستوديو", !bodyTxt().includes("chrome://extensions") && !bodyTxt().includes("وضع المطوّر") && !bodyTxt().includes("الإضافة"));
+const t2vP = (w.VBS || {}).compose ? w.VBS.compose("t2v", { name: "عطر فاخر من ثواني", price: 4900, idea: "هدية مثالية", style: "lux", dur: 8, asp: "9:16" }) : "";
+ok("مركّب المشهد يصوغ برومبت Veo 3.1 باللقطات والهوية", t2vP.includes("Veo 3.1") && t2vP.includes("لقطة 3") && t2vP.includes("VITO BYTE STUDIO"), t2vP.slice(0, 60));
+const capV = (w.VBS || {}).capture ? w.VBS.capture("https://storage.googleapis.com/ltx/x1.mp4") : null;
+ok("التقاط نتيجة فيديو يبني المعرض محلياً", capV && capV.kind === "video" && !!d.querySelector("#vbs-gal .st-gi video"), "gal=" + ((w.VBS.gal || []).length));
+const capI = w.VBS.capture("https://lh3.googleusercontent.com/abc/def=w1000");
+ok("روابط الصور تُصنَّف وتعرض بالمعرض", capI && capI.kind === "image" && !!d.querySelector("#vbs-gal .st-gi img"));
+ok("النص العاري يُرفض — لا نتائج وهمية", w.VBS.capture("نص بلا رابط") === null);
 /* 5) طلبية زبون حقيقية (مسار الزائر العام) */
 const slug = d.body.querySelector('a[href^="#/s/"]')?.getAttribute("href")?.slice(4) || JSON.parse(w.sessionStorage.getItem("nx_user") || "{}").slug;
 /* نجلب معرف المنتج من قائمة التاجر عبر جلسة الجرة */

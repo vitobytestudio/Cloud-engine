@@ -530,3 +530,16 @@ html[dir="rtl"] .foot-col a:hover { transform: translateX(-3px); }
 .st-feat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 15px; }
 .st-feat b { display: block; font-size: 14px; margin-bottom: 3px; color: #cfc6ff; }
 .st-feat span { font-size: 13px; color: var(--dim); line-height: 1.75; }
+
+.st-hero2 { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 20px 22px; background: linear-gradient(135deg, rgba(124,108,255,.16), rgba(0,212,255,.07) 60%, rgba(124,108,255,.04)); border: 1px solid rgba(124,108,255,.35); }
+.st-ws { margin-top: 18px; }
+.st-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 16px; }
+.st-tab { padding: 10px 4px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--dim); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.st-tab.on { background: rgba(124,108,255,.16); border-color: rgba(124,108,255,.45); color: #cfc6ff; }
+.st-up-prev { width: 100%; max-height: 200px; object-fit: contain; border-radius: 12px; background: var(--card); border: 1px solid var(--line); margin-top: 8px; }
+.st-result { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.st-gal { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.st-gi { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.st-gi video, .st-gi img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #000; }
+.st-acts { display: flex; gap: 6px; padding: 8px; }
+.st-acts .chip { font-size: 12px; padding: 5px 10px; }
