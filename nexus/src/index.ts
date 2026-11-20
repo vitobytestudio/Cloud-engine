@@ -39,10 +39,17 @@ const SEC: Record<string, string> = {
   "content-security-policy":
     "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
 };
-function secure(res: Response): Response {
+function secure(res: Response, csp?: string): Response {
   const h = new Headers(res.headers);
   for (const [k, v] of Object.entries(SEC)) h.set(k, v);
+  if (csp) h.set("content-security-policy", csp);
   return new Response(res.body, { status: res.status, headers: h });
+}
+
+/* CSP صفحة نافذة الربط التفاعلية: script من ملفنا الثابت فقط + إطار عقدة الترحيل حصراً */
+function linkCsp(env: Env): string {
+  const ro = env.VBS_RELAY_ORIGIN ? String(env.VBS_RELAY_ORIGIN).replace(/\/+$/, "") : "";
+  return "default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-src 'self'" + (ro ? " " + ro : "") + "; base-uri 'self'; form-action 'self'; frame-ancestors 'self'";
 }
 
 // ═══ الإشعارات ═══
@@ -79,7 +86,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.4", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.5", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 /* ═══ استوديو VITO BYTE — الجلسة السحابية المعزولة (قرار المالك) ═══
    الربط: توكن لمرة واحدة → نافذة عقدة الأتمتة (دخول جوجل الرسمي — وإن لم يكن له حساب أنشئه) →
@@ -123,11 +130,26 @@ route("GET", "/api/studio/link-info", async (req, env, s) => {
   return json({ ok: true, relay: String(env.VBS_RELAY_ORIGIN).replace(/\/+$/, "") + "/login/" + tok });
 }, { auth: true });
 
-route("GET", "/studio/link/:token", async (req, env, _s, p) => {
-  if (!(await env.CACHE_KV.get("vbs_link:" + p.token))) return new Response("Not Found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
-  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ربط حساب Google Flow — VITO BYTE STUDIO</title><style>body{background:#05060a;color:#eef0f6;font-family:system-ui,'IBM Plex Sans Arabic',sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.c{max-width:420px;padding:28px;text-align:center}.m{font-weight:700;letter-spacing:.26em;font-size:12px;color:#cdbaff}h1{font-size:19px}p{color:#939ab1;line-height:1.9;font-size:14px}a{color:#2ad4f6}</style></head><body><div class="c"><div class="m">VITO BYTE STUDIO</div><h1>جارٍ فتح نافذة الربط الآمنة…</h1><p id="st">لحظات وتنتقل إلى تسجيل دخول جوجل الرسمي — سجّل دخولك أو أنشئ حساباً جديداً، ثم تعود الجلسة مشفرة إلى حسابك هنا.</p><p id="fb" hidden><a id="fb-a" href="#">متابعة الربط يدوياً ←</a></p></div><script>
-(async()=>{try{const r=await fetch("/api/studio/link-info?token="+encodeURIComponent(location.pathname.split("/").pop()),{credentials:"same-origin"});if(!r.ok){document.getElementById("st").textContent=r.status===404?"انتهت صلاحية رابط الربط — أعد الضغط على زر الربط في المنصة.":r.status===503?"خدمة الربط السحابية تُجهَّز الآن — عد بعد دقائق وأعد المحاولة.":"سجّل الدخول إلى المنصة أولاً ثم أعد المحاولة.";return}const d=await r.json();document.getElementById("fb-a").href=d.relay;document.getElementById("fb").hidden=false;location.replace(d.relay)}catch(e){document.getElementById("st").textContent="تعذر الاتصال — أعد المحاولة."}})();
-</script></body></html>`;
+route("GET", "/studio/link/:token", async (req, env, _s, _p) => {
+  /* القشرة ترسم دائماً بلا أي بوابة KV — التحقق في link-info مع استطلاع صبور يغطي تأخر انتشار KV، والنافذة التفاعلية تُعرض داخل منصتنا بإطار عقدة الترحيل حصراً */
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ربط حساب Google Flow — VITO BYTE STUDIO</title><style>
+body{background:#05060a;color:#eef0f6;font-family:system-ui,'IBM Plex Sans Arabic',sans-serif;margin:0;height:100vh;overflow:hidden}
+#bar{position:fixed;top:0;right:0;left:0;height:42px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,#0b0a14,#05060a);border-bottom:1px solid #1c1930;z-index:3}
+.m{font-weight:700;letter-spacing:.26em;font-size:11px;color:#cdbaff}
+#st{font-size:12.5px;color:#939ab1}
+#ri{position:fixed;top:42px;right:0;left:0;bottom:0;width:100%;border:0;display:none;background:#05060a}
+#ri.on{display:block}
+.card{position:fixed;inset:42px;display:grid;place-items:center;text-align:center;padding:26px;z-index:2;background:#05060a}
+.card h1{font-size:18px}.card p{color:#939ab1;line-height:2;font-size:14px;max-width:430px}
+.card a{color:#2ad4f6}
+#wait p{color:#8a90a6}
+</style></head><body>
+<div id="bar"><span class="m">VITO BYTE STUDIO</span><span id="st">جارٍ تجهيز نافذة الربط الآمنة…</span></div>
+<iframe id="ri" title="نافذة الدخول التفاعلية لجوجل"></iframe>
+<div class="card" id="wait"><div><h1>نافذة دخول تفاعلية حية</h1><p>ستفتح صفحة جوجل الرسمية هنا داخل منصتنا — اكتب بريدك وكلمة السر بنفسك وأكّد التحقق بخطوتين بيديك وبرضاه الكامل.<br>نحن لا نلمس كلمة السر في أي حقل لدينا — ما يمر عبرنا بكسلات الصفحة ولمساتك فقط.</p></div></div>
+<div class="card" id="expired" hidden><div><h1>انتهت صلاحية رابط الربط</h1><p>أعد الضغط على زر «ربط حساب Google Flow بضغطة واحدة» في المنصة ثم أكمل من النافذة الجديدة.</p></div></div>
+<div class="card" id="slow" hidden><div><h1>عقدة الربط بطيئة الاستجابة</h1><p>يمكنك المتابعة عبر فتح نافذة الدخول مباشرة:</p><p><a id="fb-a" href="#">افتح نافذة الدخول التفاعلية ←</a></p></div></div>
+<script src="/studio-link.js?v=223"></script></body></html>`;
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 });
 
@@ -1348,7 +1370,7 @@ export default {
       const ct = m[2] === "jpg" ? "image/jpeg" : m[2] === "png" ? "image/png" : "image/webp";
       return secure(new Response(obj, { headers: { "content-type": ct, "cache-control": "public, max-age=31536000, immutable" } }));
     }
-    if (path.startsWith("/api/")) {
+    if (path.startsWith("/api/") || path.startsWith("/studio/link/")) {
       // بوابة الإدارة المركزية: جهاز مدير صالح + ترويسة الرابط السري — وإلا 404 صامت
       if (path.startsWith("/api/adm/") && path !== "/api/adm/setup" && path !== "/api/adm/setup-status" && path !== "/api/adm/login") {
         const ph = await admMeta(env, "panel_hash");
@@ -1385,7 +1407,8 @@ export default {
           if (!s || hdr !== s.csrf) return bad("csrf", 403);
         }
         try {
-          return secure(await r.h(req, env, s, params));
+          const rr = await r.h(req, env, s, params);
+          return secure(rr, req.url.includes("/studio/link/") ? linkCsp(env) : undefined);
         } catch (e) {
           return secure(json({ error: "server", detail: String(e).slice(0, 200) }, 500));
         }
