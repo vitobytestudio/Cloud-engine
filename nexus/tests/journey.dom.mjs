@@ -156,7 +156,14 @@ const linkTok = (w.__vbsLink || "").split("/").pop();
 const ck0 = Object.entries(jar).map(([k, v]) => k + "=" + v).join("; ");
 const liRes = await fetch(BASE + "/api/studio/link-info?token=" + encodeURIComponent(linkTok), { headers: { cookie: ck0 } }).then((r) => r.json()).catch(() => null);
 ok("رابط الربط يوجّه لعقدة الجلسة السحابية", !!(liRes && liRes.relay && liRes.relay.includes("/login/")), JSON.stringify(liRes || {}).slice(0, 80));
-await fetch(liRes.relay).catch(() => {});
+const relRes = await fetch(liRes.relay).catch(() => null);
+const relTxt = relRes ? await relRes.text().catch(() => "") : "";
+ok("نافذة الدخول التفاعلية تعلن الكتابة بنفسك بلا حقول كلمة سر لدينا", relTxt.includes("بنفسك") && relTxt.includes("vbs-live") && relTxt.includes("2FA") === false && !relTxt.includes("إضافة"), relTxt.slice(0, 70));
+const deadPage = await fetch(BASE + "/studio/link/deadbeefdeadbeefdeadbeef").catch(() => null);
+const deadTxt = deadPage ? await deadPage.text().catch(() => "") : "";
+ok("رابط منتهٍ يعيد صفحة لائحة بدل 404 الأجوف (جرح إنتاج 2026-11-20)", !!deadPage && deadPage.status === 200 && deadTxt.includes("studio-link.js") && deadTxt.includes("بنفسك"), String(deadPage && deadPage.status));
+const linkJs = await fetch(BASE + "/studio-link.js?v=223").catch(() => null);
+ok("سكربت نافذة الربط التفاعلية مخدوم ثابتاً", !!linkJs && linkJs.status === 200, String(linkJs && linkJs.status));
 let connUI = false;
 for (let i = 0; i < 15 && !connUI; i++) { await sleep(1000); connUI = !!d.querySelector(".st-conn"); }
 ok("الجلسة تعود مشفرة والاتصال يكتشف تلقائياً بلا تحديث", connUI && bodyTxt().includes("مرتبط بحسابك في Google Flow"), bodyTxt().slice(0, 90));
