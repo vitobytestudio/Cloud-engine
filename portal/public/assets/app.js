@@ -1,4 +1,5 @@
-/* AS2 GATE — منطق الواجهة: اللغة، التبويبات، الساحة العالمية، الوكيل الذكي */
+/* AS2 GATE — منطق الواجهة: اللغة، التمييز النشط، التبويبات، الساحة العالمية، الوكيل الذكي
+   سياسة النماذج: نماذج الاستوديو المجانية حصراً عبر الخادم — لا نماذج مستخدمين ولا مفاتيح زوار */
 "use strict";
 
 /* ————— الساحة العالمية — بيانات ————— */
@@ -58,7 +59,7 @@ const UI = {
   typing: { ar: "الوكيل يجهز الجواب…", en: "The agent is preparing…" },
   sendError: { ar: "تعذر الوصول للوكيل — حاول مجدداً.", en: "Couldn't reach the agent — try again." },
   welcome: {
-    ar: "أهلاً بك في بوابة AS2 👋\nأنا وكيلك الذكي — أسألني عن **Alignerr** و**Outlier**: التسجيل، قبول الملف، التقييمات، الأجر، والمهام عالية القيمة.\nاختر سؤالاً من الشرائح أو اكتب سؤالك بحرية.",
+    ar: "أهلاً بك في بوابة AS2 👋\nأنا وكيلك الذكي — اسألني عن **Alignerr** و**Outlier**: التسجيل، قبول الملف، التقييمات، الأجر، والمهام عالية القيمة.\nاختر سؤالاً من الشرائح أو اكتب سؤالك بحرية.",
     en: "Welcome to the AS2 gate 👋\nI'm your AI agent — ask me about **Alignerr** and **Outlier**: registration, acceptance, assessments, pay, and high-value tasks.\nPick a question below or type freely.",
   },
   modeKB: { ar: "قاعدة معرفة", en: "Knowledge base" },
@@ -78,10 +79,10 @@ function applyLang() {
   html.dir = lang === "ar" ? "rtl" : "ltr";
   document.getElementById("langBtn").textContent = lang === "ar" ? "EN" : "ع";
   const input = document.getElementById("chatInput");
-  input.placeholder = lang === "ar" ? input.dataset.phAr : input.dataset.phEn;
-  renderArena();
-  if (!chatBusy && chatLog.children.length <= 1) renderChips(DEFAULT_CHIPS);
-  updateModeBadge();
+  if (input) input.placeholder = lang === "ar" ? input.dataset.phAr : input.dataset.phEn;
+  if (document.getElementById("grid-dev")) renderArena();
+  if (!chatBusy && chatLog && chatLog.children.length <= 1) renderChips(DEFAULT_CHIPS);
+  updateModeBadge(chatModeState);
 }
 
 document.getElementById("langBtn").addEventListener("click", () => {
@@ -91,6 +92,15 @@ document.getElementById("langBtn").addEventListener("click", () => {
   } catch {}
   applyLang();
 });
+
+/* ————— التمييز النشط في الترويسة ————— */
+(function markActive() {
+  const here = (location.pathname.replace(/\/+$/, "") || "/") + "";
+  document.querySelectorAll(".links a").forEach((a) => {
+    const t = (a.getAttribute("href") || "").replace(/\/+$/, "") || "/";
+    if (t === here || (t !== "/" && here.startsWith(t))) a.classList.add("active");
+  });
+})();
 
 /* ————— الساحة — عرض ————— */
 function renderArena() {
@@ -111,6 +121,7 @@ function renderArena() {
 /* ————— التبويبات ————— */
 function bindTabs(containerId, attr, map) {
   const host = document.getElementById(containerId);
+  if (!host) return;
   host.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-" + attr + "]");
     if (!btn) return;
@@ -129,10 +140,12 @@ bindTabs("arenaTabs", "tab", {
   cyber: document.getElementById("grid-cyber"),
 });
 const outlierTip = document.getElementById("tip-outlier");
-document.getElementById("trackTabs").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-track]");
-  if (b) outlierTip.hidden = b.dataset.track !== "outlier";
-});
+if (outlierTip) {
+  document.getElementById("trackTabs").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-track]");
+    if (b) outlierTip.hidden = b.dataset.track !== "outlier";
+  });
+}
 
 /* ————— الظهور التدريجي ————— */
 const io = new IntersectionObserver(
@@ -143,17 +156,16 @@ function observeReveals() {
   document.querySelectorAll(".reveal:not(.in)").forEach((el) => io.observe(el));
 }
 
-/* ————— الوكيل الذكي ————— */
+/* ————— الوكيل الذكي (صفحة /agent حصراً) ————— */
 const chatLog = document.getElementById("chatLog");
 const chatChips = document.getElementById("chatChips");
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
 const chatSend = document.getElementById("chatSend");
 const chatMode = document.getElementById("chatMode");
-const chatKeyPanel = document.getElementById("chatKeyPanel");
-const orKeyInput = document.getElementById("orKey");
 const DEFAULT_CHIPS = ["alignerr_what", "outlier_what", "alignerr_signup", "outlier_signup", "acceptance", "pay"];
 let chatBusy = false;
+let chatModeState = "kb";
 let history = [];
 
 function esc(s) {
@@ -173,48 +185,36 @@ function addMsg(kind, text) {
 }
 
 function renderChips(ids) {
+  if (!chatChips) return;
   chatChips.innerHTML = ids
     .filter((id) => CHIPS[id])
     .map((id) => `<button class="chip" data-qid="${id}">${esc(CHIPS[id][lang])}</button>`)
     .join("");
 }
 
-chatChips.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-qid]");
-  if (btn && !chatBusy) ask(CHIPS[btn.dataset.qid][lang]);
-});
-
-function getSavedKey() {
-  try {
-    return localStorage.getItem("as2_or_key") || "";
-  } catch {
-    return "";
-  }
+if (chatChips) {
+  chatChips.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-qid]");
+    if (btn && !chatBusy) ask(CHIPS[btn.dataset.qid][lang]);
+  });
 }
 
-document.getElementById("chatGear").addEventListener("click", () => {
-  chatKeyPanel.hidden = !chatKeyPanel.hidden;
-});
-orKeyInput.addEventListener("change", () => {
-  try {
-    orKeyInput.value.trim() ? localStorage.setItem("as2_or_key", orKeyInput.value.trim()) : localStorage.removeItem("as2_or_key");
-  } catch {}
-  updateModeBadge();
-});
-
-function updateModeBadge() {
-  const live = !!getSavedKey();
-  chatMode.textContent = live ? UI.modeLLM[lang] : UI.modeKB[lang];
-  chatMode.classList.toggle("live", live);
+function updateModeBadge(state) {
+  if (!chatMode) return;
+  chatModeState = state || chatModeState;
+  chatMode.textContent = chatModeState === "llm" ? UI.modeLLM[lang] : UI.modeKB[lang];
+  chatMode.classList.toggle("live", chatModeState === "llm");
 }
 
-chatForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const q = chatInput.value.trim();
-  if (!q || chatBusy) return;
-  chatInput.value = "";
-  ask(q);
-});
+if (chatForm) {
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = chatInput.value.trim();
+    if (!q || chatBusy) return;
+    chatInput.value = "";
+    ask(q);
+  });
+}
 
 async function ask(q) {
   chatBusy = true;
@@ -227,13 +227,14 @@ async function ask(q) {
     const r = await fetch("/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ q, lang, history: history.slice(-8), key: getSavedKey() }),
+      body: JSON.stringify({ q, lang, history: history.slice(-8) }),
     });
     const d = await r.json();
     typing.remove();
     if (d && d.ok && d.text) {
       addMsg("bot", d.text);
       history.push({ role: "user", content: q }, { role: "assistant", content: d.text });
+      updateModeBadge(d.mode === "llm" ? "llm" : "kb");
       if (Array.isArray(d.chips) && d.chips.length) renderChips(d.chips);
     } else {
       addMsg("bot", UI.sendError[lang]);
@@ -249,8 +250,9 @@ async function ask(q) {
 }
 
 /* ————— إقلاع ————— */
-orKeyInput.value = getSavedKey();
-addMsg("bot", UI.welcome[lang]);
-renderChips(DEFAULT_CHIPS);
+if (chatLog) {
+  addMsg("bot", UI.welcome[lang]);
+  renderChips(DEFAULT_CHIPS);
+}
 applyLang();
 observeReveals();

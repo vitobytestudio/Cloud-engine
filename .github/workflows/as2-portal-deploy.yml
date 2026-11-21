@@ -53,7 +53,12 @@ jobs:
           echo "$C" | grep -q '"ok":true' || { echo "::error::الوكيل لم يجيب"; tail -n 30 dev.log; exit 1; }
           curl -s -m 4 http://127.0.0.1:8795/ | grep -q "AS2" || { echo "::error::الموقع لم يُقدَّم"; tail -n 30 dev.log; exit 1; }
           curl -s -m 4 http://127.0.0.1:8795/assets/style.css | grep -q "brand-mark" || { echo "::error::التصميم لم يُقدَّم"; exit 1; }
-          echo "::notice::الإقلاع المحلي سليم — الموقع + الوكيل + التصميم"
+          for P in platforms acceptance agent arena support; do
+            curl -s -m 4 "http://127.0.0.1:8795/$P" | grep -q "page-hero\|sec-num" || { echo "::error::الصفحة $P لم تُقدَّم"; tail -n 30 dev.log; exit 1; }
+          done
+          [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8795/nonexistent)" = "404" ] || { echo "::error::صفحة 404 لا تعمل"; exit 1; }
+          curl -s http://127.0.0.1:8795/nonexistent | grep -q "AS2" || { echo "::error::صفحة 404 بلا محتوى"; exit 1; }
+          echo "::notice::الإقلاع المحلي سليم — 6 صفحات + 404 + الوكيل + التصميم"
 
       - name: النشر
         if: github.event_name != 'pull_request' # الإنتاج وأسراره على main حصراً — الـPR يُفحص فقط
@@ -89,4 +94,8 @@ jobs:
           C=$(curl -s "$URL/api/chat?q=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7&lang=ar")
           echo "$C" | grep -q '"ok":true' || { echo "::error::فحص الوكيل على الإنتاج فشل"; exit 1; }
           curl -s "$URL/" | grep -q "AS2" || { echo "::error::الموقع لم يُقدَّم على الإنتاج"; exit 1; }
-          echo "::notice::البوابة حية على $URL — الموقع والوكيل يعملان ✓"
+          for P in platforms acceptance agent arena support; do
+            curl -s "$URL/$P" | grep -q "page-hero\|sec-num" || { echo "::error::الصفحة $P لا تعمل على الإنتاج"; exit 1; }
+          done
+          H2=$(curl -s "$URL/api/health"); echo "$H2" | grep -q '"models":"free-tier"' || { echo "::error::سياسة النماذج المجانية غير نشطة"; exit 1; }
+          echo "::notice::البوابة حية على $URL — 6 صفحات + الوكيل بنماذج مجانية ✓"
