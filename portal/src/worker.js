@@ -5,7 +5,7 @@
            + وضع حي اختياري عبر OpenRouter (سر العامل أو مفتاح الزائر العابر)
    ———————————————————————————————————————————————————————————————— */
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const APP = "as2-portal";
 const RATE_LIMIT = 60;
 const RATE_WINDOW = 60_000;
@@ -342,7 +342,7 @@ Phrase your question any way you like — I'll prepare the precise answer.`,
 
 const CHIP_IDS = new Set(KB.flatMap((k) => k.chips).concat(KB.map((k) => k.id)));
 
-export { KB, CHIP_IDS, matchIntent };
+export { KB, CHIP_IDS, matchIntent, FREE_MODELS };
 
 /* ————— مطابقة السؤال على النية ————— */
 function matchIntent(q) {
@@ -394,6 +394,16 @@ VERIFIED BRIEFING (October 2026):
 
 RULES: Reply in the user's language (Arabic if they write Arabic, English otherwise). Be structured, concrete and honest — never invent rates, guarantees or acceptance promises; say when figures vary by project. Keep answers under 220 words unless the user asks for detail. End with one concrete next step. When useful, mention that AS2 offers free profile review and assessment training (studio WhatsApp: +963 777 84 56 35).`;
 
+/* ————— سياسة النماذج: نماذجنا المجانية حصراً —
+   لا الأعلى تكلفة (لا نماذج مدفوعة) ولا الأدنى قدرة (لا نماذج مصغّرة)
+   ولا نماذج المستخدمين (مفاتيح الزوار تُتجاهل تماماً) ————— */
+const FREE_MODELS = [
+  "deepseek/deepseek-chat-v3-0324:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "google/gemma-3-27b-it:free",
+  "qwen/qwen-2.5-72b-instruct:free",
+];
+
 async function askLLM(q, lang, key, history, env) {
   const messages = [
     {
@@ -409,22 +419,33 @@ async function askLLM(q, lang, key, history, env) {
     }
   }
   messages.push({ role: "user", content: q.slice(0, 2000) });
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { authorization: "Bearer " + key, "content-type": "application/json" },
-    body: JSON.stringify({
-      model: env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
-      messages,
-      max_tokens: 900,
-      temperature: 0.4,
-    }),
-    signal: AbortSignal.timeout(28_000),
-  });
-  if (!r.ok) throw new Error("llm_" + r.status);
-  const d = await r.json();
-  const text = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-  if (!text || !text.trim()) throw new Error("llm_empty");
-  return text.trim();
+
+  /* تدوير نماذجنا المجانية بالترتيب حتى يجيب أحدها — حصص الـ:free تنفد أحياناً */
+  const models = env.OPENROUTER_MODEL ? [env.OPENROUTER_MODEL] : FREE_MODELS;
+  let lastErr = null;
+  for (const model of models) {
+    try {
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { authorization: "Bearer " + key, "content-type": "application/json" },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: 900,
+          temperature: 0.4,
+        }),
+        signal: AbortSignal.timeout(28_000),
+      });
+      if (!r.ok) throw new Error("llm_" + r.status);
+      const d = await r.json();
+      const text = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if (!text || !text.trim()) throw new Error("llm_empty");
+      return { text: text.trim(), model };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("llm_exhausted");
 }
 
 /* ————— حد معدل بسيط لكل IP ————— */
@@ -449,11 +470,12 @@ export default {
     const path = url.pathname;
 
     if (!path.startsWith("/api/")) {
-      return new Response("Not found", { status: 404 });
+      /* الأصول تُقدَّم من [assets] — وما لا يطابقها يرجع بصفحة 404 البريميم */
+      return env.ASSETS.fetch(request);
     }
 
     if (path === "/api/health" && request.method === "GET") {
-      return json({ ok: true, v: VERSION, app: APP, agent: "kb+llm", updated: "2026-10" });
+      return json({ ok: true, v: VERSION, app: APP, agent: "kb+llm", models: "free-tier", updated: "2026-10" });
     }
 
     if (path === "/api/chat") {
@@ -476,11 +498,12 @@ export default {
         if (!q) return json({ ok: false, error: "empty_q" }, 400);
         if (q.length > 2000) return json({ ok: false, error: "q_too_long" }, 413);
 
-        const key = ((body && typeof body.key === "string" && body.key.trim()) || env.OPENROUTER_API_KEY || "").trim();
+        /* سياسة النماذج: سر الاستوديو حصراً + نماذجنا المجانية — أي مفتاح من الزائر يُتجاهل تماماً */
+        const key = (env.OPENROUTER_API_KEY || "").trim();
         if (key) {
           try {
-            const text = await askLLM(q, lang, key, history, env);
-            return json({ ok: true, mode: "llm", intent: null, text, chips: ["acceptance", "pay", "as2_support"].filter((c) => CHIP_IDS.has(c)) });
+            const { text, model } = await askLLM(q, lang, key, history, env);
+            return json({ ok: true, mode: "llm", intent: null, model, text, chips: ["acceptance", "pay", "as2_support"].filter((c) => CHIP_IDS.has(c)) });
           } catch (e) {
             const r = kbAnswer(q, lang);
             return json({ ok: true, mode: "kb", ...r, notice: "llm_fallback" });

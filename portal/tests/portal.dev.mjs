@@ -1,6 +1,5 @@
 /* بوابة AS2 PORTAL — اختبارات الوكيل والـ API (تعمل بمحرك Node مباشرة على معالج العامل) */
-import worker, { KB, CHIP_IDS } from "../src/worker.js";
-import { matchIntent } from "../src/worker.js";
+import worker, { KB, CHIP_IDS, FREE_MODELS, matchIntent } from "../src/worker.js";
 
 const env = { OPENROUTER_API_KEY: "" };
 const ctx = { waitUntil() {}, passThroughOnException() {} };
@@ -144,10 +143,15 @@ console.log("— POST —");
   G("POST KB يعمل", r.status === 200 && d.ok === true && d.mode === "kb" && d.intent === "alignerr_signup");
 }
 {
-  const r = await call("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q: "hi", lang: "en", key: "sk-or-fake-key-for-fallback-drill" }) });
+  const r = await call("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q: "hi", lang: "en", key: "sk-or-user-tried-key-drill" }) });
   const d = await j(r);
-  G("مفتاح زائر زائف → سقوط آمن على KB", r.status === 200 && d.ok === true && (d.mode === "llm" || d.mode === "kb"));
-  G("لا تسرّب المفتاح", !JSON.stringify(d).includes("sk-or-fake"));
+  G("سياسة النماذج: مفتاح المستخدم يُتجاهل → KB", r.status === 200 && d.ok === true && d.mode === "kb");
+  G("لا تسرّب مفتاح المستخدم أبداً", !JSON.stringify(d).includes("sk-or-user"));
+}
+{
+  G("سياسة النماذج: قائمة مجانية ≥ 3", Array.isArray(FREE_MODELS) && FREE_MODELS.length >= 3, FREE_MODELS?.length);
+  G("سياسة النماذج: كلها :free بلا استثناء", FREE_MODELS.every((m) => m.endsWith(":free")), FREE_MODELS);
+  G("سياسة النماذج: لا تكرار", new Set(FREE_MODELS).size === FREE_MODELS.length);
 }
 {
   const r = await call("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
