@@ -33,6 +33,8 @@ console.log("— الصحة —");
   G("ok:true", d.ok === true);
   G("app=as2-portal", d.app === "as2-portal");
   G("نمط الوكيل kb+llm", d.agent === "kb+llm");
+  G("سياسة النماذج في الصحة", d.models === "free-tier");
+  G("بلا سر → live:false", d.live === false);
 }
 
 console.log("— الوكيل (KB) عبر GET —");

@@ -5,7 +5,7 @@
            + وضع حي اختياري عبر OpenRouter (سر العامل أو مفتاح الزائر العابر)
    ———————————————————————————————————————————————————————————————— */
 
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 const APP = "as2-portal";
 const RATE_LIMIT = 60;
 const RATE_WINDOW = 60_000;
@@ -475,7 +475,8 @@ export default {
     }
 
     if (path === "/api/health" && request.method === "GET") {
-      return json({ ok: true, v: VERSION, app: APP, agent: "kb+llm", models: "free-tier", updated: "2026-10" });
+      const live = !!((env.OPENROUTER_API_KEY || "").trim());
+      return json({ ok: true, v: VERSION, app: APP, agent: "kb+llm", models: "free-tier", live, updated: "2026-10" });
     }
 
     if (path === "/api/chat") {

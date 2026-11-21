@@ -68,17 +68,43 @@ jobs:
           URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
           [ -n "$URL" ] && echo "::notice::LIVE=$URL" || echo "::notice::تم النشر — راجع السجل"
 
-      - name: مفتاح الوكيل الحي (من أسرار GitHub إلى سر العامل — لا يُطبع أبداً)
+      - name: مفتاح الوكيل الحي — من حزمة AI_KEYS (أسرار GitHub) إلى سر العامل — لا يُطبع أبداً
         if: github.event_name != 'pull_request'
         working-directory: portal
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || secrets.OPENROUTER_KEY || secrets.OPENROUTER || vars.OPENROUTER_API_KEY }}
+          AI_KEYS: ${{ secrets.AI_KEYS || vars.AI_KEYS }}
         run: |
-          if [ -n "$OPENROUTER_API_KEY" ]; then
-            printf '%s' "$OPENROUTER_API_KEY" | npx wrangler secret put OPENROUTER_API_KEY
-            echo "::notice::الوكيل الحي مُفعّل — الردود عبر OpenRouter"
+          # اصطلاح الاستوديو المعتمد: كل مفاتيح المزودين في حزمة AI_KEYS — نفس محلل نكساب
+          SRC="$AI_KEYS"
+          case "$SRC" in
+            '{'*) SRC="$(printf '%s' "$SRC" | python3 -c 'import sys,json;o=json.load(sys.stdin);print("\n".join(k+"="+v for k,v in o.items() if isinstance(v,str)))' 2>/dev/null || true)" ;;
+          esac
+          KEY=""
+          while IFS= read -r LINE; do
+            LINE="$(printf '%s' "$LINE" | tr -d '\r')"
+            LINE="${LINE#"${LINE%%[![:space:]]*}"}"; LINE="${LINE%"${LINE##*[![:space:]]}"}"
+            if [ -z "$LINE" ]; then continue; fi
+            case "$LINE" in "#"*) continue;; esac
+            case "$LINE" in
+              *=*) RAW_NAME="${LINE%%=*}"; VAL="${LINE#*=}";;
+              *:*) RAW_NAME="${LINE%%:*}"; VAL="${LINE#*:}";;
+              *) continue;;
+            esac
+            RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d '"' | tr -d "'" | tr '[:lower:]' '[:upper:]')"
+            RAW_NAME="${RAW_NAME#EXPORT}"; RAW_NAME="${RAW_NAME#_}"; RAW_NAME="${RAW_NAME%:}"
+            RAW_NAME="$(printf '%s' "$RAW_NAME" | tr -d ' ')"
+            VAL="${VAL#"${VAL%%[![:space:]]*}"}"; VAL="${VAL%"${VAL##*[![:space:]]}"}"
+            VAL="${VAL%,}"; VAL="${VAL%\"}"; VAL="${VAL#\"}"; VAL="${VAL%'}"; VAL="${VAL#'}"
+            case "$RAW_NAME" in
+              OPENROUTER_API_KEY|OPENROUTER_KEY|OPENROUTER_API_TOKEN|OPENROUTER_TOKEN|OPENROUTER)
+                [ -n "$VAL" ] && KEY="$VAL" && break ;;
+            esac
+          done <<< "$SRC"
+          if [ -n "$KEY" ]; then
+            printf '%s' "$KEY" | npx wrangler secret put OPENROUTER_API_KEY
+            echo "::notice::الوكيل الحي مُفعّل من حزمة AI_KEYS — نماذجنا المجانية عبر OpenRouter"
           else
-            echo "::notice::بدون مفتاح — الوكيل يعمل بقاعدة المعرفة الدقيقة المحلية (ودعم مفتاح الزائر العابر)"
+            echo "::warning::لا مفتاح OpenRouter داخل حزمة AI_KEYS — الوكيل يعمل بقاعدة المعرفة الدقيقة المحلية"
           fi
 
       - name: فحص ما بعد النشر (الصحة + الوكيل + الموقع)
@@ -97,5 +123,11 @@ jobs:
           for P in platforms acceptance agent arena support; do
             curl -s "$URL/$P" | grep -q "page-hero\|sec-num" || { echo "::error::الصفحة $P لا تعمل على الإنتاج"; exit 1; }
           done
-          H2=$(curl -s "$URL/api/health"); echo "$H2" | grep -q '"models":"free-tier"' || { echo "::error::سياسة النماذج المجانية غير نشطة"; exit 1; }
+          H2=$(curl -s "$URL/api/health"); echo "health: $H2"
+          echo "$H2" | grep -q '"models":"free-tier"' || { echo "::error::سياسة النماذج المجانية غير نشطة"; exit 1; }
+          if echo "$H2" | grep -q '"live":true'; then
+            echo "::notice::الوكيل الحي مُفعّل من حزمة AI_KEYS — نماذجنا المجانية تعمل على الإنتاج ✓"
+          else
+            echo "::warning::الوكيل يعمل بقاعدة المعرفة — لا مفتاح OpenRouter في حزمة AI_KEYS"
+          fi
           echo "::notice::البوابة حية على $URL — 6 صفحات + الوكيل بنماذج مجانية ✓"
