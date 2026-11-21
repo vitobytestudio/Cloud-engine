@@ -52,7 +52,8 @@ jobs:
           C=$(curl -s -m 4 "http://127.0.0.1:8795/api/chat?q=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7&lang=ar")
           echo "$C" | grep -q '"ok":true' || { echo "::error::الوكيل لم يجيب"; tail -n 30 dev.log; exit 1; }
           curl -s -m 4 http://127.0.0.1:8795/ | grep -q "AS2" || { echo "::error::الموقع لم يُقدَّم"; tail -n 30 dev.log; exit 1; }
-          curl -s -m 4 http://127.0.0.1:8795/assets/style.css | grep -q "brand-mark" || { echo "::error::التصميم لم يُقدَّم"; exit 1; }
+          curl -s -m 4 http://127.0.0.1:8795/assets/style.css | grep -q "js .reveal" || { echo "::error::التصميم بلا فشل آمن"; exit 1; }
+          curl -s -m 4 "http://127.0.0.1:8795/assets/app.js?v=112" | grep -q 'classList.add("js")' || { echo "::error::app.js بلا فشل آمن"; exit 1; }
           for P in platforms acceptance agent arena support; do
             curl -s -m 4 "http://127.0.0.1:8795/$P" | grep -q "page-hero\|sec-num" || { echo "::error::الصفحة $P لم تُقدَّم"; tail -n 30 dev.log; exit 1; }
           done
@@ -130,4 +131,9 @@ jobs:
           else
             echo "::warning::الوكيل يعمل بقاعدة المعرفة — لا مفتاح OpenRouter في حزمة AI_KEYS"
           fi
+          V=$(curl -s "$URL/" | grep -oE 'app\.js\?v=[0-9]+' | head -1 | sed 's/.*v=//')
+          [ -n "$V" ] || { echo "::error::روابط الأصول غير موسومة بإصدار"; exit 1; }
+          curl -s "$URL/assets/app.js?v=$V" | grep -q 'classList.add("js")' || { echo "::error::app.js على الإنتاج بلا فشل آمن"; exit 1; }
+          curl -s "$URL/assets/style.css?v=$V" | grep -q "js .reveal" || { echo "::error::style.css على الإنتاج بلا فشل آمن"; exit 1; }
+          echo "::notice::الأصول على الإنتاج سليمة بإصدار v=$V — الفشل الآمن مُثبت ✓"
           echo "::notice::البوابة حية على $URL — 6 صفحات + الوكيل بنماذج مجانية ✓"

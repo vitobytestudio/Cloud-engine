@@ -1,6 +1,10 @@
 /* AS2 GATE — منطق الواجهة: اللغة، التمييز النشط، التبويبات، الساحة العالمية، الوكيل الذكي
-   سياسة النماذج: نماذج الاستوديو المجانية حصراً عبر الخادم — لا نماذج مستخدمين ولا مفاتيح زوار */
+   سياسة النماذج: نماذج الاستوديو المجانية حصراً عبر الخادم — لا نماذج مستخدمين ولا مفاتيح زوار
+   الفشل الآمن: الإخفاء التدريجي يفعّل فقط بجافاسكربت حي — وأي انهيار يعيد كل شيء مرئياً فوراً */
 "use strict";
+
+document.documentElement.classList.add("js");
+try {
 
 /* ————— الساحة العالمية — بيانات ————— */
 const FREQ = {
@@ -148,11 +152,15 @@ if (outlierTip) {
 }
 
 /* ————— الظهور التدريجي ————— */
-const io = new IntersectionObserver(
-  (entries) => entries.forEach((en) => en.isIntersecting && en.target.classList.add("in")),
-  { threshold: 0.12 }
-);
 function observeReveals() {
+  if (!("IntersectionObserver" in window)) {
+    document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries) => entries.forEach((en) => en.isIntersecting && en.target.classList.add("in")),
+    { threshold: 0.12 }
+  );
   document.querySelectorAll(".reveal:not(.in)").forEach((el) => io.observe(el));
 }
 
@@ -256,3 +264,7 @@ if (chatLog) {
 }
 applyLang();
 observeReveals();
+} catch (e) {
+  /* أي انهيار — الموقع كله يظهر فوراً بلا حركات */
+  document.documentElement.classList.remove("js");
+}
