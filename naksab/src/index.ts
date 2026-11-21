@@ -17,7 +17,7 @@ const route = (m: string, pat: string, h: Route["h"], o: Partial<Route> = {}) =>
 const bad = (err: string, status = 400) => json({ error: err }, status);
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.2.3", env: e.ENVIRONMENT }) /* 1.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */);
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "1.2.4", env: e.ENVIRONMENT }) /* 1.1.1: VDB بأقراص D1 الذرية بلا KV + التزام MVCC + التدقيق الرسمي يُقرأ من محركنا */);
 
 // ═══ المصادقة ═══
 /* ─── الجلسة السحابية: أساس الرابط الديناميكي — عقدة الأتمتة تحدّث رابطها الحي عند كل إقلاع (الإلحاق الكامل بأمر المالك) ─── */
