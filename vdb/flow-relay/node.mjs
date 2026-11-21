@@ -600,7 +600,9 @@ async function pump() {
   } catch (e) { /* المنصة غير متاحة مؤقتاً — يعيد المحاولة */ }
   finally { busy = false; }
 }
-setInterval(pump, 2500);
+/* استطلاع الطابور: 30ث في الإنتاج (صفر أثر على كوتة KV) — وRELAY_POLL_MS يُقصَّر للبوابات محلياً */
+const POLL_MS = Math.max(2000, Number(process.env.RELAY_POLL_MS || 30000));
+setInterval(pump, POLL_MS);
 pump();
 
 const srv = http.createServer(async (req, res) => {

@@ -93,7 +93,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.8", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.9", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 /* ═══ استوديو VITO BYTE — الجلسة السحابية المعزولة (قرار المالك) ═══
    الربط: توكن لمرة واحدة → نافذة عقدة الأتمتة (دخول جوجل الرسمي — وإن لم يكن له حساب أنشئه) →
@@ -209,6 +209,12 @@ route("POST", "/api/studio/generate", async (req, env, s) => {
   const job = { id, uid: s.userId, state: "queued", spec: { mode, prompt, dur: [4, 6, 8].includes(Number(b?.dur)) ? Number(b.dur) : 8, asp: ["9:16", "16:9", "1:1"].includes(String(b?.asp)) ? String(b.asp) : "9:16", image_url: isHttpsUrl(String(b?.image_url || "")) ? String(b.image_url) : null, ts: Date.now() } };
   await env.CACHE_KV.put("vbs_job:" + id, JSON.stringify(job));
   await env.CACHE_KV.put("vbs_q:" + String(Date.now()).padStart(15, "0") + ":" + id, id);
+  /* مؤشر الرأس: الطابور يُدار بهذه المفتاح الواحد — صفر عمليات list في الاستطلاع
+     (جرح الإنتاج 2026-11-21: مسح vbs_q: كل 2.5ث أفاد حصة 1,000 list يومية كاملة فحُجبت KV حتى منتصف الليل) */
+  const hRaw = await env.CACHE_KV.get("vbs_q:head");
+  const head: string[] = hRaw ? JSON.parse(hRaw) : [];
+  head.push(id);
+  await env.CACHE_KV.put("vbs_q:head", JSON.stringify(head.slice(-64)), { expirationTtl: 86400 });
   await env.CACHE_KV.put(kq, String(used + 1), { expirationTtl: 86400 });
   return json({ ok: true, job_id: id }, 202);
 }, { auth: true, csrf: true });
@@ -224,20 +230,26 @@ route("GET", "/api/studio/job/:id", async (_r, env, s, p) => {
 
 route("POST", "/api/studio/relay/next", async (req, env) => {
   if (!vbsRelay(req, env)) return bad("not_found", 404);
-  const { keys } = await env.CACHE_KV.list({ prefix: "vbs_q:", limit: 1 });
-  if (!keys.length) return json({ ok: true, job: null });
-  const k = keys[0]?.name;
-  if (!k) return json({ ok: true, job: null });
-  const id = (await env.CACHE_KV.get(k)) || k.split(":")[2];
-  const raw = await env.CACHE_KV.get("vbs_job:" + id);
-  if (!raw) { await env.CACHE_KV.delete(k); return json({ ok: true, job: null }); }
-  const j = JSON.parse(raw);
-  j.state = "running";
-  await env.CACHE_KV.put("vbs_job:" + id, JSON.stringify(j));
-  await env.CACHE_KV.delete(k);
-  const enc = await vbsSess(env, j.uid);
+  /* الطابور بمؤشر الرأس حصراً — لا list هنا أبداً؛ الاستطلاع الفارغ قراءة واحدة بلا أي كتابة */
+  const hRaw = await env.CACHE_KV.get("vbs_q:head");
+  const head: string[] = hRaw ? JSON.parse(hRaw) : [];
+  let claimed: { id: string; j: any } | null = null;
+  while (!claimed) {
+    const id = head.shift();
+    if (!id) break;
+    const raw = await env.CACHE_KV.get("vbs_job:" + id);
+    if (!raw) continue; /* مهمة انقضت — تُسقط من الرأس */
+    const j = JSON.parse(raw);
+    if (j.state !== "queued") continue; /* مُطالَبة سابقاً (تسابق نادر مع توليد متلاحق) — تُتخطى */
+    await env.CACHE_KV.put("vbs_q:head", JSON.stringify(head.slice(-64)), { expirationTtl: 86400 });
+    j.state = "running";
+    await env.CACHE_KV.put("vbs_job:" + id, JSON.stringify(j));
+    claimed = { id, j };
+  }
+  if (!claimed) return json({ ok: true, job: null });
+  const enc = await vbsSess(env, claimed.j.uid);
   if (!enc) return json({ ok: true, job: null });
-  return json({ ok: true, job: { id: j.id, spec: j.spec }, session: await vbsDec(env, JSON.parse(enc)) });
+  return json({ ok: true, job: { id: claimed.j.id, spec: claimed.j.spec }, session: await vbsDec(env, JSON.parse(enc)) });
 });
 
 route("POST", "/api/studio/relay/result", async (req, env) => {
