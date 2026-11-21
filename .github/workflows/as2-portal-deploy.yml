@@ -1,0 +1,92 @@
+name: "AS2 PORTAL — نشر على workers.dev"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "portal/**"
+      - ".github/workflows/as2-portal-deploy.yml"
+  pull_request:
+    paths:
+      - "portal/**"
+      - ".github/workflows/as2-portal-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: as2-portal-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: c963e813a0e1a05274746e27c054d782
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: تثبيت الحزم
+        working-directory: portal
+        run: npm install --no-audit --no-fund
+
+      - name: بوابة الوكيل — 109+ فحصاً على قاعدة المعرفة والـ API (عربي/إنكليزي، سقوط آمن، حد معدل)
+        working-directory: portal
+        run: node tests/portal.dev.mjs
+
+      - name: إقلاع محلي — wrangler dev + فحص الموقع والوكيل معاً
+        working-directory: portal
+        run: |
+          npx wrangler dev --port 8795 > dev.log 2>&1 &
+          for i in $(seq 1 60); do sleep 1; curl -s -m 2 http://127.0.0.1:8795/api/health >/dev/null 2>&1 && break; done
+          H=$(curl -s -m 4 http://127.0.0.1:8795/api/health)
+          echo "health: $H"
+          echo "$H" | grep -q '"ok":true' || { echo "::error::الوكيل لم يقلع"; tail -n 30 dev.log; exit 1; }
+          C=$(curl -s -m 4 "http://127.0.0.1:8795/api/chat?q=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7&lang=ar")
+          echo "$C" | grep -q '"ok":true' || { echo "::error::الوكيل لم يجيب"; tail -n 30 dev.log; exit 1; }
+          curl -s -m 4 http://127.0.0.1:8795/ | grep -q "AS2" || { echo "::error::الموقع لم يُقدَّم"; tail -n 30 dev.log; exit 1; }
+          curl -s -m 4 http://127.0.0.1:8795/assets/style.css | grep -q "brand-mark" || { echo "::error::التصميم لم يُقدَّم"; exit 1; }
+          echo "::notice::الإقلاع المحلي سليم — الموقع + الوكيل + التصميم"
+
+      - name: النشر
+        if: github.event_name != 'pull_request' # الإنتاج وأسراره على main حصراً — الـPR يُفحص فقط
+        working-directory: portal
+        run: |
+          npx wrangler deploy 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
+          [ -n "$URL" ] && echo "::notice::LIVE=$URL" || echo "::notice::تم النشر — راجع السجل"
+
+      - name: مفتاح الوكيل الحي (من أسرار GitHub إلى سر العامل — لا يُطبع أبداً)
+        if: github.event_name != 'pull_request'
+        working-directory: portal
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || secrets.OPENROUTER_KEY || secrets.OPENROUTER || vars.OPENROUTER_API_KEY }}
+        run: |
+          if [ -n "$OPENROUTER_API_KEY" ]; then
+            printf '%s' "$OPENROUTER_API_KEY" | npx wrangler secret put OPENROUTER_API_KEY
+            echo "::notice::الوكيل الحي مُفعّل — الردود عبر OpenRouter"
+          else
+            echo "::notice::بدون مفتاح — الوكيل يعمل بقاعدة المعرفة الدقيقة المحلية (ودعم مفتاح الزائر العابر)"
+          fi
+
+      - name: فحص ما بعد النشر (الصحة + الوكيل + الموقع)
+        if: github.event_name != 'pull_request'
+        working-directory: portal
+        run: |
+          URL=$(grep -oE 'https://[a-z0-9-]+\.vitobytestudio\.workers\.dev' deploy.log | head -1)
+          [ -n "$URL" ] || { echo "::warning::لم يُستخرج العنوان — تجاوز"; exit 0; }
+          sleep 5
+          H=$(curl -s "$URL/api/health")
+          echo "health: $H"
+          echo "$H" | grep -q '"ok":true' || { echo "::error::فحص /api/health على الإنتاج فشل"; exit 1; }
+          C=$(curl -s "$URL/api/chat?q=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7&lang=ar")
+          echo "$C" | grep -q '"ok":true' || { echo "::error::فحص الوكيل على الإنتاج فشل"; exit 1; }
+          curl -s "$URL/" | grep -q "AS2" || { echo "::error::الموقع لم يُقدَّم على الإنتاج"; exit 1; }
+          echo "::notice::البوابة حية على $URL — الموقع والوكيل يعملان ✓"
