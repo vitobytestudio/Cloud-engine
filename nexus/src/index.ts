@@ -93,7 +93,7 @@ async function getUser(env: Env, sessionId: string): Promise<UserRow | null> {
 }
 
 // ═══ الصحة ═══
-route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.7", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
+route("GET", "/api/health", async (_r, e) => json({ ok: true, v: "2.2.8", app: "nexus", env: e.ENVIRONMENT }) /* 2.1.7: الوكيل — توثيق جوجل بالترويسة، مهلة 15 ثانية، برود مصنَّف، وكتالوج أوبنراوتر الحي */); /* 2.0.1: استعادة بعد تداخل نشر خارجي باسم العامل */
 
 /* ═══ استوديو VITO BYTE — الجلسة السحابية المعزولة (قرار المالك) ═══
    الربط: توكن لمرة واحدة → نافذة عقدة الأتمتة (دخول جوجل الرسمي — وإن لم يكن له حساب أنشئه) →
@@ -167,7 +167,7 @@ body{background:#05060a;color:#eef0f6;font-family:system-ui,'IBM Plex Sans Arabi
 <div class="card" id="wait"><div><h1>نافذة دخول تفاعلية حية</h1><p>ستفتح صفحة جوجل الرسمية هنا داخل منصتنا — اكتب بريدك وكلمة السر بنفسك وأكّد التحقق بخطوتين بيديك وبرضاه الكامل.<br>نحن لا نلمس كلمة السر في أي حقل لدينا — ما يمر عبرنا بكسلات الصفحة ولمساتك فقط.</p></div></div>
 <div class="card" id="expired" hidden><div><h1>انتهت صلاحية رابط الربط</h1><p>أعد الضغط على زر «ربط حساب Google Flow بضغطة واحدة» في المنصة ثم أكمل من النافذة الجديدة.</p></div></div>
 <div class="card" id="slow" hidden><div><h1>عقدة الربط بطيئة الاستجابة</h1><p>يمكنك المتابعة عبر فتح نافذة الدخول مباشرة:</p><p><a id="fb-a" href="#">افتح نافذة الدخول التفاعلية ←</a></p></div></div>
-<script src="/studio-link.js?v=223"></script></body></html>`;
+<script src="/studio-link.js?v=224"></script></body></html>`;
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 });
 

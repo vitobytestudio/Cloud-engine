@@ -164,7 +164,7 @@ ok("نافذة الدخول التفاعلية تعلن الكتابة بنفس�
 const deadPage = await fetch(BASE + "/studio/link/deadbeefdeadbeefdeadbeef").catch(() => null);
 const deadTxt = deadPage ? await deadPage.text().catch(() => "") : "";
 ok("رابط منتهٍ يعيد صفحة لائحة بدل 404 الأجوف (جرح إنتاج 2026-11-20)", !!deadPage && deadPage.status === 200 && deadTxt.includes("studio-link.js") && deadTxt.includes("بنفسك"), String(deadPage && deadPage.status));
-const linkJs = await fetch(BASE + "/studio-link.js?v=223").catch(() => null);
+const linkJs = await fetch(BASE + "/studio-link.js?v=224").catch(() => null);
 ok("سكربت نافذة الربط التفاعلية مخدوم ثابتاً", !!linkJs && linkJs.status === 200, String(linkJs && linkJs.status));
 let connUI = false;
 for (let i = 0; i < 15 && !connUI; i++) { await sleep(1000); connUI = !!d.querySelector(".st-conn"); }

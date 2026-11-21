@@ -43,7 +43,20 @@ if (!NEXUS || !TOKEN) { console.error("[relay] NEXUS_ORIGIN و VBS_RELAY_TOKEN �
 
 const FLOW_URL = "https://labs.google/fx/tools/flow";
 const PHONE_UA = /Mobi|Android|iPhone|iPad/i;
-const REACHED_FLOW = /labs\.google\/(fx\/|tools\/)?flow|labs\.google\/fx/;
+/* الحسم الثلاثي للنجاح (جرح إنتاج 2026-11-21: بارامتر continue في رابط الدخول يطابق "labs.google" فيعلن نجاحاً زائفاً بلا حساب):
+   (أ) عنوان Flow حقيقي: مضيف labs.google|flow.google.com ومساراً — لا بارامترات استعلام أبداً
+   (ب) شريحة حساب جوجل موجودة بالصفحة (لا تظهر إلا مسجّلاً)
+   (ج) في finishLive: كوكي دخول جوجل فعلي (SID/SAPISID…) داخل الجلسة قبل نشرها — بلاها لا نجاح ولا تخزين */
+const FLOW_HOSTS = new Set(["labs.google", "flow.google.com"]);
+const GOOGLE_AUTH_COOKIES = new Set(["SID", "SSID", "HSID", "SAPISID", "APISID", "__Secure-1PSID", "__Secure-3PSID"]);
+async function reachedFlow(pg) {
+  try {
+    const u = new URL(pg.url());
+    if (!FLOW_HOSTS.has(u.hostname)) return false;
+    if (!(u.hostname === "labs.google" ? u.pathname.startsWith("/fx/") : u.pathname.startsWith("/project/"))) return false;
+    return await pg.evaluate(() => !!document.querySelector('a[aria-label^="Google Account"], button[aria-label^="Google Account"], img[alt^="Google Account"], [data-ogsr-up]')).catch(() => false);
+  } catch { return false; }
+}
 
 const page = (title, body, autoClose = false) => `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{background:#05060a;color:#eef0f6;font-family:system-ui,'IBM Plex Sans Arabic',sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}.c{max-width:460px;padding:28px;text-align:center}.m{font-weight:700;letter-spacing:.26em;font-size:12px;color:#cdbaff}h1{font-size:19px}p{color:#939ab1;line-height:1.9;font-size:14px}</style></head><body><div class="c"><div class="m">VITO BYTE STUDIO</div>${body}${autoClose ? '<script>setTimeout(()=>{try{window.close()}catch{}},1200)<\/script>' : ""}</div></body></html>`;
 
@@ -194,8 +207,8 @@ function startLiveLogin(tok, phone) {
         deviceScaleFactor: phone ? 2 : 1,
         isMobile: phone,
         hasTouch: phone,
-        locale: "ar",
-        extraHTTPHeaders: { "Accept-Language": "ar,en;q=0.8" },
+        locale: "en-US",
+        extraHTTPHeaders: { "Accept-Language": "en-US,en;q=0.9" },
       });
       await entry.ctx.addInitScript("try{Object.defineProperty(navigator,'webdriver',{get:()=>undefined})}catch{}");
       entry.page = await entry.ctx.newPage();
@@ -209,7 +222,17 @@ function startLiveLogin(tok, phone) {
       entry.timer = setTimeout(() => finishLive(entry, false, "انتهت مهلة الدخول (" + LOGIN_MIN + " دقائق) — أعد ربط الحساب من المنصة"), LOGIN_MIN * 60000);
       entry.watch = setInterval(async () => {
         if (entry.done) return;
-        try { if (REACHED_FLOW.test(entry.page.url())) finishLive(entry, true); } catch {}
+        try {
+          if (await reachedFlow(entry.page)) {
+            const st = await entry.ctx.storageState();
+            if (!st.cookies.some((c) => GOOGLE_AUTH_COOKIES.has(c.name))) return; /* وصل الصفحة دون حساب — يكمل دخوله */
+            if (!entry.authNote) { entry.authNote = true; sendTo(entry, { type: "note", msg: "اكتُشف دخولك بحسابك — تُغلق النافذة خلال لحظات…" }); }
+            finishLive(entry, true);
+          } else if (!entry.sorryNote && /google\.[a-z.]+\/sorry|unusual traffic/i.test(entry.page.url())) {
+            entry.sorryNote = true;
+            sendTo(entry, { type: "note", msg: "جوجل تطلب تحققاً إضافياً — أكمله بنفسك الآن داخل النافذة (صورة أو نص) وسيكمل الربط تلقائياً" });
+          }
+        } catch {}
       }, 1500);
       await entry.cdp.send("Page.startScreencast", { format: "jpeg", quality: 55, maxWidth: phone ? 390 : 960, maxHeight: phone ? 844 : 700, everyNthFrame: 1 });
       await entry.page.goto("https://accounts.google.com/signin/v2/identifier?continue=" + encodeURIComponent(FLOW_URL) + "&flowName=GlifWebSignIn", { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
@@ -288,6 +311,7 @@ ws.onerror=function(){st.textContent="تعذر الوصول إلى نافذة ا
 ws.onmessage=function(ev){var d;try{d=JSON.parse(ev.data)}catch(e){return}
  if(d.type==="frame"){var im=new Image();im.onload=function(){cv.width=im.width;cv.height=im.height;cx.drawImage(im,0,0);st.hidden=true};im.src="data:image/"+(d.mime||"jpeg")+";base64,"+d.data}
  else if(d.type==="linked"){done.hidden=false;cv.hidden=true;st.hidden=true;kb.blur();setTimeout(function(){try{window.close()}catch(e){}},1500)}
+ else if(d.type==="note"){st.hidden=false;st.textContent=d.msg}
  else if(d.type==="error"){st.hidden=false;st.textContent=d.msg||"تعذر إتمام الربط"}};
 function pos(e){var r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*(cv.width/r.width),y:(e.clientY-r.top)*(cv.height/r.height)}}
 cv.addEventListener("pointerdown",function(e){kb.focus();var p=pos(e);if(ws.readyState===1)ws.send(JSON.stringify({type:"mouse",kind:"down",x:p.x,y:p.y}))});

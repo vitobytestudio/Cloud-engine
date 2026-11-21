@@ -26,11 +26,11 @@
       r.json().then(function (d) {
         document.getElementById("fb-a").href = d.relay;
         var fr = document.getElementById("ri");
-        fr.onload = function () { loaded = true; fr.classList.add("on"); document.getElementById("wait").hidden = true; st.textContent = "نافذة الدخول التفاعلية حية"; };
+        fr.onload = function () { loaded = true; fr.classList.add("on"); document.getElementById("wait").hidden = true; document.getElementById("slow").hidden = true; st.textContent = "نافذة الدخول التفاعلية حية — سجّل دخولك بنفسك داخلها"; };
         fr.src = d.relay + "?embed=1";
         setTimeout(function () {
-          if (!loaded) { show("slow"); st.textContent = "العقدة بطيئة الاستجابة — يمكنك فتح النافذة مباشرة"; }
-        }, 20000);
+          if (!loaded) { show("slow"); st.textContent = "تشغيل متصفح الربط يستغرق لحظات — النافذة تُفتح تلقائياً عند جهوزها، أو افتحها مباشرة:"; }
+        }, 45000);
       }).catch(function () { st.textContent = "تعذر الاتصال — أعد المحاولة."; });
     }).catch(function () { st.textContent = "تعذر الاتصال — أعد المحاولة."; });
   }
