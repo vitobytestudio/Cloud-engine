@@ -683,9 +683,9 @@ footer { border-top: 1px solid var(--line-soft); padding: 34px clamp(16px, 5vw, 
 footer .sig { font-family: var(--font-en); font-size: 12px; color: var(--ink-faint); letter-spacing: 1px; }
 footer .sig b { color: var(--gold); }
 
-/* ————— حركات الظهور ————— */
-.reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
-.reveal.in { opacity: 1; transform: none; }
+/* ————— حركات الظهور — تفشل إلى الظهور الكامل إذا مات الجافاسكربت (لا صفحة فارغة أبداً) ————— */
+.js .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.js .reveal.in { opacity: 1; transform: none; }
 
 /* ————— استجابة ————— */
 @media (max-width: 980px) {

@@ -5,7 +5,7 @@
            + وضع حي اختياري عبر OpenRouter (سر العامل أو مفتاح الزائر العابر)
    ———————————————————————————————————————————————————————————————— */
 
-const VERSION = "1.1.1";
+const VERSION = "1.1.2";
 const APP = "as2-portal";
 const RATE_LIMIT = 60;
 const RATE_WINDOW = 60_000;
